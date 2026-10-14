@@ -69,3 +69,16 @@ export function selectNextElection(elections, today = new Date()) {
 export function daysUntilElection(electionDate, today = new Date()) {
   return dateIndex(electionDate) - dateIndex(datePartsInOhio(today));
 }
+
+export const WRITE_IN_PARTY = "Write-in";
+
+export function isWriteInCandidate(candidate) {
+  return candidate.party === WRITE_IN_PARTY;
+}
+
+export function partitionCandidates(candidates) {
+  return {
+    onBallot: candidates.filter((candidate) => !isWriteInCandidate(candidate)),
+    writeIn: candidates.filter(isWriteInCandidate),
+  };
+}

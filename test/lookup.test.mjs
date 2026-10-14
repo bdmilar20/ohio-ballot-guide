@@ -6,6 +6,7 @@ import {
   daysUntilElection,
   hasPublishedBallotDetails,
   normalizeQuery,
+  partitionCandidates,
   racesForCounty,
   resolveLocation,
   selectNextElection,
@@ -85,4 +86,30 @@ test("calculates the election countdown by Ohio calendar date", () => {
   assert.equal(daysUntilElection("2026-11-03", "2026-11-03"), 0);
   assert.equal(daysUntilElection("2026-11-03", new Date("2026-10-15T03:30:00Z")), 20);
   assert.equal(daysUntilElection("2026-11-03", new Date("2026-10-15T04:30:00Z")), 19);
+});
+
+test("separates certified write-ins from candidates printed on the ballot", () => {
+  const governor = data.elections
+    .find(({ id }) => id === "2026-11-03-general")
+    .statewide_races.find(({ office }) => office.startsWith("Governor"));
+
+  const { onBallot, writeIn } = partitionCandidates(governor.candidates);
+
+  assert.equal(onBallot.length + writeIn.length, governor.candidates.length);
+  assert.deepEqual(
+    onBallot.map(({ party }) => party),
+    ["Democratic", "Libertarian", "Republican"],
+  );
+  assert.ok(writeIn.length > 0);
+  assert.ok(writeIn.every(({ party }) => party === "Write-in"));
+});
+
+test("partitions candidate lists that have no write-ins", () => {
+  const { onBallot, writeIn } = partitionCandidates([
+    { name: "A", party: "Democratic" },
+    { name: "B", party: "Republican" },
+  ]);
+
+  assert.equal(onBallot.length, 2);
+  assert.deepEqual(writeIn, []);
 });

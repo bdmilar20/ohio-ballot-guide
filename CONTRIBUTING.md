@@ -10,6 +10,11 @@ Thank you for helping make Ohio election information easier to inspect.
 4. Run `npm run check` and `npm test`.
 5. In the pull request, identify the changed contest and explain what the official source shows.
 
+Mark a certified write-in candidate with `"party": "Write-in"`. The interface
+relies on that exact value to separate write-ins from the candidates printed on
+the ballot, so do not use it for a candidate whose name appears on the ballot
+and do not substitute another spelling.
+
 Keep descriptions factual and concise. Candidate campaign websites may provide useful context, but they are not authoritative for ballot status.
 
 ## Coverage additions

@@ -102,6 +102,9 @@ footer {
 }
 
 .source-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   color: var(--muted);
   font-size: 0.9rem;
   font-weight: 600;
@@ -362,6 +365,9 @@ h2 {
 .text-button,
 .quiet-button {
   align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   border: 0;
   background: transparent;
   color: var(--accent);
@@ -426,6 +432,7 @@ h2 {
 }
 
 .essentials article {
+  position: relative;
   padding: 1.3rem;
 }
 
@@ -456,6 +463,14 @@ h2 {
 .essentials strong a {
   text-decoration-color: #bcb5aa;
   text-underline-offset: 0.22rem;
+}
+
+/* The whole card is the tap target, not just the date text. */
+.essentials strong a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
 }
 
 .essentials strong a:hover {
@@ -530,7 +545,10 @@ h2 {
 }
 
 .race-source {
+  display: inline-flex;
+  align-items: center;
   flex: none;
+  min-height: 24px;
   color: var(--accent);
   font-size: 0.76rem;
   font-weight: 700;
@@ -563,6 +581,29 @@ h2 {
   font-size: 0.68rem;
   font-weight: 600;
   padding: 0.2rem 0.55rem;
+}
+
+.write-in-lead {
+  margin: 0.95rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid #ebe6dc;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.candidate-list-write-in {
+  margin-top: 0.15rem;
+}
+
+.candidate-list-write-in li {
+  min-height: 36px;
+  border-top: 0;
+  color: var(--muted);
+}
+
+.candidate-list-write-in .candidate-name {
+  font-weight: 500;
 }
 
 .verified {
@@ -614,6 +655,9 @@ h2 {
 }
 
 .issue-card a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   color: white;
   font-size: 0.78rem;
   font-weight: 700;
@@ -681,6 +725,9 @@ h2 {
 }
 
 .about-copy a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   color: var(--accent);
   font-weight: 700;
   text-underline-offset: 0.25rem;

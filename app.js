@@ -1,6 +1,7 @@
 import {
   daysUntilElection,
   hasPublishedBallotDetails,
+  partitionCandidates,
   racesForCounty,
   resolveLocation,
   upcomingElections,
@@ -79,6 +80,23 @@ function setHttpsHref(link, value) {
   link.href = url.href;
 }
 
+function candidateItem(candidate, { showParty }) {
+  const item = document.createElement("li");
+  const name = document.createElement("span");
+  name.className = "candidate-name";
+  name.textContent = candidate.name;
+  item.append(name);
+
+  if (showParty) {
+    const party = document.createElement("span");
+    party.className = "party";
+    party.textContent = candidate.party;
+    item.append(party);
+  }
+
+  return item;
+}
+
 function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY) {
   const node = raceTemplate.content.firstElementChild.cloneNode(true);
   node.dataset.secondary = String(index >= collapseAfter);
@@ -100,17 +118,28 @@ function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY) {
   }
 
   const list = node.querySelector(".candidate-list");
-  for (const candidate of race.candidates) {
-    const item = document.createElement("li");
-    const name = document.createElement("span");
-    const party = document.createElement("span");
-    name.className = "candidate-name";
-    party.className = "party";
-    name.textContent = candidate.name;
-    party.textContent = candidate.party;
-    item.append(name, party);
-    list.append(item);
+  const { onBallot, writeIn } = partitionCandidates(race.candidates);
+  for (const candidate of onBallot) {
+    list.append(candidateItem(candidate, { showParty: true }));
   }
+
+  if (writeIn.length > 0) {
+    const lead = document.createElement("p");
+    lead.className = "write-in-lead";
+    lead.textContent =
+      "Certified write-in candidates. These names are not printed on the ballot — you have to write one in.";
+
+    const writeInList = document.createElement("ul");
+    writeInList.className = "candidate-list candidate-list-write-in";
+    writeInList.setAttribute("aria-label", `Certified write-in candidates for ${race.office}`);
+    for (const candidate of writeIn) {
+      writeInList.append(candidateItem(candidate, { showParty: false }));
+    }
+
+    list.after(lead, writeInList);
+  }
+
+  if (onBallot.length === 0) list.remove();
 
   node.querySelector(".verified").textContent = `Verified ${displayDate(race.last_verified)}`;
   return node;
