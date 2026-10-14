@@ -45,6 +45,12 @@ Text is near-black, never pure `#000`.
   `--text-micro: .75rem`. Labels, party chips, verification dates and the footer
   all sit at that floor. When you need something to recede, change weight or
   color — do not go smaller.
+- **Write `font-size` in `rem`, or as a `clamp()` whose first argument is in
+  `rem`.** Those are the forms the floor can be proven in without a browser, so
+  they are the only ones `test/styles.test.mjs` accepts — `em`, `%`, `var()` and
+  a `clamp()` with a `vw` floor fail the suite as unevaluatable rather than
+  passing unchecked. Set `font-size` on its own; the `font` shorthand can carry a
+  size, so the suite rejects it except for `font: inherit`.
 - Body copy is `line-height: 1.55`; NDS uses `--leading-relaxed: 1.625`. Keep
   body leading above 1.5.
 
@@ -61,7 +67,9 @@ requirements rather than preferences.
 - Nothing is communicated by color alone.
 - `prefers-reduced-motion` is honored.
 
-Only the 12px type floor is machine-checked, by `test/styles.test.mjs`. The
+Only the 12px type floor is machine-checked, by `test/styles.test.mjs`. It reads
+every `font-size` declaration in `styles.css` and fails on any value it cannot
+evaluate, so a new unit or function cannot slip past by matching no pattern. The
 project has no dependencies and no build step, and a headless browser is too
 much to ask of a contributor fixing a candidate's name, so contrast and target
 size are confirmed in review against a rendered page rather than in `npm test`.
