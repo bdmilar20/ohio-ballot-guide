@@ -19,7 +19,10 @@ The round-2 schema work did most of the structural job:
   per-contest rather than per-site. That does not change across states.
 - `locations` map to `county_ids` rather than to a single county, and the
   interface asks the voter when a place spans more than one. County-crossing
-  places are not an Ohio-specific problem, so that logic carries over.
+  places are not an Ohio-specific problem, so that logic carries over. The
+  Census relationship file that backs those mappings is national, and the rule
+  that `county_ids` leads with the county holding most of the ZIP's residents
+  applies to every state's cross-county ZIPs.
 - `hasPublishedBallotDetails()` separates "we know a date" from "we know the
   ballot". Most states publish schedules long before certified contests, so this
   distinction becomes more useful with more states, not less.

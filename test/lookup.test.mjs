@@ -44,6 +44,17 @@ test("records county choices for single- and cross-county ZIPs", () => {
   assert.deepEqual(resolveLocation("45251", data.locations)?.county_ids, ["hamilton"]);
 });
 
+test("offers the county holding most of a cross-county ZIP first", () => {
+  const crossCounty = ["43235", "45246", "45249", "45255"];
+  const majorityCounty = { 43235: "franklin", 45246: "hamilton", 45249: "hamilton", 45255: "hamilton" };
+
+  for (const zip of crossCounty) {
+    const countyIds = resolveLocation(zip, data.locations)?.county_ids ?? [];
+    assert.ok(countyIds.length > 1, `${zip} should still cross county lines`);
+    assert.equal(countyIds[0], majorityCounty[zip], `${zip} must offer its majority county first`);
+  }
+});
+
 test("returns county races only after a county is selected", () => {
   assert.equal(racesForCounty("franklin", election.counties).length, 1);
   assert.deepEqual(racesForCounty("delaware", election.counties), []);

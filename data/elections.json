@@ -73,19 +73,19 @@
       "last_verified": "2026-10-14"
     },
     {
-      "id": "zip-cincinnati-clermont-hamilton",
+      "id": "zip-cincinnati-hamilton-clermont",
       "display_name": "Cincinnati ZIP",
       "kind": "zip",
-      "county_ids": ["clermont", "hamilton"],
+      "county_ids": ["hamilton", "clermont"],
       "aliases": ["45255"],
       "source_url": "https://www2.census.gov/geo/docs/maps-data/data/rel2020/zcta520/tab20_zcta520_county20_natl.txt",
       "last_verified": "2026-10-14"
     },
     {
-      "id": "zip-cincinnati-butler-hamilton",
+      "id": "zip-cincinnati-hamilton-butler",
       "display_name": "Cincinnati ZIP",
       "kind": "zip",
-      "county_ids": ["butler", "hamilton"],
+      "county_ids": ["hamilton", "butler"],
       "aliases": ["45246"],
       "source_url": "https://www2.census.gov/geo/docs/maps-data/data/rel2020/zcta520/tab20_zcta520_county20_natl.txt",
       "last_verified": "2026-10-14"
