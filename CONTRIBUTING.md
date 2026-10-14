@@ -22,4 +22,4 @@ Add a new dated object to the `elections` array instead of replacing an existing
 
 Use an empty array when an election has no statewide races or issues. Add county names to the root `counties` registry, and put only this election's county coverage in the election's `counties` object.
 
-Keep city aliases and ZIP aliases in separate location records. Each ZIP record must list every county the ZIP crosses, cite an official source, and include the date it was verified. The validator rejects numeric ZIP aliases on city-wide records so a city's broader county footprint cannot leak into a ZIP result.
+Keep city aliases and ZIP aliases in separate location records. Each ZIP record must list every county in the Census Bureau's ZCTA-to-county relationship file, cite that official file, and include the date it was verified. Check disputed boundaries against HUD's USPS residential-address crosswalk; do not use sales-tax jurisdiction reports as a substitute for residential geography. The validator rejects numeric ZIP aliases on city-wide records so a city's broader county footprint cannot leak into a ZIP result.

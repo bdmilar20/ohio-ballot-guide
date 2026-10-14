@@ -33,11 +33,14 @@ test("records county choices for single- and cross-county ZIPs", () => {
   const crossCounty = resolveLocation("43235", data.locations);
   const singleCounty = resolveLocation("44113", data.locations);
   const columbusZip = resolveLocation("43215", data.locations);
-  const cincinnatiZip = resolveLocation("45220", data.locations);
   assert.deepEqual(crossCounty?.county_ids, ["franklin", "delaware"]);
   assert.deepEqual(singleCounty?.county_ids, ["cuyahoga"]);
   assert.deepEqual(columbusZip?.county_ids, ["franklin"]);
-  assert.deepEqual(cincinnatiZip?.county_ids, ["clermont", "hamilton"]);
+  assert.deepEqual(resolveLocation("45212", data.locations)?.county_ids, ["hamilton"]);
+  assert.deepEqual(resolveLocation("45220", data.locations)?.county_ids, ["hamilton"]);
+  assert.deepEqual(resolveLocation("45240", data.locations)?.county_ids, ["hamilton"]);
+  assert.deepEqual(resolveLocation("45249", data.locations)?.county_ids, ["hamilton", "warren"]);
+  assert.deepEqual(resolveLocation("45251", data.locations)?.county_ids, ["hamilton"]);
 });
 
 test("returns county races only after a county is selected", () => {
