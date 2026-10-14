@@ -1,192 +1,235 @@
 {
   "meta": {
     "jurisdiction": "Ohio",
-    "election_name": "2026 General/Special Election",
-    "election_date": "2026-11-03",
     "last_reviewed": "2026-10-14",
     "coverage_note": "Statewide contests plus one countywide pilot contest for Franklin, Cuyahoga, and Hamilton counties."
   },
+  "counties": {
+    "franklin": { "name": "Franklin County" },
+    "delaware": { "name": "Delaware County" },
+    "fairfield": { "name": "Fairfield County" },
+    "cuyahoga": { "name": "Cuyahoga County" },
+    "hamilton": { "name": "Hamilton County" }
+  },
   "locations": [
     {
-      "display_name": "Columbus",
-      "county_id": "franklin",
-      "county_name": "Franklin County",
-      "aliases": ["Columbus", "Columbus, Ohio", "43201", "43202", "43203", "43204", "43205", "43206", "43207", "43209", "43210", "43211", "43212", "43213", "43214", "43215", "43219", "43220", "43221", "43222", "43223", "43224", "43227", "43228", "43229", "43230", "43231", "43232", "43235"]
+      "id": "zip-43235",
+      "display_name": "43235",
+      "county_ids": ["franklin", "delaware"],
+      "aliases": ["43235"]
     },
     {
+      "id": "columbus",
+      "display_name": "Columbus",
+      "county_ids": ["franklin", "delaware", "fairfield"],
+      "aliases": ["Columbus", "Columbus, Ohio", "43201", "43202", "43203", "43204", "43205", "43206", "43207", "43209", "43210", "43211", "43212", "43213", "43214", "43215", "43219", "43220", "43221", "43222", "43223", "43224", "43227", "43228", "43229", "43230", "43231", "43232"]
+    },
+    {
+      "id": "cleveland",
       "display_name": "Cleveland",
-      "county_id": "cuyahoga",
-      "county_name": "Cuyahoga County",
+      "county_ids": ["cuyahoga"],
       "aliases": ["Cleveland", "Cleveland, Ohio", "44101", "44102", "44103", "44104", "44105", "44106", "44107", "44108", "44109", "44110", "44111", "44112", "44113", "44114", "44115", "44118", "44119", "44120", "44121", "44122", "44124", "44125", "44126", "44127", "44128", "44129", "44130", "44131", "44132", "44134", "44135", "44137"]
     },
     {
+      "id": "cincinnati",
       "display_name": "Cincinnati",
-      "county_id": "hamilton",
-      "county_name": "Hamilton County",
+      "county_ids": ["hamilton"],
       "aliases": ["Cincinnati", "Cincinnati, Ohio", "45202", "45203", "45204", "45205", "45206", "45207", "45208", "45209", "45211", "45212", "45213", "45214", "45215", "45216", "45217", "45218", "45219", "45220", "45223", "45224", "45225", "45226", "45227", "45229", "45230", "45231", "45232", "45233", "45236", "45237", "45238", "45239", "45240", "45246", "45247", "45248", "45249", "45251", "45252", "45255"]
     }
   ],
-  "statewide_races": [
+  "elections": [
     {
-      "id": "governor",
-      "scope": "Statewide · Vote for one ticket",
-      "office": "Governor & Lieutenant Governor",
-      "last_verified": "2026-10-14",
-      "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
-      "candidates": [
-        { "name": "Amy Acton & David Pepper", "party": "Democratic" },
-        { "name": "Don Kissick & James L. Mills", "party": "Libertarian" },
-        { "name": "Vivek Ramaswamy & Robert A. McColley", "party": "Republican" },
-        { "name": "Timothy Grady & Andrea Neutzling", "party": "Write-in" },
-        { "name": "Heather Hill & Patrick Manley", "party": "Write-in" },
-        { "name": "Renea Turner & Jalen Turner", "party": "Write-in" },
-        { "name": "Ron Ula & Michael C. Lehnerd", "party": "Write-in" }
-      ]
-    },
-    {
-      "id": "us-senate",
-      "scope": "Statewide · Unexpired term ending 2029",
-      "office": "United States Senator",
-      "last_verified": "2026-10-14",
-      "source_url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf?sfvrsn=4b1792c0_739",
-      "candidates": [
-        { "name": "Sherrod Brown", "party": "Democratic" },
-        { "name": "Jon Husted", "party": "Republican" },
-        { "name": "Greg Levy", "party": "Nonpartisan" },
-        { "name": "William B. Redpath", "party": "Libertarian" },
-        { "name": "Stephen Faris", "party": "Write-in" },
-        { "name": "Anthony Holliman", "party": "Write-in" },
-        { "name": "Timothy Telymonde", "party": "Write-in" }
-      ]
-    },
-    {
-      "id": "attorney-general",
-      "scope": "Statewide · Vote for one",
-      "office": "Attorney General",
-      "last_verified": "2026-10-14",
-      "source_url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf?sfvrsn=4b1792c0_739",
-      "candidates": [
-        { "name": "John J. Kulewicz", "party": "Democratic" },
-        { "name": "Keith Faber", "party": "Republican" }
-      ]
-    },
-    {
-      "id": "secretary-of-state",
-      "scope": "Statewide · Vote for one",
-      "office": "Secretary of State",
-      "last_verified": "2026-10-14",
-      "source_url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf?sfvrsn=4b1792c0_739",
-      "candidates": [
-        { "name": "Allison Russo", "party": "Democratic" },
-        { "name": "Robert Sprague", "party": "Republican" },
-        { "name": "Tom Pruss", "party": "Libertarian" }
-      ]
-    },
-    {
-      "id": "auditor",
-      "scope": "Statewide · Vote for one",
-      "office": "Auditor of State",
-      "last_verified": "2026-10-14",
-      "source_url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf?sfvrsn=4b1792c0_739",
-      "candidates": [
-        { "name": "Annette Blackwell", "party": "Democratic" },
-        { "name": "Frank LaRose", "party": "Republican" }
-      ]
-    },
-    {
-      "id": "treasurer",
-      "scope": "Statewide · Vote for one",
-      "office": "Treasurer of State",
-      "last_verified": "2026-10-14",
-      "source_url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf?sfvrsn=4b1792c0_739",
-      "candidates": [
-        { "name": "Seth Walsh", "party": "Democratic" },
-        { "name": "Jay Edwards", "party": "Republican" }
-      ]
-    },
-    {
-      "id": "supreme-court-jan-1",
-      "scope": "Statewide · Term beginning January 1, 2027",
-      "office": "Justice of the Ohio Supreme Court",
-      "last_verified": "2026-10-14",
-      "source_url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf?sfvrsn=4b1792c0_739",
-      "candidates": [
-        { "name": "Marilyn Zayas", "party": "Democratic" },
-        { "name": "Daniel R. Hawkins", "party": "Republican" }
-      ]
-    },
-    {
-      "id": "supreme-court-jan-2",
-      "scope": "Statewide · Term beginning January 2, 2027",
-      "office": "Justice of the Ohio Supreme Court",
-      "last_verified": "2026-10-14",
-      "source_url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf?sfvrsn=4b1792c0_739",
-      "candidates": [
-        { "name": "Jennifer Brunner", "party": "Democratic" },
-        { "name": "Colleen O’Donnell", "party": "Republican" }
-      ]
-    }
-  ],
-  "counties": {
-    "franklin": {
-      "name": "Franklin County",
-      "races": [
+      "id": "2026-11-03-general",
+      "name": "2026 General/Special Election",
+      "date": "2026-11-03",
+      "type": "general",
+      "scope": "statewide",
+      "jurisdiction_ids": ["ohio"],
+      "official_info_url": "https://www.ohiosos.gov/elections/voting-schedule-text-only",
+      "registration_deadline": "2026-10-05",
+      "early_voting_end": "2026-11-01",
+      "polls": {
+        "open": "6:30 a.m.",
+        "close": "7:30 p.m."
+      },
+      "statewide_races": [
         {
-          "id": "franklin-commissioner",
-          "scope": "Franklin County · Vote for one",
-          "office": "County Commissioner",
+          "id": "governor",
+          "scope": "Statewide · Vote for one ticket",
+          "office": "Governor & Lieutenant Governor",
           "last_verified": "2026-10-14",
-          "source_url": "https://vote.franklincountyohio.gov/election-info/2026",
+          "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
+          "supplemental_sources": [
+            {
+              "label": "Qualified write-ins",
+              "url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf"
+            }
+          ],
           "candidates": [
-            { "name": "Erica C. Crawley", "party": "Democratic" },
-            { "name": "Denise D’Angelo", "party": "Republican" },
-            { "name": "Eric Terford", "party": "Libertarian" }
+            { "name": "Amy Acton & David Pepper", "party": "Democratic" },
+            { "name": "Don Kissick & James L. Mills", "party": "Libertarian" },
+            { "name": "Vivek Ramaswamy & Robert A. McColley", "party": "Republican" },
+            { "name": "Timothy Grady & Andrea Neutzling", "party": "Write-in" },
+            { "name": "Heather Hill & Patrick Manley", "party": "Write-in" },
+            { "name": "Renea Turner & Jalen Turner", "party": "Write-in" },
+            { "name": "Ron Ula & Michael C. Lehnerd", "party": "Write-in" }
+          ]
+        },
+        {
+          "id": "us-senate",
+          "scope": "Statewide · Unexpired term ending 2029",
+          "office": "United States Senator",
+          "last_verified": "2026-10-14",
+          "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
+          "supplemental_sources": [
+            {
+              "label": "Qualified write-ins",
+              "url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf"
+            }
+          ],
+          "candidates": [
+            { "name": "Sherrod Brown", "party": "Democratic" },
+            { "name": "Jon Husted", "party": "Republican" },
+            { "name": "Greg Levy", "party": "Other-party candidate" },
+            { "name": "William B. Redpath", "party": "Libertarian" },
+            { "name": "Stephen Faris", "party": "Write-in" },
+            { "name": "Anthony Holliman", "party": "Write-in" },
+            { "name": "Timothy Telymonde", "party": "Write-in" }
+          ]
+        },
+        {
+          "id": "attorney-general",
+          "scope": "Statewide · Vote for one",
+          "office": "Attorney General",
+          "last_verified": "2026-10-14",
+          "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
+          "candidates": [
+            { "name": "John J. Kulewicz", "party": "Democratic" },
+            { "name": "Keith Faber", "party": "Republican" }
+          ]
+        },
+        {
+          "id": "secretary-of-state",
+          "scope": "Statewide · Vote for one",
+          "office": "Secretary of State",
+          "last_verified": "2026-10-14",
+          "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
+          "candidates": [
+            { "name": "Allison Russo", "party": "Democratic" },
+            { "name": "Robert Sprague", "party": "Republican" },
+            { "name": "Tom Pruss", "party": "Libertarian" }
+          ]
+        },
+        {
+          "id": "auditor",
+          "scope": "Statewide · Vote for one",
+          "office": "Auditor of State",
+          "last_verified": "2026-10-14",
+          "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
+          "candidates": [
+            { "name": "Annette Blackwell", "party": "Democratic" },
+            { "name": "Frank LaRose", "party": "Republican" }
+          ]
+        },
+        {
+          "id": "treasurer",
+          "scope": "Statewide · Vote for one",
+          "office": "Treasurer of State",
+          "last_verified": "2026-10-14",
+          "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
+          "candidates": [
+            { "name": "Seth Walsh", "party": "Democratic" },
+            { "name": "Jay Edwards", "party": "Republican" }
+          ]
+        },
+        {
+          "id": "supreme-court-jan-1",
+          "scope": "Statewide · Term beginning January 1, 2027",
+          "office": "Justice of the Ohio Supreme Court",
+          "last_verified": "2026-10-14",
+          "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
+          "candidates": [
+            { "name": "Marilyn Zayas", "party": "Democratic" },
+            { "name": "Daniel R. Hawkins", "party": "Republican" }
+          ]
+        },
+        {
+          "id": "supreme-court-jan-2",
+          "scope": "Statewide · Term beginning January 2, 2027",
+          "office": "Justice of the Ohio Supreme Court",
+          "last_verified": "2026-10-14",
+          "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
+          "candidates": [
+            { "name": "Jennifer Brunner", "party": "Democratic" },
+            { "name": "Colleen O’Donnell", "party": "Republican" }
           ]
         }
-      ]
-    },
-    "cuyahoga": {
-      "name": "Cuyahoga County",
-      "races": [
-        {
-          "id": "cuyahoga-executive",
-          "scope": "Cuyahoga County · Vote for one",
-          "office": "County Executive",
-          "last_verified": "2026-10-14",
-          "source_url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf?sfvrsn=4b1792c0_739",
-          "candidates": [
-            { "name": "Chris Ronayne", "party": "Democratic" },
-            { "name": "Christopher Michael Litwinowicz", "party": "Write-in" }
+      ],
+      "counties": {
+        "franklin": {
+          "races": [
+            {
+              "id": "franklin-commissioner",
+              "scope": "Franklin County · Vote for one",
+              "office": "County Commissioner",
+              "last_verified": "2026-10-14",
+              "source_url": "https://vote.franklincountyohio.gov/election-info/2026",
+              "candidates": [
+                { "name": "Erica C. Crawley", "party": "Democratic" },
+                { "name": "Denise D’Angelo", "party": "Republican" },
+                { "name": "Eric Terford", "party": "Libertarian" }
+              ]
+            }
+          ]
+        },
+        "delaware": {
+          "races": []
+        },
+        "fairfield": {
+          "races": []
+        },
+        "cuyahoga": {
+          "races": [
+            {
+              "id": "cuyahoga-executive",
+              "scope": "Cuyahoga County · Vote for one",
+              "office": "County Executive",
+              "last_verified": "2026-10-14",
+              "source_url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf",
+              "candidates": [
+                { "name": "Chris Ronayne", "party": "Democratic" },
+                { "name": "Christopher Michael Litwinowicz", "party": "Write-in" }
+              ]
+            }
+          ]
+        },
+        "hamilton": {
+          "races": [
+            {
+              "id": "hamilton-commissioner",
+              "scope": "Hamilton County · Vote for one",
+              "office": "County Commissioner",
+              "last_verified": "2026-10-14",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Meeka Owens", "party": "Democratic" },
+                { "name": "Jonathan Pearson", "party": "Republican" },
+                { "name": "Carrie R. Davis", "party": "Write-in" }
+              ]
+            }
           ]
         }
-      ]
-    },
-    "hamilton": {
-      "name": "Hamilton County",
-      "races": [
+      },
+      "issues": [
         {
-          "id": "hamilton-commissioner",
-          "scope": "Hamilton County · Vote for one",
-          "office": "County Commissioner",
+          "id": "state-issue-3",
+          "label": "State Issue 3",
+          "title": "Voter photo identification amendment",
+          "summary": "A proposed constitutional amendment concerning photo identification requirements for voting. Read the certified explanation and the official arguments before deciding.",
           "last_verified": "2026-10-14",
-          "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
-          "candidates": [
-            { "name": "Meeka Owens", "party": "Democratic" },
-            { "name": "Jonathan Pearson", "party": "Republican" },
-            { "name": "Carrie R. Davis", "party": "Write-in" }
-          ]
+          "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf"
         }
       ]
-    }
-  },
-  "issues": [
-    {
-      "id": "state-issue-3",
-      "label": "State Issue 3",
-      "title": "Voter photo identification amendment",
-      "summary": "A proposed constitutional amendment concerning photo identification requirements for voting. Read the certified explanation and the official arguments before deciding.",
-      "last_verified": "2026-10-14",
-      "source_url": "https://www.ohiosos.gov/office/media-center/categories/press-releases/2026-08-18"
     }
   ]
 }

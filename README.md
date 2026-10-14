@@ -2,7 +2,7 @@
 
 A small, nonpartisan, open-source guide to upcoming Ohio elections. Visitors enter a city or ZIP code and receive a concise view of statewide contests, pilot county races, election dates, and links to official sources—without creating an account.
 
-This first release covers the November 3, 2026 general election. Statewide contest data is available throughout Ohio; countywide pilot data is available for Franklin, Cuyahoga, and Hamilton counties. A city or ZIP cannot determine an exact precinct ballot, so the guide always links to Ohio's official sample-ballot directory.
+The first populated election is the November 3, 2026 general election. Statewide contest data is available throughout Ohio; countywide pilot data is available for Franklin, Cuyahoga, and Hamilton counties. A city or ZIP cannot determine an exact precinct ballot, so the guide never infers county races from a ZIP alone and always links to Ohio's official sample-ballot directory.
 
 ## Run locally
 
@@ -23,7 +23,9 @@ npm test
 
 ## Data model
 
-All public election data lives in [`data/elections.json`](data/elections.json). Every contest must include:
+All public election data lives in [`data/elections.json`](data/elections.json). The root `elections` array can hold general, primary, special, and local elections. The site selects the nearest election whose date has not passed, so adding a future record does not require an application release.
+
+The root county registry supplies stable county names for location matching. Each election includes a stable ID, date, type, scope, official information URL, voting deadlines, statewide contests, covered county records, and issues. Every contest must include:
 
 - a stable ID;
 - its geographic scope and office;
@@ -31,7 +33,7 @@ All public election data lives in [`data/elections.json`](data/elections.json). 
 - an official source URL; and
 - a `last_verified` date.
 
-Candidate affiliations are labels from the official candidate lists. The project does not endorse candidates or summarize policy positions in this release.
+Candidate affiliations are labels from the official candidate lists. The project does not endorse candidates or summarize policy positions in this release. Location records use `county_ids` because a city or ZIP may cross county lines; ambiguous city matches require the voter to choose a county before any pilot county race appears.
 
 ## Contributing
 

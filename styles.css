@@ -35,6 +35,11 @@ input {
   font: inherit;
 }
 
+button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;
@@ -213,6 +218,13 @@ h2 {
   font-size: 0.75rem;
 }
 
+.data-status {
+  margin: 0.65rem 0 0;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .quick-picks {
   display: flex;
   flex-wrap: wrap;
@@ -369,9 +381,44 @@ h2 {
   font-size: 0.88rem;
 }
 
+.county-choice {
+  margin: -0.5rem 0 1.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: var(--surface);
+  padding: 1rem 1.15rem;
+}
+
+.county-choice p {
+  margin-bottom: 0.75rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.county-choice > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.county-choice button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0.5rem 0.8rem;
+}
+
+.county-choice button:hover,
+.county-choice button:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .essentials {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   margin-bottom: 5rem;
   border: 1px solid var(--line);
   border-radius: 0.8rem;
@@ -474,6 +521,14 @@ h2 {
   text-transform: uppercase;
 }
 
+.race-sources {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem 0.75rem;
+}
+
 .race-source {
   flex: none;
   color: var(--accent);
@@ -553,11 +608,41 @@ h2 {
   color: #e5e1d9;
 }
 
+.issue-card .verified {
+  margin: 0.9rem 0 0;
+  color: #bdb8ae;
+}
+
 .issue-card a {
   color: white;
   font-size: 0.78rem;
   font-weight: 700;
   text-underline-offset: 0.25rem;
+}
+
+.later-elections {
+  margin-top: 4.8rem;
+}
+
+.later-elections ul {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1.2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.later-elections li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  border-top: 1px solid var(--line);
+  padding: 0.9rem 0;
+}
+
+.later-elections li span {
+  flex: none;
+  color: var(--muted);
 }
 
 .exact-ballot {

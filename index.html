@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="A simple, source-first guide to Ohio's November 3, 2026 election."
+      content="A simple, source-first guide to upcoming Ohio elections."
     />
     <meta name="theme-color" content="#f7f3eb" />
     <title>Ohio Ballot Guide</title>
@@ -25,7 +25,7 @@
     <main id="main">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">November 3, 2026 · Ohio</p>
+          <p class="eyebrow" id="hero-election-date">Loading Ohio’s next election…</p>
           <h1 id="hero-title">Know what’s on your ballot.</h1>
           <p class="hero-intro">
             Enter a city or ZIP code for a calm, source-first look at the next election.
@@ -43,25 +43,26 @@
                 placeholder="Try Columbus or 44113"
                 required
               />
-              <button type="submit">Show my guide</button>
+              <button type="submit" disabled>Show my guide</button>
             </div>
             <p class="form-note">Ohio only · City and ZIP matches are approximate</p>
+            <p class="data-status" id="data-status" role="status">Loading verified election data…</p>
           </form>
 
           <div class="quick-picks" aria-label="Try a pilot city">
             <span>Try</span>
-            <button type="button" data-location="Columbus">Columbus</button>
-            <button type="button" data-location="Cleveland">Cleveland</button>
-            <button type="button" data-location="Cincinnati">Cincinnati</button>
+            <button type="button" data-location="Columbus" disabled>Columbus</button>
+            <button type="button" data-location="Cleveland" disabled>Cleveland</button>
+            <button type="button" data-location="Cincinnati" disabled>Cincinnati</button>
           </div>
         </div>
 
-        <aside class="date-card" aria-label="Election date">
-          <div class="date-card-top">Next election</div>
-          <div class="date-card-date"><span>Nov</span><strong>03</strong></div>
-          <div class="date-card-bottom">Tuesday · 2026</div>
+        <aside class="date-card" id="date-card" aria-label="Election date" hidden>
+          <div class="date-card-top" id="date-card-label">Next election</div>
+          <div class="date-card-date"><span id="date-month">—</span><strong id="date-day">—</strong></div>
+          <div class="date-card-bottom" id="date-weekday-year">Date loading</div>
           <div class="date-card-rule"></div>
-          <p>Polls open<br /><strong>6:30 a.m.–7:30 p.m.</strong></p>
+          <p>Polls open<br /><strong id="date-polls">Hours loading</strong></p>
         </aside>
       </section>
 
@@ -75,7 +76,7 @@
         <div class="results-heading">
           <div>
             <p class="eyebrow" id="result-kicker">Your guide</p>
-            <h2 id="result-title">November 3 general election</h2>
+            <h2 id="result-title">Upcoming election</h2>
             <p id="result-summary"></p>
           </div>
           <button class="text-button" id="new-search" type="button">Change location</button>
@@ -83,16 +84,26 @@
 
         <div class="notice" id="coverage-notice"></div>
 
+        <section class="county-choice" id="county-choice" aria-labelledby="county-choice-prompt" hidden>
+          <p id="county-choice-prompt"></p>
+          <div id="county-options"></div>
+        </section>
+
         <div class="essentials" aria-label="Election essentials">
           <article>
             <span>Vote on</span>
-            <strong><a href="https://www.ohiosos.gov/elections/voting-schedule-text-only" target="_blank" rel="noreferrer">Tuesday, November 3</a></strong>
-            <small>Polls: 6:30 a.m.–7:30 p.m.</small>
+            <strong><a id="vote-date-link" href="https://www.ohiosos.gov/elections/voting-schedule-text-only" target="_blank" rel="noreferrer">Date loading</a></strong>
+            <small id="poll-hours">Poll hours loading</small>
           </article>
           <article>
             <span>Vote early</span>
-            <strong><a href="https://www.ohiosos.gov/elections/voting-schedule-text-only" target="_blank" rel="noreferrer">Through November 1</a></strong>
+            <strong><a id="early-date-link" href="https://www.ohiosos.gov/elections/voting-schedule-text-only" target="_blank" rel="noreferrer">Date loading</a></strong>
             <small>Hours vary by day</small>
+          </article>
+          <article>
+            <span>Register by</span>
+            <strong><a id="registration-deadline" href="https://www.ohiosos.gov/elections/voting-schedule-text-only" target="_blank" rel="noreferrer">Date loading</a></strong>
+            <small>Check your registration status</small>
           </article>
           <article>
             <span>Bring</span>
@@ -101,16 +112,18 @@
           </article>
         </div>
 
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Candidate guide</p>
-            <h2>Statewide contests</h2>
+        <section id="statewide-section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Candidate guide</p>
+              <h2>Statewide contests</h2>
+            </div>
+            <button class="quiet-button" id="toggle-races" type="button" aria-expanded="false">
+              Show all contests
+            </button>
           </div>
-          <button class="quiet-button" id="toggle-races" type="button" aria-expanded="false">
-            Show all contests
-          </button>
-        </div>
-        <div class="race-list" id="statewide-races"></div>
+          <div class="race-list" id="statewide-races"></div>
+        </section>
 
         <section id="local-section">
           <div class="section-heading compact">
@@ -125,11 +138,17 @@
         <section class="issue-section" id="issue-section">
           <div class="section-heading compact">
             <div>
-              <p class="eyebrow">On every Ohio ballot</p>
-              <h2>Statewide issue</h2>
+              <p class="eyebrow" id="issue-kicker">On every Ohio ballot</p>
+              <h2>Ballot issues</h2>
             </div>
           </div>
           <div id="issues"></div>
+        </section>
+
+        <section class="later-elections" id="later-elections" hidden>
+          <p class="eyebrow">Also scheduled</p>
+          <h2>Later elections</h2>
+          <ul id="later-election-list"></ul>
         </section>
 
         <section class="exact-ballot">
@@ -158,8 +177,8 @@
         <div class="about-copy">
           <p>
             Ohio election information lives across state and county websites. This pilot
-            keeps a small set of verified facts in version-controlled files and links every
-            contest back to its official source.
+            keeps verified elections in a dated, version-controlled collection and links
+            every contest back to its official source.
           </p>
           <p>
             The first release covers statewide contests and countywide pilot data for
@@ -182,7 +201,9 @@
             <p class="race-scope"></p>
             <h3></h3>
           </div>
-          <a class="race-source" target="_blank" rel="noreferrer">Source <span aria-hidden="true">↗</span></a>
+          <div class="race-sources">
+            <a class="race-source" target="_blank" rel="noreferrer">Official ballot <span aria-hidden="true">↗</span></a>
+          </div>
         </div>
         <ul class="candidate-list"></ul>
         <p class="verified"></p>

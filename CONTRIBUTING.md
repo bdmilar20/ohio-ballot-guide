@@ -4,7 +4,7 @@ Thank you for helping make Ohio election information easier to inspect.
 
 ## Data corrections
 
-1. Edit `data/elections.json`.
+1. Edit the matching record in the `elections` array in `data/elections.json`.
 2. Link the correction to an official Ohio Secretary of State or county board of elections source.
 3. Set `last_verified` to the date you checked the official source.
 4. Run `npm run check` and `npm test`.
@@ -15,3 +15,9 @@ Keep descriptions factual and concise. Candidate campaign websites may provide u
 ## Coverage additions
 
 Add county coverage in small, reviewable changes. Start with countywide races, then add district-level data only when the location-to-district mapping is documented and tested.
+
+## Adding an election
+
+Add a new dated object to the `elections` array instead of replacing an existing election. Include its `type`, `scope`, official schedule URL, registration deadline, early-voting end date, poll hours, contests, counties, and issues. The application sorts the collection and shows the nearest election that has not passed.
+
+Use an empty array when an election has no statewide races or issues. Add county names to the root `counties` registry, and put only this election's county coverage in the election's `counties` object. Do not map a city or ZIP to one county when the place crosses county lines; list every known county ID and let the interface ask the voter.
