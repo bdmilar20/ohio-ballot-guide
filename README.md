@@ -2,7 +2,7 @@
 
 A small, nonpartisan, open-source guide to upcoming Ohio elections. Visitors enter a city or ZIP code and receive a concise view of statewide contests, pilot county races, election dates, and links to official sources—without creating an account.
 
-The first populated election is the November 3, 2026 general election. Statewide contest data is available throughout Ohio; countywide pilot data is available for Franklin, Cuyahoga, and Hamilton counties. A city or ZIP cannot determine an exact precinct ballot, so the guide never infers county races from a ZIP alone and always links to Ohio's official sample-ballot directory.
+The first populated election is the November 3, 2026 general election. Statewide contest data is available throughout Ohio; countywide pilot data is available for Franklin, Cuyahoga, and Hamilton counties. The official 2027 primary/special, special, and general election dates are also included as schedule-only records while their ballots are not yet certified. A city or ZIP cannot determine an exact precinct ballot, so cross-county matches require the voter to choose a county and every result links to Ohio's official sample-ballot directory.
 
 ## Run locally
 
@@ -33,7 +33,7 @@ The root county registry supplies stable county names for location matching. Eac
 - an official source URL; and
 - a `last_verified` date.
 
-Candidate affiliations are labels from the official candidate lists. The project does not endorse candidates or summarize policy positions in this release. Location records use `county_ids` because a city or ZIP may cross county lines; ambiguous city matches require the voter to choose a county before any pilot county race appears.
+Candidate affiliations are labels from the official candidate lists. The project does not endorse candidates or summarize policy positions in this release. Location records use `county_ids` because a city or ZIP may cross county lines. A match with one documented county shows that county's pilot coverage; a cross-county match asks the voter to choose before any county race appears.
 
 ## Contributing
 

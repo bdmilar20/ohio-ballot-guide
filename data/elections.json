@@ -230,6 +230,60 @@
           "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf"
         }
       ]
+    },
+    {
+      "id": "2027-05-04-primary-special",
+      "name": "2027 Primary/Special Election (where scheduled)",
+      "date": "2027-05-04",
+      "type": "primary",
+      "scope": "municipal",
+      "jurisdiction_ids": ["ohio"],
+      "official_info_url": "https://www.ohiosos.gov/assets/election-calendar-2027.pdf",
+      "registration_deadline": "2027-04-05",
+      "early_voting_end": "2027-05-02",
+      "polls": {
+        "open": "6:30 a.m.",
+        "close": "7:30 p.m."
+      },
+      "statewide_races": [],
+      "counties": {},
+      "issues": []
+    },
+    {
+      "id": "2027-08-03-special",
+      "name": "2027 Special Election (where scheduled)",
+      "date": "2027-08-03",
+      "type": "special",
+      "scope": "municipal",
+      "jurisdiction_ids": ["ohio"],
+      "official_info_url": "https://www.ohiosos.gov/assets/election-calendar-2027.pdf",
+      "registration_deadline": "2027-07-06",
+      "early_voting_end": "2027-08-01",
+      "polls": {
+        "open": "6:30 a.m.",
+        "close": "7:30 p.m."
+      },
+      "statewide_races": [],
+      "counties": {},
+      "issues": []
+    },
+    {
+      "id": "2027-11-02-general",
+      "name": "2027 General Election (where scheduled)",
+      "date": "2027-11-02",
+      "type": "general",
+      "scope": "municipal",
+      "jurisdiction_ids": ["ohio"],
+      "official_info_url": "https://www.ohiosos.gov/assets/election-calendar-2027.pdf",
+      "registration_deadline": "2027-10-04",
+      "early_voting_end": "2027-10-31",
+      "polls": {
+        "open": "6:30 a.m.",
+        "close": "7:30 p.m."
+      },
+      "statewide_races": [],
+      "counties": {},
+      "issues": []
     }
   ]
 }

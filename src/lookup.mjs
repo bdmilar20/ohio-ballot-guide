@@ -8,10 +8,6 @@ export function normalizeQuery(value) {
     .replace(/\s+/g, " ");
 }
 
-export function isZipQuery(value) {
-  return /^\d{5}$/.test(normalizeQuery(value));
-}
-
 export function resolveLocation(query, locations) {
   const normalized = normalizeQuery(query);
 
@@ -26,6 +22,14 @@ export function resolveLocation(query, locations) {
 
 export function racesForCounty(countyId, counties) {
   return counties[countyId]?.races ?? [];
+}
+
+export function hasPublishedBallotDetails(election) {
+  return (
+    election.statewide_races.length > 0 ||
+    election.issues.length > 0 ||
+    Object.values(election.counties).some(({ races }) => races.length > 0)
+  );
 }
 
 function datePartsInOhio(value) {

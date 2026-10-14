@@ -4,7 +4,7 @@ import test from "node:test";
 
 import {
   daysUntilElection,
-  isZipQuery,
+  hasPublishedBallotDetails,
   normalizeQuery,
   racesForCounty,
   resolveLocation,
@@ -28,11 +28,11 @@ test("resolves city and ZIP aliases", () => {
   assert.equal(resolveLocation("44113", data.locations)?.id, "cleveland");
 });
 
-test("records known cross-county ZIPs without choosing a county", () => {
-  const location = resolveLocation("43235", data.locations);
-  assert.deepEqual(location?.county_ids, ["franklin", "delaware"]);
-  assert.equal(isZipQuery("43235"), true);
-  assert.equal(isZipQuery("Columbus"), false);
+test("records county choices for single- and cross-county ZIPs", () => {
+  const crossCounty = resolveLocation("43235", data.locations);
+  const singleCounty = resolveLocation("44113", data.locations);
+  assert.deepEqual(crossCounty?.county_ids, ["franklin", "delaware"]);
+  assert.deepEqual(singleCounty?.county_ids, ["cuyahoga"]);
 });
 
 test("returns county races only after a county is selected", () => {
@@ -56,7 +56,25 @@ test("selects the nearest upcoming election and skips past elections", () => {
   assert.equal(selectNextElection(elections, "2027-05-05"), null);
 });
 
+test("published data continues with Ohio's 2027 election schedule", () => {
+  assert.equal(
+    selectNextElection(data.elections, "2026-11-04")?.id,
+    "2027-05-04-primary-special",
+  );
+  assert.deepEqual(
+    upcomingElections(data.elections, "2027-05-05").map(({ id }) => id),
+    ["2027-08-03-special", "2027-11-02-general"],
+  );
+});
+
+test("distinguishes populated ballots from schedule-only election dates", () => {
+  assert.equal(hasPublishedBallotDetails(data.elections[0]), true);
+  assert.equal(hasPublishedBallotDetails(data.elections[1]), false);
+});
+
 test("calculates the election countdown by Ohio calendar date", () => {
   assert.equal(daysUntilElection("2026-11-03", "2026-10-14"), 20);
   assert.equal(daysUntilElection("2026-11-03", "2026-11-03"), 0);
+  assert.equal(daysUntilElection("2026-11-03", new Date("2026-10-15T03:30:00Z")), 20);
+  assert.equal(daysUntilElection("2026-11-03", new Date("2026-10-15T04:30:00Z")), 19);
 });

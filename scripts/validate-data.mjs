@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const data = JSON.parse(
-  await readFile(new URL("../data/elections.json", import.meta.url), "utf8"),
-);
+import { normalizeQuery } from "../src/lookup.mjs";
+
+const dataSource = process.argv[2] ?? new URL("../data/elections.json", import.meta.url);
+const data = JSON.parse(await readFile(dataSource, "utf8"));
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const electionTypes = new Set(["general", "primary", "special", "local"]);
 const electionScopes = new Set(["statewide", "county", "municipal"]);
@@ -36,6 +37,7 @@ let raceCount = 0;
 let issueCount = 0;
 
 for (const election of data.elections) {
+  assert.ok(election.id, "each election needs an id");
   assert.ok(!electionIds.has(election.id), `duplicate election id: ${election.id}`);
   electionIds.add(election.id);
   assert.ok(election.name, `${election.id} needs a name`);
@@ -59,6 +61,7 @@ for (const election of data.elections) {
   for (const race of allRaces) {
     assert.ok(!raceIds.has(race.id), `duplicate race id in ${election.id}: ${race.id}`);
     raceIds.add(race.id);
+    assert.ok(race.scope, `${race.id} needs a scope`);
     assert.ok(race.office, `${race.id} needs an office`);
     assert.ok(race.candidates.length > 0, `${race.id} needs candidates`);
     for (const candidate of race.candidates) {
@@ -88,7 +91,7 @@ for (const election of data.elections) {
   issueCount += election.issues.length;
 }
 
-const aliases = new Set();
+const aliases = new Map();
 for (const location of data.locations) {
   assert.ok(location.id && location.display_name, "each location needs an id and display name");
   assert.ok(location.county_ids.length > 0, `${location.id} needs at least one county`);
@@ -96,9 +99,13 @@ for (const location of data.locations) {
     assert.ok(data.counties[countyId], `${location.id} references unknown county ${countyId}`);
   }
   for (const alias of location.aliases) {
-    const normalized = alias.trim().toLowerCase();
-    assert.ok(!aliases.has(normalized), `duplicate location alias: ${alias}`);
-    aliases.add(normalized);
+    const normalized = normalizeQuery(alias);
+    const existingLocationId = aliases.get(normalized);
+    assert.ok(
+      !existingLocationId || existingLocationId === location.id,
+      `location alias ${alias} collides with ${existingLocationId}`,
+    );
+    aliases.set(normalized, location.id);
   }
 }
 

@@ -1,10 +1,13 @@
 import {
   daysUntilElection,
-  isZipQuery,
+  hasPublishedBallotDetails,
   racesForCounty,
   resolveLocation,
   upcomingElections,
 } from "./src/lookup.mjs";
+
+const OFFICIAL_VOTING_SCHEDULE_URL =
+  "https://www.ohiosos.gov/elections/voting-schedule-text-only";
 
 const form = document.querySelector("#location-form");
 const input = document.querySelector("#location");
@@ -155,18 +158,24 @@ function renderElectionOverview() {
   const date = new Date(`${activeElection.date}T12:00:00Z`);
   const month = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }).format(date);
   const day = new Intl.DateTimeFormat("en-US", { day: "2-digit", timeZone: "UTC" }).format(date);
-  const weekdayYear = new Intl.DateTimeFormat("en-US", {
+  const weekday = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
+    timeZone: "UTC",
+  }).format(date);
+  const year = new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     timeZone: "UTC",
-  }).format(date).replace(",", " ·");
+  }).format(date);
   const daysAway = daysUntilElection(activeElection.date);
+  const timingLabel =
+    activeElection.scope === "statewide" ? "Next election" : "Next scheduled date";
 
   heroElectionDate.textContent = `${displayDate(activeElection.date)} · Ohio`;
-  dateCardLabel.textContent = daysAway === 0 ? "Election today" : `Next election · ${daysAway} days`;
+  dateCardLabel.textContent =
+    daysAway === 0 ? "Scheduled election date" : `${timingLabel} · ${daysAway} days`;
   dateMonth.textContent = month;
   dateDay.textContent = day;
-  dateWeekdayYear.textContent = weekdayYear;
+  dateWeekdayYear.textContent = `${weekday} · ${year}`;
   datePolls.textContent = `${activeElection.polls.open}–${activeElection.polls.close}`;
   dateCard.hidden = false;
 
@@ -213,7 +222,7 @@ function showCounty(countyId) {
   if (races.length === 0) {
     setNotice(
       `${county.name} coverage is not available yet.`,
-      "The statewide guide is ready below. Use the official sample-ballot link for your exact local contests.",
+      "The published election schedule is ready below. Use the official sample-ballot link for your exact local contests.",
     );
     return;
   }
@@ -222,7 +231,7 @@ function showCounty(countyId) {
   renderRaces(localContainer, races);
   setNotice(
     "Approximate location.",
-    `This match points to ${county.name}. City boundaries can cross district lines, so verify your precinct with the official sample-ballot link below.`,
+    `This match points to ${county.name}. Place and ZIP boundaries can cross district lines, so verify your precinct with the official sample-ballot link below.`,
   );
 }
 
@@ -245,31 +254,39 @@ function renderCountyChoice(location) {
 }
 
 function showGuide(query) {
-  if (!data || !activeElection) {
+  if (!data) {
     dataStatus.hidden = false;
     dataStatus.textContent = "Election data is still loading. Please try again in a moment.";
     return;
   }
 
+  if (!activeElection) {
+    dataStatus.hidden = false;
+    dataStatus.textContent = "No upcoming election data is published yet.";
+    return;
+  }
+
   const location = resolveLocation(query, data.locations);
-  const zipSearch = isZipQuery(query);
+  const hasBallotDetails = hasPublishedBallotDetails(activeElection);
   resultKicker.textContent = location ? `${location.display_name} match` : "Statewide guide";
   resultSummary.textContent = location
     ? `Showing the next scheduled election and the coverage available for ${location.display_name}.`
-    : `We do not have a local pilot match for “${query.trim()}” yet. The statewide guide is available below.`;
+    : `We do not have a local pilot match for “${query.trim()}” yet. ${
+        hasBallotDetails ? "The statewide guide" : "The published election schedule"
+      } is available below.`;
 
   countyChoice.hidden = true;
   localSection.hidden = true;
 
-  if (!location) {
+  if (!hasBallotDetails) {
+    setNotice(
+      "Ballot details are not published yet.",
+      "This date applies only where an election is scheduled. Use the official sample-ballot link below to confirm whether you have an election and see your local contests.",
+    );
+  } else if (!location) {
     setNotice(
       "Local coverage is still growing.",
-      "The pilot currently includes Franklin, Cuyahoga, and Hamilton counties. Statewide contests apply throughout Ohio.",
-    );
-  } else if (zipSearch) {
-    setNotice(
-      "ZIP codes do not define ballot boundaries.",
-      "County races stay hidden for ZIP-only searches because one ZIP can cross county lines. Use the official sample-ballot link below for your exact local contests.",
+      "The pilot currently includes Franklin, Cuyahoga, and Hamilton counties. Published statewide contests apply throughout Ohio.",
     );
   } else if (location.county_ids.length > 1) {
     setNotice(
@@ -327,7 +344,16 @@ try {
 
   if (!activeElection) {
     heroElectionDate.textContent = "No upcoming election published";
-    dataStatus.textContent = "No upcoming election data is published yet. Check Ohio’s official voting schedule for current dates.";
+    const scheduleLink = document.createElement("a");
+    setHttpsHref(scheduleLink, OFFICIAL_VOTING_SCHEDULE_URL);
+    scheduleLink.target = "_blank";
+    scheduleLink.rel = "noreferrer";
+    scheduleLink.textContent = "Check Ohio’s official voting schedule";
+    dataStatus.replaceChildren(
+      document.createTextNode("No upcoming election data is published yet. "),
+      scheduleLink,
+      document.createTextNode(" for current dates."),
+    );
   } else {
     renderElectionOverview();
     dataStatus.hidden = true;
