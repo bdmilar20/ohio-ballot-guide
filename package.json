@@ -1,0 +1,10 @@
+{
+  "name": "ohio-ballot-guide",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/validate-data.mjs",
+    "test": "node --test"
+  }
+}

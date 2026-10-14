@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="A simple, source-first guide to Ohio's November 3, 2026 election."
+    />
+    <meta name="theme-color" content="#f7f3eb" />
+    <title>Ohio Ballot Guide</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to ballot guide</a>
+
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="Ohio Ballot Guide home">
+        <span class="brand-mark" aria-hidden="true">OH</span>
+        <span>Ohio Ballot Guide</span>
+      </a>
+      <a class="source-link" href="#about">How this works</a>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">November 3, 2026 · Ohio</p>
+          <h1 id="hero-title">Know what’s on your ballot.</h1>
+          <p class="hero-intro">
+            Enter a city or ZIP code for a calm, source-first look at the next election.
+            No account. No tracking. No political spin.
+          </p>
+
+          <form class="search-form" id="location-form">
+            <label for="location">City or ZIP code</label>
+            <div class="search-row">
+              <input
+                id="location"
+                name="location"
+                type="search"
+                autocomplete="postal-code"
+                placeholder="Try Columbus or 44113"
+                required
+              />
+              <button type="submit">Show my guide</button>
+            </div>
+            <p class="form-note">Ohio only · City and ZIP matches are approximate</p>
+          </form>
+
+          <div class="quick-picks" aria-label="Try a pilot city">
+            <span>Try</span>
+            <button type="button" data-location="Columbus">Columbus</button>
+            <button type="button" data-location="Cleveland">Cleveland</button>
+            <button type="button" data-location="Cincinnati">Cincinnati</button>
+          </div>
+        </div>
+
+        <aside class="date-card" aria-label="Election date">
+          <div class="date-card-top">Next election</div>
+          <div class="date-card-date"><span>Nov</span><strong>03</strong></div>
+          <div class="date-card-bottom">Tuesday · 2026</div>
+          <div class="date-card-rule"></div>
+          <p>Polls open<br /><strong>6:30 a.m.–7:30 p.m.</strong></p>
+        </aside>
+      </section>
+
+      <section class="trust-strip" aria-label="Guide principles">
+        <p><span aria-hidden="true">✓</span> Official election sources</p>
+        <p><span aria-hidden="true">✓</span> Verification dates on every contest</p>
+        <p><span aria-hidden="true">✓</span> Open data you can inspect</p>
+      </section>
+
+      <section class="results" id="results" aria-live="polite" hidden>
+        <div class="results-heading">
+          <div>
+            <p class="eyebrow" id="result-kicker">Your guide</p>
+            <h2 id="result-title">November 3 general election</h2>
+            <p id="result-summary"></p>
+          </div>
+          <button class="text-button" id="new-search" type="button">Change location</button>
+        </div>
+
+        <div class="notice" id="coverage-notice"></div>
+
+        <div class="essentials" aria-label="Election essentials">
+          <article>
+            <span>Vote on</span>
+            <strong><a href="https://www.ohiosos.gov/elections/voting-schedule-text-only" target="_blank" rel="noreferrer">Tuesday, November 3</a></strong>
+            <small>Polls: 6:30 a.m.–7:30 p.m.</small>
+          </article>
+          <article>
+            <span>Vote early</span>
+            <strong><a href="https://www.ohiosos.gov/elections/voting-schedule-text-only" target="_blank" rel="noreferrer">Through November 1</a></strong>
+            <small>Hours vary by day</small>
+          </article>
+          <article>
+            <span>Bring</span>
+            <strong><a href="https://www.ohiosos.gov/elections/voter-ID-requirements" target="_blank" rel="noreferrer">Accepted photo ID</a></strong>
+            <small>Check the official requirements</small>
+          </article>
+        </div>
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Candidate guide</p>
+            <h2>Statewide contests</h2>
+          </div>
+          <button class="quiet-button" id="toggle-races" type="button" aria-expanded="false">
+            Show all contests
+          </button>
+        </div>
+        <div class="race-list" id="statewide-races"></div>
+
+        <section id="local-section">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Pilot coverage</p>
+              <h2 id="local-title">Countywide contest</h2>
+            </div>
+          </div>
+          <div class="race-list" id="local-races"></div>
+        </section>
+
+        <section class="issue-section" id="issue-section">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">On every Ohio ballot</p>
+              <h2>Statewide issue</h2>
+            </div>
+          </div>
+          <div id="issues"></div>
+        </section>
+
+        <section class="exact-ballot">
+          <div>
+            <p class="eyebrow">One last check</p>
+            <h2>Verify your exact ballot</h2>
+            <p>
+              A city or ZIP code cannot identify every district and precinct. Use Ohio’s
+              official sample-ballot directory before you vote.
+            </p>
+          </div>
+          <a
+            class="primary-link"
+            href="https://www.ohiosos.gov/directories/sample-ballot"
+            target="_blank"
+            rel="noreferrer"
+          >Open official sample ballot <span aria-hidden="true">↗</span></a>
+        </section>
+      </section>
+
+      <section class="about" id="about">
+        <div>
+          <p class="eyebrow">Built for trust</p>
+          <h2>Small on purpose.</h2>
+        </div>
+        <div class="about-copy">
+          <p>
+            Ohio election information lives across state and county websites. This pilot
+            keeps a small set of verified facts in version-controlled files and links every
+            contest back to its official source.
+          </p>
+          <p>
+            The first release covers statewide contests and countywide pilot data for
+            Franklin, Cuyahoga, and Hamilton counties. It does not predict an exact ballot.
+          </p>
+          <a href="https://braedenlocal.communities.buzz.xyz/git/94836163b88d94175e9adc593a22c0e0e6ef6fc6896407ee1ac494eb246f2da4/ohio-ballot-guide">Clone the open-source project <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Nonpartisan. Open source. Built with public election records.</p>
+      <p>Data last reviewed <span id="review-date">October 14, 2026</span>.</p>
+    </footer>
+
+    <template id="race-template">
+      <article class="race-card">
+        <div class="race-card-header">
+          <div>
+            <p class="race-scope"></p>
+            <h3></h3>
+          </div>
+          <a class="race-source" target="_blank" rel="noreferrer">Source <span aria-hidden="true">↗</span></a>
+        </div>
+        <ul class="candidate-list"></ul>
+        <p class="verified"></p>
+      </article>
+    </template>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
