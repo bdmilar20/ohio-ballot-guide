@@ -30,3 +30,10 @@ Use an empty array when an election has no statewide races or issues. Add county
 Keep city aliases and ZIP aliases in separate location records. Each ZIP record must list every county in the Census Bureau's ZCTA-to-county relationship file, cite that official file, and include the date it was verified. Check disputed boundaries against HUD's USPS residential-address crosswalk; do not use sales-tax jurisdiction reports as a substitute for residential geography. The validator rejects numeric ZIP aliases on city-wide records so a city's broader county footprint cannot leak into a ZIP result.
 
 List `county_ids` with the county holding most of the ZIP's residents first. The county picker offers the counties in that order and says nothing else about which one is likelier, so a minority county listed first points most of the ZIP at the wrong ballot. Take the shares from `POPPT` in the newest edition of the relationship file that carries population counts; `AREALAND_PART` in the current edition agrees on the ordering for every record here.
+
+## Design changes
+
+Read [`docs/DESIGN.md`](docs/DESIGN.md) before changing `styles.css` or the page
+structure. It records the standard the guide builds to, including the 12px type
+floor that `npm test` enforces and the rule against a red or blue brand accent
+in an election context.
