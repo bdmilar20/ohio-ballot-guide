@@ -33,7 +33,7 @@ The root county registry supplies stable county names for location matching. Eac
 - an official source URL; and
 - a `last_verified` date.
 
-Candidate affiliations are labels from the official candidate lists. The project does not endorse candidates or summarize policy positions in this release. Location records use `county_ids` because a city or ZIP may cross county lines. A match with one documented county shows that county's pilot coverage; a cross-county match asks the voter to choose before any county race appears.
+Candidate affiliations are labels from the official candidate lists. The project does not endorse candidates or summarize policy positions in this release. City and ZIP aliases have separate location records because their county footprints can differ. ZIP county mappings cite Ohio's official Finder download, a one-county match shows that county's pilot coverage, and a cross-county match asks the voter to choose before any county race appears.
 
 ## Contributing
 

@@ -13,11 +13,15 @@ export function resolveLocation(query, locations) {
 
   if (!normalized) return null;
 
-  return (
-    locations.find((location) =>
-      location.aliases.some((alias) => normalizeQuery(alias) === normalized),
-    ) ?? null
+  const location = locations.find((candidate) =>
+    candidate.aliases.some((alias) => normalizeQuery(alias) === normalized),
   );
+
+  if (!location) return null;
+
+  return location.kind === "zip"
+    ? { ...location, display_name: normalized }
+    : location;
 }
 
 export function racesForCounty(countyId, counties) {

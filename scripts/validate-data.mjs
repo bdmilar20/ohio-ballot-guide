@@ -8,6 +8,8 @@ const data = JSON.parse(await readFile(dataSource, "utf8"));
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const electionTypes = new Set(["general", "primary", "special", "local"]);
 const electionScopes = new Set(["statewide", "county", "municipal"]);
+const locationKinds = new Set(["city", "zip"]);
+const zipPattern = /^\d{5}$/;
 
 function assertDate(value, label) {
   assert.match(value, datePattern, `${label} must use YYYY-MM-DD`);
@@ -94,12 +96,22 @@ for (const election of data.elections) {
 const aliases = new Map();
 for (const location of data.locations) {
   assert.ok(location.id && location.display_name, "each location needs an id and display name");
+  assert.ok(locationKinds.has(location.kind), `${location.id} has an invalid location kind`);
   assert.ok(location.county_ids.length > 0, `${location.id} needs at least one county`);
   for (const countyId of location.county_ids) {
     assert.ok(data.counties[countyId], `${location.id} references unknown county ${countyId}`);
   }
+  if (location.kind === "zip") {
+    assertHttpsUrl(location.source_url, `${location.id}.source_url`);
+    assertDate(location.last_verified, `${location.id}.last_verified`);
+  }
   for (const alias of location.aliases) {
     const normalized = normalizeQuery(alias);
+    assert.equal(
+      zipPattern.test(normalized),
+      location.kind === "zip",
+      `${location.id} must ${location.kind === "zip" ? "only" : "not"} carry ZIP alias ${alias}`,
+    );
     const existingLocationId = aliases.get(normalized);
     assert.ok(
       !existingLocationId || existingLocationId === location.id,

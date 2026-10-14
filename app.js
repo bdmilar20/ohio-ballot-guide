@@ -270,7 +270,9 @@ function showGuide(query) {
   const hasBallotDetails = hasPublishedBallotDetails(activeElection);
   resultKicker.textContent = location ? `${location.display_name} match` : "Statewide guide";
   resultSummary.textContent = location
-    ? `Showing the next scheduled election and the coverage available for ${location.display_name}.`
+    ? hasBallotDetails
+      ? `Showing the next scheduled election and the coverage available for ${location.display_name}.`
+      : `Showing the next scheduled election for ${location.display_name}.`
     : `We do not have a local pilot match for “${query.trim()}” yet. ${
         hasBallotDetails ? "The statewide guide" : "The published election schedule"
       } is available below.`;

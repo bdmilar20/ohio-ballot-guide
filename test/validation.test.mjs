@@ -36,6 +36,16 @@ test("validator rejects aliases that collide after query normalization", async (
   assert.match(result.stderr, /location alias Cincinnati collides with cleveland/);
 });
 
+test("validator rejects a ZIP alias on a city-wide location", async (t) => {
+  const result = await validateFixture(t, (data) => {
+    const columbus = data.locations.find(({ id }) => id === "columbus");
+    columbus.aliases.push("43085");
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /columbus must not carry ZIP alias 43085/);
+});
+
 test("validator rejects a contest without a geographic scope", async (t) => {
   const result = await validateFixture(t, (data) => {
     delete data.elections[0].statewide_races[0].scope;

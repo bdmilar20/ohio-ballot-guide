@@ -20,4 +20,6 @@ Add county coverage in small, reviewable changes. Start with countywide races, t
 
 Add a new dated object to the `elections` array instead of replacing an existing election. Include its `type`, `scope`, official schedule URL, registration deadline, early-voting end date, poll hours, contests, counties, and issues. The application sorts the collection and shows the nearest election that has not passed.
 
-Use an empty array when an election has no statewide races or issues. Add county names to the root `counties` registry, and put only this election's county coverage in the election's `counties` object. Do not map a city or ZIP to one county when the place crosses county lines; list every known county ID and let the interface ask the voter.
+Use an empty array when an election has no statewide races or issues. Add county names to the root `counties` registry, and put only this election's county coverage in the election's `counties` object.
+
+Keep city aliases and ZIP aliases in separate location records. Each ZIP record must list every county the ZIP crosses, cite an official source, and include the date it was verified. The validator rejects numeric ZIP aliases on city-wide records so a city's broader county footprint cannot leak into a ZIP result.

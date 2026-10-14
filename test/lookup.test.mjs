@@ -25,14 +25,19 @@ test("normalizes Ohio city suffixes with or without comma spacing", () => {
 
 test("resolves city and ZIP aliases", () => {
   assert.equal(resolveLocation("Cincinnati", data.locations)?.id, "cincinnati");
-  assert.equal(resolveLocation("44113", data.locations)?.id, "cleveland");
+  assert.equal(resolveLocation("44113", data.locations)?.id, "zip-cleveland-cuyahoga");
+  assert.equal(resolveLocation("44113", data.locations)?.display_name, "44113");
 });
 
 test("records county choices for single- and cross-county ZIPs", () => {
   const crossCounty = resolveLocation("43235", data.locations);
   const singleCounty = resolveLocation("44113", data.locations);
+  const columbusZip = resolveLocation("43215", data.locations);
+  const cincinnatiZip = resolveLocation("45220", data.locations);
   assert.deepEqual(crossCounty?.county_ids, ["franklin", "delaware"]);
   assert.deepEqual(singleCounty?.county_ids, ["cuyahoga"]);
+  assert.deepEqual(columbusZip?.county_ids, ["franklin"]);
+  assert.deepEqual(cincinnatiZip?.county_ids, ["clermont", "hamilton"]);
 });
 
 test("returns county races only after a county is selected", () => {
