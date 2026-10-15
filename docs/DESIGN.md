@@ -95,17 +95,29 @@ a way it would not constrain an ordinary product:
   destructive actions only (`--destructive: #e40014`) and uses a muted green for
   affirmative state (`--accent-green: #366e56`).
 
-### Open: the accent is currently crimson
+### Resolved: the accent is moss green
 
-`--accent: #7b2432` is the one place this project does not follow the rule above.
-It is a deliberate, unresolved question rather than an oversight, and it belongs
-to the project owner, not to a reviewer.
+`--accent: #42594c` with `--accent-dark: #314037`. The guide shipped with a
+crimson accent (`#7b2432`), which read as a party color on a page whose own hero
+says "No political spin." The project owner chose green on 2026-10-15.
 
-The accent is fully tokenized — `--accent`, `--accent-dark`, and two `rgba()`
-literals in `styles.css` — so the decision is three values wide and reversible.
-It carries the eyebrow labels, the primary button, the date numeral, every
-source link and the focus ring. The repo already defines `--moss: #42594c`,
-within a few points of the NDS affirmative green, if the answer is to change it.
+Moss was already defined in `styles.css` for the notice rail, within a few points
+of the NDS affirmative green (`#366e56`), so the switch reuses an existing token
+rather than introducing a hue. It carries the eyebrow labels, the primary button,
+the date numeral, every source link and the focus ring.
+
+Contrast on the two surfaces, measured rather than assumed:
+
+| pair | ratio |
+|---|---|
+| `#42594c` on `--paper: #f7f3eb` | 6.86:1 |
+| `#42594c` on `--surface: #fffdf8` | 7.47:1 |
+| `white` on `#42594c` (primary button) | 7.60:1 |
+| `white` on `#314037` (button hover) | 10.94:1 |
+
+All clear WCAG 2.2 AA for normal text (4.5:1). The accent stays fully tokenized —
+`--accent`, `--accent-dark`, and two `rgba()` literals — so it remains four
+values wide and reversible.
 
 ## Content
 
