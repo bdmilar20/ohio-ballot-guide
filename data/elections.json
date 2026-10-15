@@ -146,6 +146,7 @@
               "id": "franklin-commissioner",
               "scope": "Franklin County · Vote for one",
               "office": "County Commissioner",
+              "office_id": "county-commissioner",
               "last_verified": "2026-10-15",
               "source_url": "https://vote.franklincountyohio.gov/getmedia/e0a4ca45-6893-45c1-8190-87696f8804b4/2026-General-Candidate-List-5",
               "candidates": [
@@ -157,6 +158,7 @@
               "id": "franklin-auditor",
               "scope": "Franklin County · Vote for one",
               "office": "County Auditor",
+              "office_id": "county-auditor",
               "last_verified": "2026-10-15",
               "source_url": "https://vote.franklincountyohio.gov/getmedia/e0a4ca45-6893-45c1-8190-87696f8804b4/2026-General-Candidate-List-5",
               "candidates": [
@@ -184,6 +186,7 @@
               "id": "cuyahoga-executive",
               "scope": "Cuyahoga County · Vote for one",
               "office": "County Executive",
+              "office_id": "county-executive",
               "last_verified": "2026-10-15",
               "source_url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf",
               "candidates": [
@@ -195,6 +198,7 @@
               "id": "cuyahoga-common-pleas-general-2027-01-01",
               "scope": "Cuyahoga County · Term beginning January 1, 2027 · Vote for one",
               "office": "Judge of the Court of Common Pleas, General Division",
+              "office_id": "common-pleas-judge",
               "last_verified": "2026-10-15",
               "source_url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf",
               "candidates": [
@@ -217,6 +221,7 @@
               "id": "hamilton-commissioner",
               "scope": "Hamilton County · Vote for one",
               "office": "County Commissioner",
+              "office_id": "county-commissioner",
               "last_verified": "2026-10-15",
               "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
               "candidates": [
@@ -229,6 +234,7 @@
               "id": "hamilton-auditor",
               "scope": "Hamilton County · Vote for one",
               "office": "County Auditor",
+              "office_id": "county-auditor",
               "last_verified": "2026-10-15",
               "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
               "candidates": [
