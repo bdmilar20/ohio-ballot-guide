@@ -1,10 +1,13 @@
 # Where the election dates come from
 
-Every date in `data/elections.json` has two independent supports: the Ohio
-Revised Code section that fixes it, and the Secretary of State's elections
-calendar for that year, which prints it. This document records both so a
-contributor can check a date without re-deriving it, and so nobody "corrects" a
-date that is already right.
+Every election day and `registration_deadline` in `data/elections.json` has two
+independent supports: the Ohio Revised Code section that fixes it, and the
+Secretary of State's elections calendar for that year, which prints it. The
+early-voting fields have one support each — the annual calendar prints the day
+early voting *begins* but never the day it ends, so `early_voting_end` rests on
+the statute alone. This document records what backs each field so a contributor
+can check a date without re-deriving it, and so nobody "corrects" a date that is
+already right.
 
 ## The statutes
 
@@ -80,13 +83,24 @@ engine that completes the challenge, and include a control:
 
 ```js
 // node, with puppeteer-core driving an installed Chrome
+import puppeteer from 'puppeteer-core';
+
+const url = 'https://www.ohiosos.gov/assets/election-calendar-2027.pdf';
+
+const browser = await puppeteer.launch({
+  executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+});
 const page = await browser.newPage();
 await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
   'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36');
 // Load any page on the origin first; that clears Cloudflare for the session.
 await page.goto('https://www.ohiosos.gov/office/media-center/publications');
 // Then fetch the asset from inside the page, with the clearance cookie.
-await page.evaluate(u => fetch(u, { credentials: 'include' }).then(r => r.status), url);
+console.log(await page.evaluate(async (u) => {
+  const response = await fetch(u, { credentials: 'include' });
+  return { status: response.status, type: response.headers.get('content-type') };
+}, url));
+await browser.close();
 ```
 
 Run every check against a deliberately bogus sibling URL as well. Measured
