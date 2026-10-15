@@ -1,8 +1,8 @@
 {
   "meta": {
     "jurisdiction": "Ohio",
-    "last_reviewed": "2026-10-14",
-    "coverage_note": "Statewide contests plus one countywide contest for Franklin, Cuyahoga, and Hamilton counties. County, ZIP, and place-name geography is generated into data/locations.json."
+    "last_reviewed": "2026-10-15",
+    "coverage_note": "Statewide contests plus selected, explicitly partial countywide contests for Franklin, Cuyahoga, and Hamilton counties. County, ZIP, and place-name geography is generated into data/locations.json."
   },
   "elections": [
     {
@@ -134,17 +134,33 @@
       ],
       "counties": {
         "franklin": {
+          "coverage": {
+            "status": "partial",
+            "scope": "Selected countywide contests",
+            "summary": "Other countywide contests and all district, municipal, school, and precinct contests may be omitted.",
+            "source_url": "https://vote.franklincountyohio.gov/getmedia/e0a4ca45-6893-45c1-8190-87696f8804b4/2026-General-Candidate-List-5",
+            "last_verified": "2026-10-15"
+          },
           "races": [
             {
               "id": "franklin-commissioner",
               "scope": "Franklin County · Vote for one",
               "office": "County Commissioner",
-              "last_verified": "2026-10-14",
-              "source_url": "https://vote.franklincountyohio.gov/election-info/2026",
+              "last_verified": "2026-10-15",
+              "source_url": "https://vote.franklincountyohio.gov/getmedia/e0a4ca45-6893-45c1-8190-87696f8804b4/2026-General-Candidate-List-5",
               "candidates": [
                 { "name": "Erica C. Crawley", "party": "Democratic" },
-                { "name": "Denise D’Angelo", "party": "Republican" },
                 { "name": "Eric Terford", "party": "Libertarian" }
+              ]
+            },
+            {
+              "id": "franklin-auditor",
+              "scope": "Franklin County · Vote for one",
+              "office": "County Auditor",
+              "last_verified": "2026-10-15",
+              "source_url": "https://vote.franklincountyohio.gov/getmedia/e0a4ca45-6893-45c1-8190-87696f8804b4/2026-General-Candidate-List-5",
+              "candidates": [
+                { "name": "Michael Stinziano", "party": "Democratic" }
               ]
             }
           ]
@@ -156,32 +172,67 @@
           "races": []
         },
         "cuyahoga": {
+          "coverage": {
+            "status": "partial",
+            "scope": "Selected countywide contests",
+            "summary": "Other countywide contests and all district, municipal, school, and precinct contests may be omitted.",
+            "source_url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf",
+            "last_verified": "2026-10-15"
+          },
           "races": [
             {
               "id": "cuyahoga-executive",
               "scope": "Cuyahoga County · Vote for one",
               "office": "County Executive",
-              "last_verified": "2026-10-14",
+              "last_verified": "2026-10-15",
               "source_url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf",
               "candidates": [
                 { "name": "Chris Ronayne", "party": "Democratic" },
                 { "name": "Christopher Michael Litwinowicz", "party": "Write-in" }
               ]
+            },
+            {
+              "id": "cuyahoga-common-pleas-general-2027-01-01",
+              "scope": "Cuyahoga County · Term beginning January 1, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, General Division",
+              "last_verified": "2026-10-15",
+              "source_url": "https://www.boe.cuyahogacounty.gov/docs/default-source/boe/candidates-page/candidate-list.pdf",
+              "candidates": [
+                { "name": "Kira Krivosh", "party": "Nonpartisan" },
+                { "name": "Jacob Westfall", "party": "Nonpartisan" }
+              ]
             }
           ]
         },
         "hamilton": {
+          "coverage": {
+            "status": "partial",
+            "scope": "Selected countywide contests",
+            "summary": "Other countywide contests and all district, municipal, school, and precinct contests may be omitted.",
+            "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+            "last_verified": "2026-10-15"
+          },
           "races": [
             {
               "id": "hamilton-commissioner",
               "scope": "Hamilton County · Vote for one",
               "office": "County Commissioner",
-              "last_verified": "2026-10-14",
+              "last_verified": "2026-10-15",
               "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
               "candidates": [
                 { "name": "Meeka Owens", "party": "Democratic" },
                 { "name": "Jonathan Pearson", "party": "Republican" },
                 { "name": "Carrie R. Davis", "party": "Write-in" }
+              ]
+            },
+            {
+              "id": "hamilton-auditor",
+              "scope": "Hamilton County · Vote for one",
+              "office": "County Auditor",
+              "last_verified": "2026-10-15",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Jessica E. Miranda", "party": "Democratic" }
               ]
             }
           ]

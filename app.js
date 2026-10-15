@@ -26,6 +26,8 @@ const statewideContainer = document.querySelector("#statewide-races");
 const localContainer = document.querySelector("#local-races");
 const localSection = document.querySelector("#local-section");
 const localTitle = document.querySelector("#local-title");
+const localCoverageSummary = document.querySelector("#local-coverage-summary");
+const localSource = document.querySelector("#local-source");
 const countyChoice = document.querySelector("#county-choice");
 const countyChoicePrompt = document.querySelector("#county-choice-prompt");
 const countyOptions = document.querySelector("#county-options");
@@ -261,7 +263,7 @@ function renderCoverageSummary() {
     `Every Ohio location resolves to a county: ${number(counts.zips)} ZIP codes and`,
     `${number(counts.places)} place names across all ${countyCount} counties.`,
     curated.length > 0
-      ? `Countywide contests are verified for ${countyNames(curated)} so far, and statewide contests apply everywhere.`
+      ? `Selected countywide contests are verified for ${countyNames(curated)} so far, and statewide contests apply everywhere.`
       : "Statewide contests apply everywhere; countywide contests are not verified yet.",
     "It does not predict an exact ballot.",
   ].join(" ");
@@ -269,6 +271,7 @@ function renderCoverageSummary() {
 
 function showCounty(countyId) {
   const county = locations.counties[countyId];
+  const countyElection = activeElection.counties[countyId];
   const races = racesForCounty(countyId, activeElection.counties);
   countyChoice.hidden = true;
   localSection.hidden = races.length === 0;
@@ -278,17 +281,23 @@ function showCounty(countyId) {
     setNotice(
       `${county.name} contests are not verified yet.`,
       curated.length > 0
-        ? `Verified countywide contests so far: ${countyNames(curated)}. Statewide contests and the published schedule are below — use the official sample-ballot link for your exact local contests.`
+        ? `Selected countywide contests are verified so far for ${countyNames(curated)}. Statewide contests and the published schedule are below — use the official sample-ballot link for your exact local contests.`
         : "The published election schedule is ready below. Use the official sample-ballot link for your exact local contests.",
     );
     return;
   }
 
   localTitle.textContent = `${county.name} contests`;
+  localCoverageSummary.textContent = `${countyElection.coverage.scope}. ${countyElection.coverage.summary}`;
+  setHttpsHref(localSource, countyElection.coverage.source_url);
+  localSource.setAttribute("aria-label", `Review the full official candidate list for ${county.name}`);
   renderRaces(localContainer, races);
+  const hasPartialCoverage = countyElection.coverage.status === "partial";
   setNotice(
-    "Approximate location.",
-    `This match points to ${county.name}. Place and ZIP boundaries can cross district lines, so verify your precinct with the official sample-ballot link below.`,
+    hasPartialCoverage ? "Approximate location and partial coverage." : "Approximate location.",
+    hasPartialCoverage
+      ? `This match points to ${county.name}. The county section contains ${races.length} selected, verified countywide ${races.length === 1 ? "contest" : "contests"}, not a complete ballot. Verify your precinct with the official sample-ballot link below.`
+      : `This match points to ${county.name}. The county section covers every verified countywide contest in the official list, but it is not a complete precinct ballot. Verify your precinct with the official sample-ballot link below.`,
   );
 }
 

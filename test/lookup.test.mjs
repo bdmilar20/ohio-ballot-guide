@@ -82,9 +82,29 @@ test("a single-county ZIP never asks the voter to choose", () => {
 });
 
 test("returns county races only after a county is selected", () => {
-  assert.equal(racesForCounty("franklin", election.counties).length, 1);
+  assert.equal(racesForCounty("franklin", election.counties).length, 2);
   assert.deepEqual(racesForCounty("delaware", election.counties), []);
   assert.deepEqual(racesForCounty("unknown", election.counties), []);
+});
+
+test("publishes sourced, explicitly partial coverage for each pilot county", () => {
+  for (const countyId of ["franklin", "cuyahoga", "hamilton"]) {
+    const county = election.counties[countyId];
+    assert.equal(county.coverage.status, "partial");
+    assert.match(county.coverage.source_url, /^https:\/\//);
+    assert.equal(county.races.length, 2);
+  }
+});
+
+test("uses Franklin County's latest certified commissioner list", () => {
+  const commissioner = racesForCounty("franklin", election.counties).find(
+    ({ id }) => id === "franklin-commissioner",
+  );
+
+  assert.deepEqual(
+    commissioner.candidates.map(({ name }) => name),
+    ["Erica C. Crawley", "Eric Terford"],
+  );
 });
 
 test("selects the nearest upcoming election and skips past elections", () => {

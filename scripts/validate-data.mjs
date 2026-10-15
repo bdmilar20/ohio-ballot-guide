@@ -10,6 +10,7 @@ const locations = JSON.parse(await readFile(locationSource, "utf8"));
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const electionTypes = new Set(["general", "primary", "special", "local"]);
 const electionScopes = new Set(["statewide", "county", "municipal"]);
+const coverageStatuses = new Set(["partial", "complete"]);
 const orderBases = new Set(["population-2010", "land-area-2020", "single-county"]);
 // Ohio has had 88 counties since 1851. A generated file that disagrees has lost
 // rows or picked up another state.
@@ -146,6 +147,17 @@ for (const election of data.elections) {
   for (const [countyId, county] of Object.entries(election.counties)) {
     assert.ok(counties[countyId], `${election.id} references unknown county ${countyId}`);
     assert.ok(Array.isArray(county.races), `${countyId}.races must be an array`);
+    if (county.races.length > 0) {
+      assert.ok(county.coverage, `${countyId} needs coverage metadata`);
+      assert.ok(
+        coverageStatuses.has(county.coverage.status),
+        `${countyId}.coverage has an invalid status`,
+      );
+      assert.ok(county.coverage.scope, `${countyId}.coverage needs a scope`);
+      assert.ok(county.coverage.summary, `${countyId}.coverage needs a summary`);
+      assertHttpsUrl(county.coverage.source_url, `${countyId}.coverage.source_url`);
+      assertDate(county.coverage.last_verified, `${countyId}.coverage.last_verified`);
+    }
   }
 
   raceCount += allRaces.length;

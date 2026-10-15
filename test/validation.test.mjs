@@ -122,3 +122,14 @@ test("validator rejects a cross-county ZIP recorded as single-county", async (t)
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /order basis disagrees with its county count/);
 });
+
+test("validator rejects populated county data without coverage metadata", async (t) => {
+  const result = await validateFixture(t, {
+    elections: (data) => {
+      delete data.elections[0].counties.franklin.coverage;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /franklin needs coverage metadata/);
+});

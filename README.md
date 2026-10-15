@@ -2,7 +2,7 @@
 
 A small, nonpartisan, open-source guide to upcoming Ohio elections. Visitors enter a city or ZIP code and receive a concise view of statewide contests, countywide races, election dates, and links to official sources—without creating an account.
 
-The first populated election is the November 3, 2026 general election. Statewide contest data is available throughout Ohio, and every Ohio location resolves to a county: 1,416 ZIP codes and 1,063 place names across all 88 counties. Verified countywide contests are available for Franklin, Cuyahoga, and Hamilton counties. The official 2027 primary/special, special, and general election dates are also included as schedule-only records while their ballots are not yet certified. A city or ZIP cannot determine an exact precinct ballot, so cross-county matches require the voter to choose a county and every result links to Ohio's official sample-ballot directory.
+The first populated election is the November 3, 2026 general election. Statewide contest data is available throughout Ohio, and every Ohio location resolves to a county: 1,416 ZIP codes and 1,063 place names across all 88 counties. Selected, explicitly partial countywide data is available for Franklin, Cuyahoga, and Hamilton counties. The official 2027 primary/special, special, and general election dates are also included as schedule-only records while their ballots are not yet certified. A city or ZIP cannot determine an exact precinct ballot, so cross-county matches require the voter to choose a county and every result links to Ohio's official sample-ballot directory.
 
 ## Run locally
 
@@ -29,7 +29,7 @@ The data is split by how it is maintained.
 
 [`data/locations.json`](data/locations.json) is **generated** by [`scripts/build-locations.mjs`](scripts/build-locations.mjs) and is not edited by hand. It holds Ohio's 88 counties, every ZIP code, and every place name, each mapped to the counties it falls in. Lookups are keyed by the normalized query, so resolving a location does not scan the dataset. Regenerate it rather than patching it; `npm run check` fails on a file that lost a county, miscounted its own rows, or points a ZIP at a county that is not in the registry. Its sources are the Census Bureau's ZCTA-to-county relationship files (public domain) and the GeoNames US postal file ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)); every record names the source it came from.
 
-Each election includes a stable ID, date, type, scope, official information URL, voting deadlines, statewide contests, covered county records, and issues. Every contest must include:
+Each election includes a stable ID, date, type, scope, official information URL, voting deadlines, statewide contests, covered county records, and issues. A populated county record also declares whether its coverage is `partial` or `complete`, names the included scope, states what can be missing, and links to the full official county candidate list. Every contest must include:
 
 - a stable ID;
 - its geographic scope and office;

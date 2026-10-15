@@ -19,7 +19,7 @@ Keep descriptions factual and concise. Candidate campaign websites may provide u
 
 ## Coverage additions
 
-Add county coverage in small, reviewable changes. Start with countywide races, then add district-level data only when the location-to-district mapping is documented and tested.
+Add county coverage in small, reviewable changes. Start with countywide races, then add district-level data only when the location-to-district mapping is documented and tested. Every county with published races must include a `coverage` object with a `partial` or `complete` status, a plain-language scope and omission summary, the full official candidate-list URL, and the date that list was checked. Keep coverage `partial` whenever the guide does not contain every contest that applies countywide.
 
 Contests go in `data/elections.json`, keyed by the county slug used in
 `data/locations.json` (`franklin`, `van-wert`). Every ZIP and place name in Ohio

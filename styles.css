@@ -495,6 +495,32 @@ h2 {
   margin-bottom: 0;
 }
 
+.local-coverage {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  align-items: baseline;
+  margin: 0 0 1.25rem;
+  border-left: 3px solid var(--moss);
+  background: var(--soft-moss);
+  padding: 0.85rem 1rem;
+  color: #314037;
+  font-size: 0.78rem;
+}
+
+.local-coverage p {
+  margin: 0;
+}
+
+.local-coverage a {
+  flex: none;
+  min-height: 24px;
+  color: var(--accent);
+  font-weight: 700;
+  text-underline-offset: 0.25rem;
+}
+
 .quiet-button {
   border: 1px solid var(--line);
   border-radius: 999px;
