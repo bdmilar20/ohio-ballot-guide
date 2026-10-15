@@ -100,6 +100,14 @@
         { "label": "Office of the Executive, Cuyahoga County", "url": "https://cuyahogacounty.gov/executive" }
       ],
       "last_verified": "2026-10-15"
+    },
+    "summit-county-council": {
+      "title": "Summit County Council Member",
+      "summary": "Summit County Council is the county's eleven-member legislative and taxing authority. Three members serve at large, eight represent districts, and each serves a four-year term.",
+      "sources": [
+        { "label": "Summit County Charter, Article III, Sections 3.01.1–3.01.2", "url": "https://co.summitoh.net/files-generic/13031/file/summitcountycharter.pdf" }
+      ],
+      "last_verified": "2026-10-15"
     }
   }
 }

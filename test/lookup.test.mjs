@@ -88,11 +88,19 @@ test("returns county races only after a county is selected", () => {
 });
 
 test("publishes sourced, explicitly partial coverage for each covered county", () => {
-  for (const countyId of ["franklin", "cuyahoga", "hamilton", "montgomery"]) {
+  const expectedRaceCounts = {
+    franklin: 2,
+    cuyahoga: 2,
+    hamilton: 2,
+    montgomery: 2,
+    summit: 3,
+  };
+
+  for (const [countyId, expectedRaceCount] of Object.entries(expectedRaceCounts)) {
     const county = election.counties[countyId];
     assert.equal(county.coverage.status, "partial");
     assert.match(county.coverage.source_url, /^https:\/\//);
-    assert.equal(county.races.length, 2);
+    assert.equal(county.races.length, expectedRaceCount);
   }
 });
 
@@ -117,6 +125,44 @@ test("uses Montgomery County's current candidate report", () => {
         candidates: [
           { name: "Karl Keith", party: "Democratic" },
           { name: "Tammy L. Murphy", party: "Republican" },
+        ],
+      },
+    ],
+  );
+});
+
+test("uses Summit County's current candidate list", () => {
+  const races = racesForCounty("summit", election.counties);
+
+  assert.deepEqual(
+    races.map(({ id, candidates }) => ({
+      id,
+      candidates: candidates.map(({ name, party }) => ({ name, party })),
+    })),
+    [
+      {
+        id: "summit-council-at-large",
+        candidates: [
+          { name: "Shane R. Barker", party: "Republican" },
+          { name: "Jonathon D. Bollas", party: "Republican" },
+          { name: "John Chapman", party: "Republican" },
+          { name: "Erin Dickinson", party: "Democratic" },
+          { name: "John A. Donofrio", party: "Democratic" },
+          { name: "Elizabeth Walters", party: "Democratic" },
+        ],
+      },
+      {
+        id: "summit-common-pleas-general-2027-01-02",
+        candidates: [
+          { name: "Tania Nemer", party: "Nonpartisan" },
+          { name: "Tammy O’Brien", party: "Nonpartisan" },
+        ],
+      },
+      {
+        id: "summit-common-pleas-general-2027-01-05",
+        candidates: [
+          { name: "Alison McCarty", party: "Nonpartisan" },
+          { name: "Job Esau Perry", party: "Nonpartisan" },
         ],
       },
     ],
