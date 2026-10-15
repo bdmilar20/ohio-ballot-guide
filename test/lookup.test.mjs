@@ -87,13 +87,44 @@ test("returns county races only after a county is selected", () => {
   assert.deepEqual(racesForCounty("unknown", election.counties), []);
 });
 
-test("publishes sourced, explicitly partial coverage for each pilot county", () => {
-  for (const countyId of ["franklin", "cuyahoga", "hamilton"]) {
+test("publishes sourced, explicitly partial coverage for each covered county", () => {
+  for (const countyId of ["franklin", "cuyahoga", "hamilton", "summit"]) {
     const county = election.counties[countyId];
     assert.equal(county.coverage.status, "partial");
     assert.match(county.coverage.source_url, /^https:\/\//);
     assert.equal(county.races.length, 2);
   }
+});
+
+test("uses Summit County's current candidate list", () => {
+  const races = racesForCounty("summit", election.counties);
+
+  assert.deepEqual(
+    races.map(({ id, candidates }) => ({
+      id,
+      candidates: candidates.map(({ name, party }) => ({ name, party })),
+    })),
+    [
+      {
+        id: "summit-council-at-large",
+        candidates: [
+          { name: "Shane R. Barker", party: "Republican" },
+          { name: "Jonathon D. Bollas", party: "Republican" },
+          { name: "John Chapman", party: "Republican" },
+          { name: "Erin Dickinson", party: "Democratic" },
+          { name: "John A. Donofrio", party: "Democratic" },
+          { name: "Elizabeth Walters", party: "Democratic" },
+        ],
+      },
+      {
+        id: "summit-common-pleas-general-2027-01-02",
+        candidates: [
+          { name: "Tania Nemer", party: "Nonpartisan" },
+          { name: "Tammy O’Brien", party: "Nonpartisan" },
+        ],
+      },
+    ],
+  );
 });
 
 test("uses Franklin County's latest certified commissioner list", () => {
