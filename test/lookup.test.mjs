@@ -87,13 +87,40 @@ test("returns county races only after a county is selected", () => {
   assert.deepEqual(racesForCounty("unknown", election.counties), []);
 });
 
-test("publishes sourced, explicitly partial coverage for each pilot county", () => {
-  for (const countyId of ["franklin", "cuyahoga", "hamilton"]) {
+test("publishes sourced, explicitly partial coverage for each covered county", () => {
+  for (const countyId of ["franklin", "cuyahoga", "hamilton", "montgomery"]) {
     const county = election.counties[countyId];
     assert.equal(county.coverage.status, "partial");
     assert.match(county.coverage.source_url, /^https:\/\//);
     assert.equal(county.races.length, 2);
   }
+});
+
+test("uses Montgomery County's current candidate report", () => {
+  const races = racesForCounty("montgomery", election.counties);
+
+  assert.deepEqual(
+    races.map(({ id, candidates }) => ({
+      id,
+      candidates: candidates.map(({ name, party }) => ({ name, party })),
+    })),
+    [
+      {
+        id: "montgomery-commissioner",
+        candidates: [
+          { name: "Carolyn Rice", party: "Democratic" },
+          { name: "Margie Christie", party: "Republican" },
+        ],
+      },
+      {
+        id: "montgomery-auditor",
+        candidates: [
+          { name: "Karl Keith", party: "Democratic" },
+          { name: "Tammy L. Murphy", party: "Republican" },
+        ],
+      },
+    ],
+  );
 });
 
 test("uses Franklin County's latest certified commissioner list", () => {

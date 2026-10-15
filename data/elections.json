@@ -2,7 +2,7 @@
   "meta": {
     "jurisdiction": "Ohio",
     "last_reviewed": "2026-10-15",
-    "coverage_note": "Statewide contests plus selected, explicitly partial countywide contests for Franklin, Cuyahoga, and Hamilton counties. County, ZIP, and place-name geography is generated into data/locations.json."
+    "coverage_note": "Statewide contests plus selected, explicitly partial countywide contests for Franklin, Cuyahoga, Hamilton, and Montgomery counties. County, ZIP, and place-name geography is generated into data/locations.json."
   },
   "elections": [
     {
@@ -247,6 +247,41 @@
               "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
               "candidates": [
                 { "name": "Jessica E. Miranda", "party": "Democratic" }
+              ]
+            }
+          ]
+        },
+        "montgomery": {
+          "coverage": {
+            "status": "partial",
+            "scope": "Selected countywide contests",
+            "summary": "Other countywide contests and all district, municipal, school, and precinct contests may be omitted.",
+            "source_url": "https://www.montgomery.boe.ohio.gov/wp-content/uploads/2023/10/9.11.2026-Candidate-Petition-Report.pdf",
+            "last_verified": "2026-10-15"
+          },
+          "races": [
+            {
+              "id": "montgomery-commissioner",
+              "scope": "Montgomery County · Term beginning January 1, 2027 · Vote for one",
+              "office": "County Commissioner",
+              "office_id": "county-commissioner",
+              "last_verified": "2026-10-15",
+              "source_url": "https://www.montgomery.boe.ohio.gov/wp-content/uploads/2023/10/9.11.2026-Candidate-Petition-Report.pdf",
+              "candidates": [
+                { "name": "Carolyn Rice", "party": "Democratic" },
+                { "name": "Margie Christie", "party": "Republican" }
+              ]
+            },
+            {
+              "id": "montgomery-auditor",
+              "scope": "Montgomery County · Vote for one",
+              "office": "County Auditor",
+              "office_id": "county-auditor",
+              "last_verified": "2026-10-15",
+              "source_url": "https://www.montgomery.boe.ohio.gov/wp-content/uploads/2023/10/9.11.2026-Candidate-Petition-Report.pdf",
+              "candidates": [
+                { "name": "Karl Keith", "party": "Democratic" },
+                { "name": "Tammy L. Murphy", "party": "Republican" }
               ]
             }
           ]
