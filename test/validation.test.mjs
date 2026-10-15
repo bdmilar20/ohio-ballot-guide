@@ -15,28 +15,46 @@ async function readData(name) {
 
 // Writes both data files to a scratch directory so a test can corrupt either
 // one and watch the validator refuse it.
-async function validateFixture(t, { elections = () => {}, locations = () => {}, offices = () => {} }) {
+async function validateFixture(
+  t,
+  { elections = () => {}, locations = () => {}, offices = () => {}, countyBoards = () => {} },
+) {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "ohio-ballot-guide-"));
   t.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
 
   const electionData = await readData("elections.json");
   const locationData = await readData("locations.json");
   const officeData = await readData("offices.json");
+  const countyBoardData = await readData("county-boards.json");
   elections(electionData);
   locations(locationData);
   offices(officeData);
+  countyBoards(countyBoardData);
 
   const electionFixture = join(temporaryDirectory, "elections.json");
   const locationFixture = join(temporaryDirectory, "locations.json");
   const officeFixture = join(temporaryDirectory, "offices.json");
+  const countyBoardFixture = join(temporaryDirectory, "county-boards.json");
   await writeFile(electionFixture, JSON.stringify(electionData));
   await writeFile(locationFixture, JSON.stringify(locationData));
   await writeFile(officeFixture, JSON.stringify(officeData));
+  await writeFile(countyBoardFixture, JSON.stringify(countyBoardData));
 
-  return spawnSync(process.execPath, [validator, electionFixture, locationFixture, officeFixture], {
-    encoding: "utf8",
-  });
+  return spawnSync(
+    process.execPath,
+    [validator, electionFixture, locationFixture, officeFixture, countyBoardFixture],
+    { encoding: "utf8" },
+  );
 }
+
+test("validator rejects a county board directory with a missing county", async (t) => {
+  const result = await validateFixture(t, {
+    countyBoards: (data) => delete data.counties.vinton,
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /county board directory must cover the same counties/);
+});
 
 test("validator rejects a contest without a geographic scope", async (t) => {
   const result = await validateFixture(t, {

@@ -31,6 +31,9 @@ const localSource = document.querySelector("#local-source");
 const countyChoice = document.querySelector("#county-choice");
 const countyChoicePrompt = document.querySelector("#county-choice-prompt");
 const countyOptions = document.querySelector("#county-options");
+const countyResource = document.querySelector("#county-resource");
+const countyResourceLabel = document.querySelector("#county-resource-label");
+const countyBoardLink = document.querySelector("#county-board-link");
 const issueSection = document.querySelector("#issue-section");
 const issueKicker = document.querySelector("#issue-kicker");
 const issuesContainer = document.querySelector("#issues");
@@ -56,6 +59,7 @@ const laterElectionList = document.querySelector("#later-election-list");
 let data;
 let locations;
 let offices;
+let countyBoards;
 let activeElection;
 let scheduledElections = [];
 
@@ -296,11 +300,20 @@ function renderCoverageSummary() {
   ].join(" ");
 }
 
+function showCountyResource(countyId) {
+  const county = locations.counties[countyId];
+  countyResourceLabel.textContent = `${county.name} election office`;
+  setHttpsHref(countyBoardLink, countyBoards[countyId]);
+  countyBoardLink.setAttribute("aria-label", `Open the official ${county.name} Board of Elections website`);
+  countyResource.hidden = false;
+}
+
 function showCounty(countyId) {
   const county = locations.counties[countyId];
   const countyElection = activeElection.counties[countyId];
   const races = racesForCounty(countyId, activeElection.counties);
   countyChoice.hidden = true;
+  showCountyResource(countyId);
   localSection.hidden = races.length === 0;
 
   if (races.length === 0) {
@@ -328,7 +341,7 @@ function showCounty(countyId) {
   );
 }
 
-function renderCountyChoice(location) {
+function renderCountyChoice(location, selectCounty = showCounty) {
   const counties = location.county_ids.map((countyId) => ({
     id: countyId,
     ...locations.counties[countyId],
@@ -342,7 +355,7 @@ function renderCountyChoice(location) {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = county.name;
-      button.addEventListener("click", () => showCounty(county.id));
+      button.addEventListener("click", () => selectCounty(county.id));
       return button;
     }),
   );
@@ -350,7 +363,7 @@ function renderCountyChoice(location) {
 }
 
 function showGuide(query) {
-  if (!data || !locations || !offices) {
+  if (!data || !locations || !offices || !countyBoards) {
     dataStatus.hidden = false;
     dataStatus.textContent = "Election data is still loading. Please try again in a moment.";
     return;
@@ -374,6 +387,7 @@ function showGuide(query) {
       } is available below.`;
 
   countyChoice.hidden = true;
+  countyResource.hidden = true;
   localSection.hidden = true;
 
   if (!hasBallotDetails) {
@@ -381,6 +395,14 @@ function showGuide(query) {
       "Ballot details are not published yet.",
       "This date applies only where an election is scheduled. Use the official sample-ballot link below to confirm whether you have an election and see your local contests.",
     );
+    if (location?.county_ids.length > 1) {
+      renderCountyChoice(location, (countyId) => {
+        countyChoice.hidden = true;
+        showCountyResource(countyId);
+      });
+    } else if (location) {
+      showCountyResource(location.county_ids[0]);
+    }
   } else if (!location) {
     setNotice(
       "No Ohio match for that search.",
@@ -439,10 +461,11 @@ async function loadJson(path) {
 }
 
 try {
-  [data, locations, offices] = await Promise.all([
+  [data, locations, offices, countyBoards] = await Promise.all([
     loadJson("./data/elections.json"),
     loadJson("./data/locations.json"),
     loadJson("./data/offices.json").then(({ offices: entries }) => entries),
+    loadJson("./data/county-boards.json").then(({ counties }) => counties),
   ]);
   scheduledElections = upcomingElections(data.elections);
   activeElection = scheduledElections[0];
