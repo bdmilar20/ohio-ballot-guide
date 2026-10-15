@@ -1,4 +1,5 @@
 import {
+  countiesWithContests,
   daysUntilElection,
   hasPublishedBallotDetails,
   partitionCandidates,
@@ -35,6 +36,7 @@ const raceTemplate = document.querySelector("#race-template");
 const toggleRaces = document.querySelector("#toggle-races");
 const newSearch = document.querySelector("#new-search");
 const reviewDate = document.querySelector("#review-date");
+const coverageSummary = document.querySelector("#coverage-summary");
 const heroElectionDate = document.querySelector("#hero-election-date");
 const dateCard = document.querySelector("#date-card");
 const dateCardLabel = document.querySelector("#date-card-label");
@@ -50,6 +52,7 @@ const laterElections = document.querySelector("#later-elections");
 const laterElectionList = document.querySelector("#later-election-list");
 
 let data;
+let locations;
 let activeElection;
 let scheduledElections = [];
 
@@ -242,16 +245,41 @@ function renderElectionOverview() {
   );
 }
 
+function countyNames(countyIds) {
+  const names = countyIds.map((countyId) => locations.counties[countyId].name.replace(/ County$/, ""));
+  if (names.length <= 1) return names.join("");
+  return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+}
+
+function renderCoverageSummary() {
+  const curated = countiesWithContests(activeElection);
+  const counts = locations.meta.counts;
+  const countyCount = Object.keys(locations.counties).length;
+  const number = (value) => value.toLocaleString("en-US");
+
+  coverageSummary.textContent = [
+    `Every Ohio location resolves to a county: ${number(counts.zips)} ZIP codes and`,
+    `${number(counts.places)} place names across all ${countyCount} counties.`,
+    curated.length > 0
+      ? `Countywide contests are verified for ${countyNames(curated)} so far, and statewide contests apply everywhere.`
+      : "Statewide contests apply everywhere; countywide contests are not verified yet.",
+    "It does not predict an exact ballot.",
+  ].join(" ");
+}
+
 function showCounty(countyId) {
-  const county = data.counties[countyId];
+  const county = locations.counties[countyId];
   const races = racesForCounty(countyId, activeElection.counties);
   countyChoice.hidden = true;
   localSection.hidden = races.length === 0;
 
   if (races.length === 0) {
+    const curated = countiesWithContests(activeElection);
     setNotice(
-      `${county.name} coverage is not available yet.`,
-      "The published election schedule is ready below. Use the official sample-ballot link for your exact local contests.",
+      `${county.name} contests are not verified yet.`,
+      curated.length > 0
+        ? `Verified countywide contests so far: ${countyNames(curated)}. Statewide contests and the published schedule are below — use the official sample-ballot link for your exact local contests.`
+        : "The published election schedule is ready below. Use the official sample-ballot link for your exact local contests.",
     );
     return;
   }
@@ -267,9 +295,12 @@ function showCounty(countyId) {
 function renderCountyChoice(location) {
   const counties = location.county_ids.map((countyId) => ({
     id: countyId,
-    ...data.counties[countyId],
+    ...locations.counties[countyId],
   }));
-  countyChoicePrompt.textContent = `${location.display_name} crosses county lines. Choose your county to view pilot coverage:`;
+  countyChoicePrompt.textContent =
+    location.kind === "zip"
+      ? `ZIP ${location.display_name} crosses county lines. Choose your county:`
+      : `${location.display_name} addresses fall in more than one county. Choose your county:`;
   countyOptions.replaceChildren(
     ...counties.map((county) => {
       const button = document.createElement("button");
@@ -283,7 +314,7 @@ function renderCountyChoice(location) {
 }
 
 function showGuide(query) {
-  if (!data) {
+  if (!data || !locations) {
     dataStatus.hidden = false;
     dataStatus.textContent = "Election data is still loading. Please try again in a moment.";
     return;
@@ -295,14 +326,14 @@ function showGuide(query) {
     return;
   }
 
-  const location = resolveLocation(query, data.locations);
+  const location = resolveLocation(query, locations);
   const hasBallotDetails = hasPublishedBallotDetails(activeElection);
   resultKicker.textContent = location ? `${location.display_name} match` : "Statewide guide";
   resultSummary.textContent = location
     ? hasBallotDetails
       ? `Showing the next scheduled election and the coverage available for ${location.display_name}.`
       : `Showing the next scheduled election for ${location.display_name}.`
-    : `We do not have a local pilot match for “${query.trim()}” yet. ${
+    : `“${query.trim()}” is not an Ohio ZIP code or place name this guide recognizes. ${
         hasBallotDetails ? "The statewide guide" : "The published election schedule"
       } is available below.`;
 
@@ -316,8 +347,8 @@ function showGuide(query) {
     );
   } else if (!location) {
     setNotice(
-      "Local coverage is still growing.",
-      "The pilot currently includes Franklin, Cuyahoga, and Hamilton counties. Published statewide contests apply throughout Ohio.",
+      "No Ohio match for that search.",
+      `The guide covers ${locations.meta.counts.zips.toLocaleString("en-US")} Ohio ZIP codes and ${locations.meta.counts.places.toLocaleString("en-US")} Ohio place names, so check the spelling or try your ZIP code. Published statewide contests apply throughout Ohio.`,
     );
   } else if (location.county_ids.length > 1) {
     setNotice(
@@ -365,10 +396,17 @@ newSearch.addEventListener("click", () => {
   });
 });
 
+async function loadJson(path) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`${path} request failed (${response.status})`);
+  return response.json();
+}
+
 try {
-  const response = await fetch("./data/elections.json");
-  if (!response.ok) throw new Error(`Data request failed (${response.status})`);
-  data = await response.json();
+  [data, locations] = await Promise.all([
+    loadJson("./data/elections.json"),
+    loadJson("./data/locations.json"),
+  ]);
   scheduledElections = upcomingElections(data.elections);
   activeElection = scheduledElections[0];
   reviewDate.textContent = displayDate(data.meta.last_reviewed);
@@ -387,6 +425,7 @@ try {
     );
   } else {
     renderElectionOverview();
+    renderCoverageSummary();
     dataStatus.hidden = true;
     setControlsDisabled(false);
   }

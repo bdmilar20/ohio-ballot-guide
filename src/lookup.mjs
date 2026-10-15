@@ -8,20 +8,29 @@ export function normalizeQuery(value) {
     .replace(/\s+/g, " ");
 }
 
-export function resolveLocation(query, locations) {
+export const ZIP_PATTERN = /^\d{5}$/;
+
+// `index` is data/locations.json: generated maps of every Ohio ZIP and place
+// name. Both lookups are keyed by the normalized query, so neither scales with
+// the size of the dataset.
+export function resolveLocation(query, index) {
   const normalized = normalizeQuery(query);
 
   if (!normalized) return null;
 
-  const location = locations.find((candidate) =>
-    candidate.aliases.some((alias) => normalizeQuery(alias) === normalized),
-  );
+  if (ZIP_PATTERN.test(normalized)) {
+    const zip = index.zips[normalized];
+    return zip ? { kind: "zip", display_name: normalized, ...zip } : null;
+  }
 
-  if (!location) return null;
+  const place = index.places[normalized];
+  return place ? { kind: "place", ...place } : null;
+}
 
-  return location.kind === "zip"
-    ? { ...location, display_name: normalized }
-    : location;
+export function countiesWithContests(election) {
+  return Object.entries(election.counties)
+    .filter(([, county]) => county.races.length > 0)
+    .map(([countyId]) => countyId);
 }
 
 export function racesForCounty(countyId, counties) {

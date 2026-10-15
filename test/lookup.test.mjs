@@ -16,6 +16,9 @@ import {
 const data = JSON.parse(
   await readFile(new URL("../data/elections.json", import.meta.url), "utf8"),
 );
+const locations = JSON.parse(
+  await readFile(new URL("../data/locations.json", import.meta.url), "utf8"),
+);
 const election = data.elections[0];
 
 test("normalizes Ohio city suffixes with or without comma spacing", () => {
@@ -24,35 +27,58 @@ test("normalizes Ohio city suffixes with or without comma spacing", () => {
   assert.equal(normalizeQuery("Columbus OH"), "columbus");
 });
 
-test("resolves city and ZIP aliases", () => {
-  assert.equal(resolveLocation("Cincinnati", data.locations)?.id, "cincinnati");
-  assert.equal(resolveLocation("44113", data.locations)?.id, "zip-cleveland-cuyahoga");
-  assert.equal(resolveLocation("44113", data.locations)?.display_name, "44113");
+test("resolves place names and ZIP codes out of the generated index", () => {
+  assert.equal(resolveLocation("Cincinnati", locations)?.display_name, "Cincinnati");
+  assert.equal(resolveLocation("Cincinnati", locations)?.kind, "place");
+  assert.equal(resolveLocation("44113", locations)?.display_name, "44113");
+  assert.equal(resolveLocation("44113", locations)?.kind, "zip");
+  assert.equal(resolveLocation("  Toledo, Ohio ", locations)?.display_name, "Toledo");
+  assert.equal(resolveLocation("", locations), null);
+  assert.equal(resolveLocation("Indianapolis", locations), null);
+  assert.equal(resolveLocation("90210", locations), null);
 });
 
-test("records county choices for single- and cross-county ZIPs", () => {
-  const crossCounty = resolveLocation("43235", data.locations);
-  const singleCounty = resolveLocation("44113", data.locations);
-  const columbusZip = resolveLocation("43215", data.locations);
-  assert.deepEqual(crossCounty?.county_ids, ["franklin", "delaware"]);
-  assert.deepEqual(singleCounty?.county_ids, ["cuyahoga"]);
-  assert.deepEqual(columbusZip?.county_ids, ["franklin"]);
-  assert.deepEqual(resolveLocation("45212", data.locations)?.county_ids, ["hamilton"]);
-  assert.deepEqual(resolveLocation("45220", data.locations)?.county_ids, ["hamilton"]);
-  assert.deepEqual(resolveLocation("45240", data.locations)?.county_ids, ["hamilton"]);
-  assert.deepEqual(resolveLocation("45249", data.locations)?.county_ids, ["hamilton", "warren"]);
-  assert.deepEqual(resolveLocation("45251", data.locations)?.county_ids, ["hamilton"]);
+test("serves locations outside the original three-city pilot", () => {
+  // The guide shipped knowing 99 ZIPs and 3 cities. These are places a voter
+  // outside Columbus, Cleveland or Cincinnati used to get nothing for.
+  assert.deepEqual(resolveLocation("43606", locations)?.county_ids, ["lucas"]);
+  assert.deepEqual(resolveLocation("44308", locations)?.county_ids, ["summit"]);
+  assert.deepEqual(resolveLocation("45402", locations)?.county_ids, ["montgomery"]);
+  assert.deepEqual(resolveLocation("Chillicothe", locations)?.county_ids, ["ross", "jackson", "pike"]);
+  assert.equal(Object.keys(locations.counties).length, 88);
+});
+
+test("keeps the county answers the curated data was reviewed with", () => {
+  const reviewed = {
+    43215: ["franklin"],
+    43235: ["franklin", "delaware"],
+    44113: ["cuyahoga"],
+    45212: ["hamilton"],
+    45220: ["hamilton"],
+    45240: ["hamilton"],
+    45249: ["hamilton", "warren"],
+    45251: ["hamilton"],
+  };
+
+  for (const [zip, countyIds] of Object.entries(reviewed)) {
+    assert.deepEqual(resolveLocation(zip, locations)?.county_ids, countyIds, `ZIP ${zip}`);
+  }
 });
 
 test("offers the county holding most of a cross-county ZIP first", () => {
-  const crossCounty = ["43235", "45246", "45249", "45255"];
   const majorityCounty = { 43235: "franklin", 45246: "hamilton", 45249: "hamilton", 45255: "hamilton" };
 
-  for (const zip of crossCounty) {
-    const countyIds = resolveLocation(zip, data.locations)?.county_ids ?? [];
+  for (const [zip, expected] of Object.entries(majorityCounty)) {
+    const countyIds = resolveLocation(zip, locations)?.county_ids ?? [];
     assert.ok(countyIds.length > 1, `${zip} should still cross county lines`);
-    assert.equal(countyIds[0], majorityCounty[zip], `${zip} must offer its majority county first`);
+    assert.equal(countyIds[0], expected, `${zip} must offer its majority county first`);
   }
+});
+
+test("a single-county ZIP never asks the voter to choose", () => {
+  const location = resolveLocation("43606", locations);
+  assert.equal(location.county_ids.length, 1);
+  assert.equal(location.order_basis, "single-county");
 });
 
 test("returns county races only after a county is selected", () => {
