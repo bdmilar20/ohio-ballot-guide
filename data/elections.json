@@ -270,7 +270,7 @@
       "type": "primary",
       "scope": "municipal",
       "jurisdiction_ids": ["ohio"],
-      "official_info_url": "https://www.ohiosos.gov/elections/voting-schedule-text-only",
+      "official_info_url": "https://www.ohiosos.gov/assets/election-calendar-2027.pdf",
       "registration_deadline": "2027-04-05",
       "early_voting_end": "2027-05-02",
       "polls": {
@@ -288,7 +288,7 @@
       "type": "special",
       "scope": "municipal",
       "jurisdiction_ids": ["ohio"],
-      "official_info_url": "https://www.ohiosos.gov/elections/voting-schedule-text-only",
+      "official_info_url": "https://www.ohiosos.gov/assets/election-calendar-2027.pdf",
       "registration_deadline": "2027-07-06",
       "early_voting_end": "2027-08-01",
       "polls": {
@@ -306,7 +306,7 @@
       "type": "general",
       "scope": "municipal",
       "jurisdiction_ids": ["ohio"],
-      "official_info_url": "https://www.ohiosos.gov/elections/voting-schedule-text-only",
+      "official_info_url": "https://www.ohiosos.gov/assets/election-calendar-2027.pdf",
       "registration_deadline": "2027-10-04",
       "early_voting_end": "2027-10-31",
       "polls": {
