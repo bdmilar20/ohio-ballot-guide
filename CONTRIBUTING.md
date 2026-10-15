@@ -21,15 +21,64 @@ Keep descriptions factual and concise. Candidate campaign websites may provide u
 
 Add county coverage in small, reviewable changes. Start with countywide races, then add district-level data only when the location-to-district mapping is documented and tested.
 
-## Adding an election
+Contests go in `data/elections.json`, keyed by the county slug used in
+`data/locations.json` (`franklin`, `van-wert`). Every ZIP and place name in Ohio
+already resolves, so adding a county means adding its contests — not its
+geography.
 
-Add a new dated object to the `elections` array instead of replacing an existing election. Include its `type`, `scope`, official schedule URL, registration deadline, early-voting end date, poll hours, contests, counties, and issues. The application sorts the collection and shows the nearest election that has not passed.
+## Regenerating the location data
 
-Use an empty array when an election has no statewide races or issues. Add county names to the root `counties` registry, and put only this election's county coverage in the election's `counties` object.
+`data/locations.json` is generated. Do not hand-edit it; re-run the script and
+commit the result with the command you ran.
 
-Keep city aliases and ZIP aliases in separate location records. Each ZIP record must list every county in the Census Bureau's ZCTA-to-county relationship file, cite that official file, and include the date it was verified. Check disputed boundaries against HUD's USPS residential-address crosswalk; do not use sales-tax jurisdiction reports as a substitute for residential geography. The validator rejects numeric ZIP aliases on city-wide records so a city's broader county footprint cannot leak into a ZIP result.
+The source files are large and are not committed. Download them into `.cache/`,
+which is ignored:
 
-List `county_ids` with the county holding most of the ZIP's residents first. The county picker offers the counties in that order and says nothing else about which one is likelier, so a minority county listed first points most of the ZIP at the wrong ballot. Take the shares from `POPPT` in the newest edition of the relationship file that carries population counts; `AREALAND_PART` in the current edition agrees on the ordering for every record here.
+```bash
+mkdir -p .cache
+curl -o .cache/tab20_zcta520_county20_natl.txt \
+  https://www2.census.gov/geo/docs/maps-data/data/rel2020/zcta520/tab20_zcta520_county20_natl.txt
+curl -o .cache/zcta_county_rel_10.txt \
+  https://www2.census.gov/geo/docs/maps-data/data/rel/zcta_county_rel_10.txt
+curl -o .cache/US.zip https://download.geonames.org/export/zip/US.zip
+unzip -o -d .cache .cache/US.zip US.txt
+```
+
+Then, from the repository root:
+
+```bash
+node scripts/build-locations.mjs \
+  --zcta .cache/tab20_zcta520_county20_natl.txt \
+  --pop .cache/zcta_county_rel_10.txt \
+  --geonames .cache/US.txt
+npm run check
+npm test
+```
+
+Each source answers one question, and the script will not substitute one for
+another:
+
+| file | answers |
+|---|---|
+| 2020 ZCTA-to-county relationship | which counties a ZIP touches |
+| 2010 ZCTA-to-county relationship | how many residents live in each ZIP-county part |
+| GeoNames US postal file | place names, and ZIPs that have no ZCTA at all |
+
+**List `county_ids` with the county holding most of the ZIP's residents first.**
+The county picker offers the counties in that order and says nothing else about
+which one is likelier, so a minority county listed first points most of the ZIP
+at the wrong ballot. Residents come from `POPPT` in the 2010 file, the newest
+edition that carries population. Land area is the fallback for the 71
+cross-county ZIPs with no 2010 population row, and it is only a fallback: across
+Ohio, ordering by land area puts the wrong county first in 26 ZIPs.
+
+A place's counties come from its ZIPs' Census county parts, never from
+GeoNames' one-county-per-ZIP column — that column files every Columbus ZIP under
+Franklin, which would hide the Delaware County part of 43235.
+
+Do not use sales-tax jurisdiction reports as a substitute for residential
+geography. Check a disputed boundary against HUD's USPS residential-address
+crosswalk.
 
 ## Design changes
 
