@@ -15,21 +15,25 @@ async function readData(name) {
 
 // Writes both data files to a scratch directory so a test can corrupt either
 // one and watch the validator refuse it.
-async function validateFixture(t, { elections = () => {}, locations = () => {} }) {
+async function validateFixture(t, { elections = () => {}, locations = () => {}, offices = () => {} }) {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "ohio-ballot-guide-"));
   t.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
 
   const electionData = await readData("elections.json");
   const locationData = await readData("locations.json");
+  const officeData = await readData("offices.json");
   elections(electionData);
   locations(locationData);
+  offices(officeData);
 
   const electionFixture = join(temporaryDirectory, "elections.json");
   const locationFixture = join(temporaryDirectory, "locations.json");
+  const officeFixture = join(temporaryDirectory, "offices.json");
   await writeFile(electionFixture, JSON.stringify(electionData));
   await writeFile(locationFixture, JSON.stringify(locationData));
+  await writeFile(officeFixture, JSON.stringify(officeData));
 
-  return spawnSync(process.execPath, [validator, electionFixture, locationFixture], {
+  return spawnSync(process.execPath, [validator, electionFixture, locationFixture, officeFixture], {
     encoding: "utf8",
   });
 }
@@ -132,4 +136,37 @@ test("validator rejects populated county data without coverage metadata", async 
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /franklin needs coverage metadata/);
+});
+
+test("validator rejects a contest whose office has no description", async (t) => {
+  const result = await validateFixture(t, {
+    elections: (data) => {
+      data.elections[0].statewide_races[0].office_id = "grand-vizier";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /governor references unknown office grand-vizier/);
+});
+
+test("validator rejects an office description with no official source", async (t) => {
+  const result = await validateFixture(t, {
+    offices: (data) => {
+      data.offices.governor.sources = [];
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /governor needs at least one official source/);
+});
+
+test("validator rejects an office source that is not HTTPS", async (t) => {
+  const result = await validateFixture(t, {
+    offices: (data) => {
+      data.offices.auditor.sources[0].url = "http://codes.ohio.gov/ohio-revised-code/section-117.11";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /must use HTTPS/);
 });

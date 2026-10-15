@@ -632,6 +632,43 @@ h2 {
   font-weight: 500;
 }
 
+.office-note {
+  margin: 0.95rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid #ebe6dc;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.office-note summary {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.office-note p {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+}
+
+.office-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+}
+
+.office-sources a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--accent);
+  font-weight: 700;
+  text-underline-offset: 0.25rem;
+}
+
 .verified {
   margin: 0.9rem 0 0;
   color: var(--muted);

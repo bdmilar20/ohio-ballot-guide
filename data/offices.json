@@ -1,0 +1,105 @@
+{
+  "meta": {
+    "last_reviewed": "2026-10-15",
+    "note": "What each office on the ballot does. Every sentence is supported by the sources listed with it; nothing here describes a candidate, a party, or a policy position."
+  },
+  "offices": {
+    "governor": {
+      "title": "Governor",
+      "summary": "Ohio's supreme executive power is vested in the governor. The governor holds office for four years, and no person may hold the office longer than two successive terms.",
+      "sources": [
+        { "label": "Ohio Constitution, Article III, Section 5", "url": "https://codes.ohio.gov/ohio-constitution/section-3.5" },
+        { "label": "Ohio Constitution, Article III, Section 2", "url": "https://codes.ohio.gov/ohio-constitution/section-3.2" }
+      ],
+      "last_verified": "2026-10-15"
+    },
+    "us-senate": {
+      "title": "United States Senator",
+      "summary": "The United States Senate is composed of two senators from each state, each elected for six years. A senator chosen to fill a vacancy serves only the remainder of the unexpired term.",
+      "sources": [
+        { "label": "U.S. Constitution, Article I, Section 3 (National Archives)", "url": "https://www.archives.gov/founding-docs/constitution-transcript" }
+      ],
+      "last_verified": "2026-10-15"
+    },
+    "attorney-general": {
+      "title": "Attorney General",
+      "summary": "The attorney general is the chief law officer for the state and all its departments, and appears for the state in cases in which the state is directly or indirectly interested. The office holds a four-year term.",
+      "sources": [
+        { "label": "Ohio Revised Code 109.02", "url": "https://codes.ohio.gov/ohio-revised-code/section-109.02" },
+        { "label": "Ohio Constitution, Article III, Section 2", "url": "https://codes.ohio.gov/ohio-constitution/section-3.2" }
+      ],
+      "last_verified": "2026-10-15"
+    },
+    "secretary-of-state": {
+      "title": "Secretary of State",
+      "summary": "The secretary of state is the chief election officer of the state, with the powers and duties over voter registration and the conduct of elections that Ohio's election law prescribes. The office holds a four-year term.",
+      "sources": [
+        { "label": "Ohio Revised Code 3501.04", "url": "https://codes.ohio.gov/ohio-revised-code/section-3501.04" },
+        { "label": "Ohio Constitution, Article III, Section 2", "url": "https://codes.ohio.gov/ohio-constitution/section-3.2" }
+      ],
+      "last_verified": "2026-10-15"
+    },
+    "auditor": {
+      "title": "Auditor of State",
+      "summary": "The auditor of state audits each public office in Ohio at least once every two fiscal years, inquiring into the accuracy and legality of its accounts and whether it followed the laws and rules that apply to it. The office holds a four-year term.",
+      "sources": [
+        { "label": "Ohio Revised Code 117.11", "url": "https://codes.ohio.gov/ohio-revised-code/section-117.11" },
+        { "label": "Ohio Constitution, Article III, Section 2", "url": "https://codes.ohio.gov/ohio-constitution/section-3.2" }
+      ],
+      "last_verified": "2026-10-15"
+    },
+    "treasurer": {
+      "title": "Treasurer of State",
+      "summary": "Every state officer, employee, and agent pays the money they receive for the state — taxes, fees, fines, and the rest — to the treasurer of state, who files and preserves the record of payment. The office holds a four-year term.",
+      "sources": [
+        { "label": "Ohio Revised Code 113.08", "url": "https://codes.ohio.gov/ohio-revised-code/section-113.08" },
+        { "label": "Ohio Constitution, Article III, Section 2", "url": "https://codes.ohio.gov/ohio-constitution/section-3.2" }
+      ],
+      "last_verified": "2026-10-15"
+    },
+    "supreme-court": {
+      "title": "Justice of the Ohio Supreme Court",
+      "summary": "The Supreme Court of Ohio consists of a chief justice and six justices, elected by the electors of the state at large for terms of not less than six years. It hears appeals from Ohio's courts of appeals and has original jurisdiction over matters including habeas corpus and the practice of law.",
+      "sources": [
+        { "label": "Ohio Constitution, Article IV, Section 2", "url": "https://codes.ohio.gov/ohio-constitution/section-4.2" },
+        { "label": "Ohio Constitution, Article IV, Section 6", "url": "https://codes.ohio.gov/ohio-constitution/section-4.6" }
+      ],
+      "last_verified": "2026-10-15"
+    },
+    "county-auditor": {
+      "title": "County Auditor",
+      "summary": "Each county is the unit for assessing real estate for taxation, and the county auditor is the assessor of all the real estate in the county for tax purposes.",
+      "sources": [
+        { "label": "Ohio Revised Code 5713.01", "url": "https://codes.ohio.gov/ohio-revised-code/section-5713.01" }
+      ],
+      "last_verified": "2026-10-15"
+    },
+    "common-pleas-judge": {
+      "title": "Judge of the Court of Common Pleas",
+      "summary": "Every Ohio county is served by a court of common pleas and by the divisions of it that state law establishes. Its judges are elected by the voters of the county for terms of not less than six years, and each must live in the county the court serves.",
+      "sources": [
+        { "label": "Ohio Constitution, Article IV, Section 4", "url": "https://codes.ohio.gov/ohio-constitution/section-4.4" },
+        { "label": "Ohio Constitution, Article IV, Section 6", "url": "https://codes.ohio.gov/ohio-constitution/section-4.6" }
+      ],
+      "last_verified": "2026-10-15"
+    },
+    "county-commissioner": {
+      "title": "County Commissioner",
+      "summary": "A board of county commissioners consists of three members, each elected to a four-year term. This is the elected body in counties that have not adopted a charter of their own.",
+      "sources": [
+        { "label": "Ohio Revised Code 305.01", "url": "https://codes.ohio.gov/ohio-revised-code/section-305.01" },
+        { "label": "Ohio Constitution, Article X, Section 3", "url": "https://codes.ohio.gov/ohio-constitution/section-10.3" }
+      ],
+      "last_verified": "2026-10-15"
+    },
+    "county-executive": {
+      "title": "County Executive",
+      "summary": "The people of an Ohio county may adopt a charter that sets their county's form of government and determines which officers they elect. Cuyahoga County's charter is why its voters elect a county executive rather than a board of three commissioners.",
+      "sources": [
+        { "label": "Ohio Constitution, Article X, Section 3", "url": "https://codes.ohio.gov/ohio-constitution/section-10.3" },
+        { "label": "Office of the Executive, Cuyahoga County", "url": "https://cuyahogacounty.gov/executive" }
+      ],
+      "last_verified": "2026-10-15"
+    }
+  }
+}

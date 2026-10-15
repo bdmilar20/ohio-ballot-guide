@@ -55,6 +55,7 @@ const laterElectionList = document.querySelector("#later-election-list");
 
 let data;
 let locations;
+let offices;
 let activeElection;
 let scheduledElections = [];
 
@@ -102,6 +103,30 @@ function candidateItem(candidate, { showParty }) {
   return item;
 }
 
+// Plain-language description of the office itself, collapsed by default so the
+// candidate list stays the first thing a voter reads.
+function renderOfficeNote(node, race) {
+  const note = node.querySelector(".office-note");
+  const office = offices[race.office_id];
+
+  if (!office) return;
+
+  note.querySelector(".office-summary").textContent = office.summary;
+  note.querySelector(".office-sources").replaceChildren(
+    ...office.sources.map((source) => {
+      const link = document.createElement("a");
+      setHttpsHref(link, source.url);
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      link.textContent = `${source.label} ↗`;
+      return link;
+    }),
+  );
+  note.querySelector(".office-verified").textContent =
+    `Office description verified ${displayDate(office.last_verified)}`;
+  note.hidden = false;
+}
+
 function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY) {
   const node = raceTemplate.content.firstElementChild.cloneNode(true);
   node.dataset.secondary = String(index >= collapseAfter);
@@ -145,6 +170,8 @@ function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY) {
   }
 
   if (onBallot.length === 0) list.remove();
+
+  renderOfficeNote(node, race);
 
   node.querySelector(".verified").textContent = `Verified ${displayDate(race.last_verified)}`;
   return node;
@@ -323,7 +350,7 @@ function renderCountyChoice(location) {
 }
 
 function showGuide(query) {
-  if (!data || !locations) {
+  if (!data || !locations || !offices) {
     dataStatus.hidden = false;
     dataStatus.textContent = "Election data is still loading. Please try again in a moment.";
     return;
@@ -412,9 +439,10 @@ async function loadJson(path) {
 }
 
 try {
-  [data, locations] = await Promise.all([
+  [data, locations, offices] = await Promise.all([
     loadJson("./data/elections.json"),
     loadJson("./data/locations.json"),
+    loadJson("./data/offices.json").then(({ offices: entries }) => entries),
   ]);
   scheduledElections = upcomingElections(data.elections);
   activeElection = scheduledElections[0];

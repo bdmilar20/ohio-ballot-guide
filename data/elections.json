@@ -24,6 +24,7 @@
           "id": "governor",
           "scope": "Statewide · Vote for one ticket",
           "office": "Governor & Lieutenant Governor",
+          "office_id": "governor",
           "last_verified": "2026-10-14",
           "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
           "supplemental_sources": [
@@ -46,6 +47,7 @@
           "id": "us-senate",
           "scope": "Statewide · Unexpired term ending 2029",
           "office": "United States Senator",
+          "office_id": "us-senate",
           "last_verified": "2026-10-14",
           "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
           "supplemental_sources": [
@@ -68,6 +70,7 @@
           "id": "attorney-general",
           "scope": "Statewide · Vote for one",
           "office": "Attorney General",
+          "office_id": "attorney-general",
           "last_verified": "2026-10-14",
           "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
           "candidates": [
@@ -79,6 +82,7 @@
           "id": "secretary-of-state",
           "scope": "Statewide · Vote for one",
           "office": "Secretary of State",
+          "office_id": "secretary-of-state",
           "last_verified": "2026-10-14",
           "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
           "candidates": [
@@ -91,6 +95,7 @@
           "id": "auditor",
           "scope": "Statewide · Vote for one",
           "office": "Auditor of State",
+          "office_id": "auditor",
           "last_verified": "2026-10-14",
           "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
           "candidates": [
@@ -102,6 +107,7 @@
           "id": "treasurer",
           "scope": "Statewide · Vote for one",
           "office": "Treasurer of State",
+          "office_id": "treasurer",
           "last_verified": "2026-10-14",
           "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
           "candidates": [
@@ -113,6 +119,7 @@
           "id": "supreme-court-jan-1",
           "scope": "Statewide · Term beginning January 1, 2027",
           "office": "Justice of the Ohio Supreme Court",
+          "office_id": "supreme-court",
           "last_verified": "2026-10-14",
           "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
           "candidates": [
@@ -124,6 +131,7 @@
           "id": "supreme-court-jan-2",
           "scope": "Statewide · Term beginning January 2, 2027",
           "office": "Justice of the Ohio Supreme Court",
+          "office_id": "supreme-court",
           "last_verified": "2026-10-14",
           "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
           "candidates": [

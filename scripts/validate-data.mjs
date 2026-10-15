@@ -5,8 +5,10 @@ import { normalizeQuery, ZIP_PATTERN } from "../src/lookup.mjs";
 
 const dataSource = process.argv[2] ?? new URL("../data/elections.json", import.meta.url);
 const locationSource = process.argv[3] ?? new URL("../data/locations.json", import.meta.url);
+const officeSource = process.argv[4] ?? new URL("../data/offices.json", import.meta.url);
 const data = JSON.parse(await readFile(dataSource, "utf8"));
 const locations = JSON.parse(await readFile(locationSource, "utf8"));
+const officeData = JSON.parse(await readFile(officeSource, "utf8"));
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const electionTypes = new Set(["general", "primary", "special", "local"]);
 const electionScopes = new Set(["statewide", "county", "municipal"]);
@@ -94,6 +96,22 @@ assert.deepEqual(
   "locations.meta.counts does not match the generated file",
 );
 
+// data/offices.json describes the office, never a candidate or a position.
+assertDate(officeData.meta.last_reviewed, "offices.meta.last_reviewed");
+const offices = officeData.offices;
+assert.ok(Object.keys(offices).length > 0, "at least one office is required");
+
+for (const [officeId, office] of Object.entries(offices)) {
+  assert.ok(office.title, `${officeId} needs a title`);
+  assert.ok(office.summary, `${officeId} needs a summary`);
+  assert.ok(office.sources.length > 0, `${officeId} needs at least one official source`);
+  for (const source of office.sources) {
+    assert.ok(source.label, `${officeId} has an unlabeled source`);
+    assertHttpsUrl(source.url, `${officeId}.${source.label}`);
+  }
+  assertDate(office.last_verified, `${officeId}.last_verified`);
+}
+
 const electionIds = new Set();
 let raceCount = 0;
 let issueCount = 0;
@@ -125,6 +143,7 @@ for (const election of data.elections) {
     raceIds.add(race.id);
     assert.ok(race.scope, `${race.id} needs a scope`);
     assert.ok(race.office, `${race.id} needs an office`);
+    assert.ok(offices[race.office_id], `${race.id} references unknown office ${race.office_id}`);
     assert.ok(race.candidates.length > 0, `${race.id} needs candidates`);
     for (const candidate of race.candidates) {
       assert.ok(candidate.name && candidate.party, `${race.id} has an incomplete candidate`);
@@ -165,7 +184,7 @@ for (const election of data.elections) {
 }
 
 console.log(
-  `Validated ${data.elections.length} elections, ${raceCount} contests, and ${issueCount} issue.`,
+  `Validated ${data.elections.length} elections, ${raceCount} contests, ${issueCount} issue, and ${Object.keys(offices).length} office descriptions.`,
 );
 console.log(
   `Validated ${countyIds.length} counties, ${Object.keys(locations.zips).length} ZIP codes, and ${Object.keys(locations.places).length} place names.`,
