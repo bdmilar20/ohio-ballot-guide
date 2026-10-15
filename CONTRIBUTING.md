@@ -26,6 +26,23 @@ Contests go in `data/elections.json`, keyed by the county slug used in
 already resolves, so adding a county means adding its contests — not its
 geography.
 
+## Office descriptions
+
+`data/offices.json` explains what each office on the ballot does. It is curated
+by hand, and the rules are narrower than for the rest of the data:
+
+- Describe **the office**, never a candidate, a party, or a policy position.
+- Every sentence must be supported by a source listed with it — the Ohio
+  Constitution, the Revised Code, or an official government page. If the
+  citation does not say it, cut the sentence rather than finding a looser source.
+- Prefer the section that states the duty over the section that merely names the
+  office. Link the section itself, not a summary of it.
+- Set `last_verified` to the date you opened each source and confirmed the text.
+
+A contest points at a description through its `office_id`. The validator fails
+on a contest whose office is missing, a description with no source, and any
+source that is not HTTPS.
+
 ## Regenerating the location data
 
 `data/locations.json` is generated. Do not hand-edit it; re-run the script and

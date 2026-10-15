@@ -29,12 +29,15 @@ The data is split by how it is maintained.
 
 [`data/locations.json`](data/locations.json) is **generated** by [`scripts/build-locations.mjs`](scripts/build-locations.mjs) and is not edited by hand. It holds Ohio's 88 counties, every ZIP code, and every place name, each mapped to the counties it falls in. Lookups are keyed by the normalized query, so resolving a location does not scan the dataset. Regenerate it rather than patching it; `npm run check` fails on a file that lost a county, miscounted its own rows, or points a ZIP at a county that is not in the registry. Its sources are the Census Bureau's ZCTA-to-county relationship files (public domain) and the GeoNames US postal file ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)); every record names the source it came from.
 
+[`data/offices.json`](data/offices.json) is **curated by hand** and says what each office on the ballot does, in plain language, with the constitutional or statutory section that supports each sentence. It describes the office only — never a candidate, a party, or a policy position.
+
 Each election includes a stable ID, date, type, scope, official information URL, voting deadlines, statewide contests, covered county records, and issues. A populated county record also declares whether its coverage is `partial` or `complete`, names the included scope, states what can be missing, and links to the full official county candidate list. Every contest must include:
 
 - a stable ID;
 - its geographic scope and office;
 - candidates' ballot names and affiliations;
-- an official source URL; and
+- an official source URL;
+- an `office_id` pointing at its description in `data/offices.json`; and
 - a `last_verified` date.
 
 Candidate affiliations are labels from the official candidate lists. The project does not endorse candidates or summarize policy positions in this release. A one-county match shows that county's coverage, and a cross-county match asks the voter to choose before any county race appears.
