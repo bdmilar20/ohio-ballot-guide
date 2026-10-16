@@ -2,7 +2,7 @@
   "meta": {
     "jurisdiction": "Ohio",
     "last_reviewed": "2026-10-15",
-    "coverage_note": "Statewide contests plus selected, explicitly partial countywide contests for Franklin, Cuyahoga, and Hamilton counties. County, ZIP, and place-name geography is generated into data/locations.json."
+    "coverage_note": "Statewide contests plus selected, explicitly partial countywide contests for Franklin, Cuyahoga, Hamilton, Montgomery, and Summit counties. County, ZIP, and place-name geography is generated into data/locations.json."
   },
   "elections": [
     {
@@ -247,6 +247,92 @@
               "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
               "candidates": [
                 { "name": "Jessica E. Miranda", "party": "Democratic" }
+              ]
+            }
+          ]
+        },
+        "montgomery": {
+          "coverage": {
+            "status": "partial",
+            "scope": "Selected countywide contests",
+            "summary": "Other countywide contests and all district, municipal, school, and precinct contests may be omitted.",
+            "source_url": "https://www.montgomery.boe.ohio.gov/wp-content/uploads/2023/10/9.11.2026-Candidate-Petition-Report.pdf",
+            "last_verified": "2026-10-15"
+          },
+          "races": [
+            {
+              "id": "montgomery-commissioner",
+              "scope": "Montgomery County · Term beginning January 1, 2027 · Vote for one",
+              "office": "County Commissioner",
+              "office_id": "county-commissioner",
+              "last_verified": "2026-10-15",
+              "source_url": "https://www.montgomery.boe.ohio.gov/wp-content/uploads/2023/10/9.11.2026-Candidate-Petition-Report.pdf",
+              "candidates": [
+                { "name": "Carolyn Rice", "party": "Democratic" },
+                { "name": "Margie Christie", "party": "Republican" }
+              ]
+            },
+            {
+              "id": "montgomery-auditor",
+              "scope": "Montgomery County · Vote for one",
+              "office": "County Auditor",
+              "office_id": "county-auditor",
+              "last_verified": "2026-10-15",
+              "source_url": "https://www.montgomery.boe.ohio.gov/wp-content/uploads/2023/10/9.11.2026-Candidate-Petition-Report.pdf",
+              "candidates": [
+                { "name": "Karl Keith", "party": "Democratic" },
+                { "name": "Tammy L. Murphy", "party": "Republican" }
+              ]
+            }
+          ]
+        },
+        "summit": {
+          "coverage": {
+            "status": "partial",
+            "scope": "Selected countywide contests",
+            "summary": "Other countywide contests and all district, municipal, school, and precinct contests may be omitted.",
+            "source_url": "https://www.boe.ohio.gov/summit/c/upload/Election_CandidateList.pdf",
+            "last_verified": "2026-10-15"
+          },
+          "races": [
+            {
+              "id": "summit-council-at-large",
+              "scope": "Summit County · Vote for no more than three",
+              "office": "County Council Member At Large",
+              "office_id": "summit-county-council",
+              "last_verified": "2026-10-15",
+              "source_url": "https://www.boe.ohio.gov/summit/c/upload/Election_CandidateList.pdf",
+              "candidates": [
+                { "name": "Shane R. Barker", "party": "Republican" },
+                { "name": "Jonathon D. Bollas", "party": "Republican" },
+                { "name": "John Chapman", "party": "Republican" },
+                { "name": "Erin Dickinson", "party": "Democratic" },
+                { "name": "John A. Donofrio", "party": "Democratic" },
+                { "name": "Elizabeth Walters", "party": "Democratic" }
+              ]
+            },
+            {
+              "id": "summit-common-pleas-general-2027-01-02",
+              "scope": "Summit County · Term beginning January 2, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, General Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-15",
+              "source_url": "https://www.boe.ohio.gov/summit/c/upload/Election_CandidateList.pdf",
+              "candidates": [
+                { "name": "Tania Nemer", "party": "Nonpartisan" },
+                { "name": "Tammy O’Brien", "party": "Nonpartisan" }
+              ]
+            },
+            {
+              "id": "summit-common-pleas-general-2027-01-05",
+              "scope": "Summit County · Term beginning January 5, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, General Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-15",
+              "source_url": "https://www.boe.ohio.gov/summit/c/upload/Election_CandidateList.pdf",
+              "candidates": [
+                { "name": "Alison McCarty", "party": "Nonpartisan" },
+                { "name": "Job Esau Perry", "party": "Nonpartisan" }
               ]
             }
           ]

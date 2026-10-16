@@ -16,6 +16,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -521,6 +525,31 @@ h2 {
   text-underline-offset: 0.25rem;
 }
 
+.county-resource {
+  align-items: center;
+  background: var(--paper-warm);
+  border: 1px solid var(--line);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 1rem 0 0;
+  padding: 0.8rem 1rem;
+}
+
+.county-resource span,
+.county-resource a {
+  font-size: 0.78rem;
+}
+
+.county-resource span {
+  color: var(--muted);
+}
+
+.county-resource a {
+  font-weight: 700;
+  min-height: 24px;
+}
+
 .quiet-button {
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -850,6 +879,12 @@ footer p {
 }
 
 @media (max-width: 560px) {
+  .county-resource {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
   .site-header,
   main,
   footer {

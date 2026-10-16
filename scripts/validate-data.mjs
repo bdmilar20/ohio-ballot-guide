@@ -6,9 +6,11 @@ import { normalizeQuery, ZIP_PATTERN } from "../src/lookup.mjs";
 const dataSource = process.argv[2] ?? new URL("../data/elections.json", import.meta.url);
 const locationSource = process.argv[3] ?? new URL("../data/locations.json", import.meta.url);
 const officeSource = process.argv[4] ?? new URL("../data/offices.json", import.meta.url);
+const countyBoardSource = process.argv[5] ?? new URL("../data/county-boards.json", import.meta.url);
 const data = JSON.parse(await readFile(dataSource, "utf8"));
 const locations = JSON.parse(await readFile(locationSource, "utf8"));
 const officeData = JSON.parse(await readFile(officeSource, "utf8"));
+const countyBoardData = JSON.parse(await readFile(countyBoardSource, "utf8"));
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const electionTypes = new Set(["general", "primary", "special", "local"]);
 const electionScopes = new Set(["statewide", "county", "municipal"]);
@@ -48,6 +50,17 @@ for (const source of locations.meta.sources) {
 const counties = locations.counties;
 const countyIds = Object.keys(counties);
 assert.equal(countyIds.length, OHIO_COUNTY_COUNT, `expected ${OHIO_COUNTY_COUNT} Ohio counties`);
+
+assertDate(countyBoardData.meta.last_verified, "county boards meta.last_verified");
+assertHttpsUrl(countyBoardData.meta.source_url, "county boards meta.source_url");
+assert.deepEqual(
+  Object.keys(countyBoardData.counties).sort(),
+  [...countyIds].sort(),
+  "county board directory must cover the same counties as locations",
+);
+for (const [countyId, url] of Object.entries(countyBoardData.counties)) {
+  assertHttpsUrl(url, `${countyId} board URL`);
+}
 
 const seenFips = new Set();
 for (const [countyId, county] of Object.entries(counties)) {

@@ -26,6 +26,12 @@ Contests go in `data/elections.json`, keyed by the county slug used in
 already resolves, so adding a county means adding its contests — not its
 geography.
 
+County Board of Elections homepages live in `data/county-boards.json`. Use the
+Ohio Secretary of State's county-board directory as the source, keep all 88
+county IDs in sync with `data/locations.json`, and update `meta.last_verified`
+when the directory is checked. The validator rejects missing counties and
+non-HTTPS links.
+
 ## Office descriptions
 
 `data/offices.json` explains what each office on the ballot does. It is curated
