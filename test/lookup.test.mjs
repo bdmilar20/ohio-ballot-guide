@@ -88,14 +88,14 @@ test("returns county races only after a county is selected", () => {
   assert.deepEqual(racesForCounty("unknown", election.counties), []);
 });
 
-test("qualifies race source names with the office and scope", () => {
+test("keeps visible race source labels before the office and scope", () => {
   const race = racesForCounty("summit", election.counties).find(
     ({ id }) => id === "summit-common-pleas-general-2027-01-05",
   );
 
   assert.equal(
-    sourceLabel(race),
-    "Official source for Judge of the Court of Common Pleas, General Division — Summit County · Term beginning January 5, 2027 · Vote for one",
+    sourceLabel(race, "Official ballot"),
+    "Official ballot — Judge of the Court of Common Pleas, General Division — Summit County · Term beginning January 5, 2027 · Vote for one",
   );
   assert.equal(
     sourceLabel(race, "Summit County General Division judges"),

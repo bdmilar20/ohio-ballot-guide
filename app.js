@@ -91,6 +91,13 @@ function setHttpsHref(link, value) {
   link.href = url.href;
 }
 
+function setExternalLinkText(link, label) {
+  const arrow = document.createElement("span");
+  arrow.setAttribute("aria-hidden", "true");
+  arrow.textContent = "↗";
+  link.replaceChildren(document.createTextNode(`${label} `), arrow);
+}
+
 function candidateItem(candidate, { showParty }) {
   const item = document.createElement("li");
   const name = document.createElement("span");
@@ -123,7 +130,7 @@ function renderOfficeNote(node, race) {
       setHttpsHref(link, source.url);
       link.target = "_blank";
       link.rel = "noreferrer";
-      link.textContent = `${source.label} ↗`;
+      setExternalLinkText(link, source.label);
       link.setAttribute("aria-label", sourceLabel(race, source.label));
       return link;
     }),
@@ -142,14 +149,14 @@ function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY) {
   const sourceGroup = node.querySelector(".race-sources");
   const source = node.querySelector(".race-source");
   setHttpsHref(source, race.source_url);
-  source.setAttribute("aria-label", sourceLabel(race));
+  source.setAttribute("aria-label", sourceLabel(race, "Official ballot"));
   for (const supplemental of race.supplemental_sources ?? []) {
     const link = document.createElement("a");
     link.className = "race-source";
     setHttpsHref(link, supplemental.url);
     link.target = "_blank";
     link.rel = "noreferrer";
-    link.textContent = `${supplemental.label} ↗`;
+    setExternalLinkText(link, supplemental.label);
     link.setAttribute("aria-label", sourceLabel(race, supplemental.label));
     sourceGroup.append(link);
   }
@@ -307,7 +314,10 @@ function showCountyResource(countyId) {
   const county = locations.counties[countyId];
   countyResourceLabel.textContent = `${county.name} election office`;
   setHttpsHref(countyBoardLink, countyBoards[countyId]);
-  countyBoardLink.setAttribute("aria-label", `Open the official ${county.name} Board of Elections website`);
+  countyBoardLink.setAttribute(
+    "aria-label",
+    `Open the official county board website — ${county.name} Board of Elections`,
+  );
   countyResource.hidden = false;
 }
 
@@ -333,7 +343,10 @@ function showCounty(countyId) {
   localTitle.textContent = `${county.name} contests`;
   localCoverageSummary.textContent = `${countyElection.coverage.scope}. ${countyElection.coverage.summary}`;
   setHttpsHref(localSource, countyElection.coverage.source_url);
-  localSource.setAttribute("aria-label", `Review the full official candidate list for ${county.name}`);
+  localSource.setAttribute(
+    "aria-label",
+    `Review the full official county list — ${county.name}`,
+  );
   renderRaces(localContainer, races);
   const hasPartialCoverage = countyElection.coverage.status === "partial";
   setNotice(
