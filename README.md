@@ -30,11 +30,18 @@ and reports the ones that have rotted. It drives a headless Chrome and talks to
 live government sites, so it is **run by hand, never from CI**. See
 [CONTRIBUTING.md](CONTRIBUTING.md#auditing-the-cited-urls).
 
+To generate the statutory schedule for a new year before comparing it with the
+Secretary of State's annual calendar:
+
+```bash
+npm run generate:schedule -- --year=2028
+```
+
 ## Data model
 
 The data is split by how it is maintained.
 
-[`data/elections.json`](data/elections.json) is **curated by hand** and cites an official source for every claim. The root `elections` array can hold general, primary, special, and local elections. The site selects the nearest election whose date has not passed, so adding a future record does not require an application release.
+[`data/elections.json`](data/elections.json) combines generated schedule fields with reviewed ballot content. Election days, registration deadlines, early-voting end dates, and poll hours are tied to a `schedule_rule`; [`scripts/build-election-schedule.mjs`](scripts/build-election-schedule.mjs) generates them from Ohio law, and `npm run check` rejects a stored value that disagrees. Candidate, issue, and coverage records remain curated and cite an official source for every claim. The root `elections` array can hold general, primary, special, and local elections. The site selects the nearest election whose date has not passed, so adding a future record does not require an application release.
 
 [`data/locations.json`](data/locations.json) is **generated** by [`scripts/build-locations.mjs`](scripts/build-locations.mjs) and is not edited by hand. It holds Ohio's 88 counties, every ZIP code, and every place name, each mapped to the counties it falls in. Lookups are keyed by the normalized query, so resolving a location does not scan the dataset. Regenerate it rather than patching it; `npm run check` fails on a file that lost a county, miscounted its own rows, or points a ZIP at a county that is not in the registry. Its sources are the Census Bureau's ZCTA-to-county relationship files (public domain) and the GeoNames US postal file ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)); every record names the source it came from.
 

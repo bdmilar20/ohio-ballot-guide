@@ -49,6 +49,36 @@ A contest points at a description through its `office_id`. The validator fails
 on a contest whose office is missing, a description with no source, and any
 source that is not HTTPS.
 
+## Generating election schedules
+
+Do not calculate recurring Ohio election dates by hand. Generate a year's
+statutory schedule:
+
+```bash
+npm run generate:schedule -- --year=2028
+```
+
+Copy the generated `schedule_rule`, `date`, `registration_deadline`,
+`early_voting_end`, and `polls` fields into a new election record, then compare
+them with the Secretary of State's annual calendar before publishing. The
+generator handles presidential-year March primaries and the ORC 1.14 holiday
+rollovers that move registration deadlines. `npm run check` recalculates those
+fields and rejects drift.
+
+If the annual calendar moves a deadline because an office is closed on a
+one-off holiday, record that source-backed exception on the election rather
+than changing the generated date silently:
+
+```json
+"schedule_exceptions": {
+  "additional_closed_dates": ["2028-02-21"]
+}
+```
+
+The validator includes those dates when it recomputes the deadline. See
+[`docs/ELECTION_DATES.md`](docs/ELECTION_DATES.md) for the statutes and the
+boundary between generated expectations and annual official verification.
+
 ## Regenerating the location data
 
 `data/locations.json` is generated. Do not hand-edit it; re-run the script and

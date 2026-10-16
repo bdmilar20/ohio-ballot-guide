@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "generate:schedule": "node scripts/build-election-schedule.mjs",
     "check": "node scripts/validate-data.mjs",
     "check:links": "node scripts/check-links.mjs",
     "test": "node --test"

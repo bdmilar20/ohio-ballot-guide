@@ -76,6 +76,40 @@ test("validator rejects an election that references an unknown county", async (t
   assert.match(result.stderr, /references unknown county mariom/);
 });
 
+test("validator rejects a hand-entered election deadline that disagrees with its rule", async (t) => {
+  const result = await validateFixture(t, {
+    elections: (data) => {
+      data.elections[1].registration_deadline = "2027-04-04";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /registration_deadline disagrees with Ohio law/);
+});
+
+test("validator cannot bypass an August rule by changing the month", async (t) => {
+  const result = await validateFixture(t, {
+    elections: (data) => {
+      data.elections[2].id = "2027-09-03-special";
+      data.elections[2].date = "2027-09-03";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /date disagrees with Ohio law/);
+});
+
+test("validator accepts a documented one-off office closure", async (t) => {
+  const result = await validateFixture(t, {
+    elections: (data) => {
+      data.elections[1].schedule_exceptions = { additional_closed_dates: ["2027-04-05"] };
+      data.elections[1].registration_deadline = "2027-04-06";
+    },
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test("validator rejects a place name that would shadow a ZIP lookup", async (t) => {
   const result = await validateFixture(t, {
     locations: (data) => {

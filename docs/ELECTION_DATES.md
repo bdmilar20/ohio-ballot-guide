@@ -9,6 +9,29 @@ the statute alone. This document records what backs each field so a contributor
 can check a date without re-deriving it, and so nobody "corrects" a date that is
 already right.
 
+## Generate first, verify second
+
+Recurring dates are executable rules, not hand-entered arithmetic. Generate a
+year with:
+
+```bash
+npm run generate:schedule -- --year=2028
+```
+
+Each stored election carries a `schedule_rule` (`ohio-primary`,
+`ohio-august-special`, or `ohio-general`). `npm run check` recomputes its
+election day, registration deadline, early-voting end, and poll hours and fails
+if the JSON drifts. The generator knows that presidential-year primaries move
+from May to March and that registration can roll through consecutive legal
+holidays.
+
+The output is still an expected statutory schedule. Compare it with the
+Secretary of State's annual calendar before publishing a new year because the
+law can change and ORC 1.14 recognizes one-off holidays appointed by the
+governor or president. Record a source-backed one-off closure in
+`schedule_exceptions.additional_closed_dates`; the validator will include it
+instead of forcing an incorrect recurring-calendar answer.
+
 ## The statutes
 
 | Date | Statute | Rule |
