@@ -41,6 +41,27 @@ export function issuesForCounty(countyId, counties) {
   return counties[countyId]?.issues ?? [];
 }
 
+export function countyCoverageNotice(countyName, coverage, raceCount, issueCount) {
+  if (coverage.method === "common_to_all_precincts") {
+    return {
+      lead: "Approximate location.",
+      copy: `This match points to ${countyName}. The county section contains only content verified on every enumerated precinct ballot, but it is not a complete precinct ballot. Verify your precinct with the official sample-ballot link below.`,
+    };
+  }
+
+  if (coverage.status === "partial") {
+    return {
+      lead: "Approximate location and partial coverage.",
+      copy: `This match points to ${countyName}. The county section contains ${raceCount} selected ${raceCount === 1 ? "contest" : "contests"} and ${issueCount} ${issueCount === 1 ? "issue" : "issues"}, not a complete ballot. Verify your precinct with the official sample-ballot link below.`,
+    };
+  }
+
+  return {
+    lead: "Approximate location.",
+    copy: `This match points to ${countyName}. The county section covers every verified countywide contest and issue in the official list, but it is not a complete precinct ballot. Verify your precinct with the official sample-ballot link below.`,
+  };
+}
+
 export function sourceLabel(race, label) {
   return `${label} — ${race.office} — ${race.scope}`;
 }

@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  countyCoverageNotice,
   daysUntilElection,
   hasPublishedBallotDetails,
   issuesForCounty,
@@ -101,6 +102,25 @@ test("returns county issues only after a county is selected", () => {
     hasPublishedBallotDetails({ statewide_races: [], issues: [], counties }),
     true,
   );
+});
+
+test("describes precinct verification only for common-precinct projections", () => {
+  const projected = countyCoverageNotice(
+    "Adams",
+    { status: "complete", method: "common_to_all_precincts" },
+    1,
+    1,
+  );
+  assert.match(projected.copy, /verified on every enumerated precinct ballot/);
+
+  const curated = countyCoverageNotice("Franklin", { status: "complete" }, 2, 0);
+  assert.match(curated.copy, /covers every verified countywide contest and issue/);
+  assert.doesNotMatch(curated.copy, /enumerated precinct ballot/);
+
+  const partial = countyCoverageNotice("Franklin", { status: "partial" }, 2, 0);
+  assert.equal(partial.lead, "Approximate location and partial coverage.");
+  assert.match(partial.copy, /2 selected contests and 0 issues/);
+  assert.doesNotMatch(partial.copy, /enumerated precinct ballot/);
 });
 
 test("keeps visible race source labels before the office and scope", () => {

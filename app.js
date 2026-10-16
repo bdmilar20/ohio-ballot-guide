@@ -1,5 +1,6 @@
 import {
   countiesWithContests,
+  countyCoverageNotice,
   daysUntilElection,
   hasPublishedBallotDetails,
   issuesForCounty,
@@ -384,13 +385,13 @@ function showCounty(countyId) {
     `Review the full official county list — ${county.name}`,
   );
   renderRaces(localContainer, races);
-  const hasPartialCoverage = countyElection.coverage.status === "partial";
-  setNotice(
-    hasPartialCoverage ? "Approximate location and partial coverage." : "Approximate location.",
-    hasPartialCoverage
-      ? `This match points to ${county.name}. The county section contains ${races.length} selected ${races.length === 1 ? "contest" : "contests"} and ${issues.length} ${issues.length === 1 ? "issue" : "issues"}, not a complete ballot. Verify your precinct with the official sample-ballot link below.`
-      : `This match points to ${county.name}. The county section contains only content verified on every enumerated precinct ballot, but it is not a complete precinct ballot. Verify your precinct with the official sample-ballot link below.`,
+  const notice = countyCoverageNotice(
+    county.name,
+    countyElection.coverage,
+    races.length,
+    issues.length,
   );
+  setNotice(notice.lead, notice.copy);
 }
 
 function renderCountyChoice(location, selectCounty = showCounty) {

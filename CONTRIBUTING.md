@@ -267,9 +267,12 @@ npm run project:vtrapp -- \
   --out .cache/vtrapp-adams-review.json
 ```
 
-Review every uncertain parse and every possible statewide duplicate. To emit a
-candidate county record, pass a JSON config with an explicit freshness limit,
-office mappings, and mappings for issues already published statewide:
+Review every uncertain parse and every possible statewide duplicate. A
+`published_statewide_race_id` is an exact office-and-candidate match;
+`possible_statewide_race_ids` are office-name matches whose candidate sets may
+differ. To emit a candidate county record, pass a JSON config with an explicit
+freshness limit, office mappings, and mappings for races or issues already
+published statewide:
 
 ```json
 {
@@ -280,6 +283,9 @@ office mappings, and mappings for issues already published statewide:
       "office_id": "county-commissioner",
       "office": "County Commissioner"
     }
+  },
+  "statewide_race_mappings": {
+    "For United States Senator": "us-senate"
   },
   "statewide_issue_mappings": {
     "Issue 3": "state-issue-3"

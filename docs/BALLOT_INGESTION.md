@@ -160,11 +160,14 @@ fingerprint covers every normalized content field by default and excludes only
 the per-precinct order and source URL.
 
 Publishing is a separate, reviewed operation. A projection config must set the
-maximum acceptable source age, map every common office to a known
-`data/offices.json` record, and explicitly identify issues already published at
-the statewide level. The projector calculates freshness again at review time,
-rejects uncertain common parses, and emits a candidate county record without
-editing `data/elections.json`.
+maximum acceptable source age, map every common county office to a known
+`data/offices.json` record, and explicitly identify statewide races or issues
+whose source content does not exactly match the published candidate or issue
+data. The review report exposes office-name matches separately from exact
+office-and-candidate matches so a stale statewide candidate list cannot turn a
+statewide race into county content. The projector calculates freshness again at
+review time, rejects uncertain common parses, and emits a candidate county
+record without editing `data/elections.json`.
 
 County records now support `issues[]` alongside `races[]`. Projected records
 carry their source-content fingerprint, and `coverage` records the source

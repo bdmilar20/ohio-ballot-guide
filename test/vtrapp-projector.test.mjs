@@ -193,6 +193,7 @@ test("reports only full-content contests present on every precinct", () => {
     ["For Governor and Lieutenant Governor", "For County Commissioner", "Issue 3", "Proposed Tax Levy (Additional)"],
   );
   assert.equal(review.common_to_all_precincts[0].published_statewide_race_id, "governor");
+  assert.deepEqual(review.common_to_all_precincts[0].possible_statewide_race_ids, ["governor"]);
   assert.equal(review.common_to_all_precincts[2].possible_statewide_issue_id, "state-issue-3");
   assert.deepEqual(review.precinct_specific.map(({ title, precinct_count }) => [title, precinct_count]), [
     ["For Village Mayor", 1],
@@ -287,6 +288,49 @@ test("requires explicit freshness, office, issue-duplicate, and uncertainty deci
   );
 });
 
+test("refuses to publish a possible statewide race as county content", () => {
+  const { snapshot, election } = fixture();
+  for (const ballot of Object.values(snapshot.ballots)) {
+    ballot.contests[0].choices = ballot.contests[0].choices.filter(
+      ({ name }) => name !== "Vivek Ramaswamy and Robert A. McColley",
+    );
+  }
+  rehashSnapshot(snapshot);
+
+  const review = analyzeSnapshot(snapshot, election);
+  const governor = review.common_to_all_precincts[0];
+  assert.equal(governor.published_statewide_race_id, null);
+  assert.deepEqual(governor.possible_statewide_race_ids, ["governor"]);
+
+  const options = {
+    maxSourceAgeHours: 24,
+    reviewedAt: "2026-10-16T18:00:00.000Z",
+    officeMappings: {
+      "For Governor and Lieutenant Governor": "governor",
+      "For County Commissioner": "county-commissioner",
+    },
+    statewideIssueMappings: { "Issue 3": "state-issue-3" },
+  };
+  assert.throws(
+    () => projectCounty(snapshot, election, options),
+    /may duplicate governor; add an explicit statewide race mapping/,
+  );
+  assert.throws(
+    () => projectCounty(snapshot, election, {
+      ...options,
+      statewideRaceMappings: { "For Governor and Lieutenant Governor": "county-commissioner" },
+    }),
+    /references county-commissioner, which does not match its office/,
+  );
+
+  const result = projectCounty(snapshot, election, {
+    ...options,
+    statewideRaceMappings: { "For Governor and Lieutenant Governor": "governor" },
+  });
+  assert.deepEqual(result.county.races.map(({ office_id }) => office_id), ["county-commissioner"]);
+  assert.ok(result.removed_statewide_duplicates.some(({ id }) => id === "governor"));
+});
+
 test("CLI writes a reviewed projection without editing election data", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "vtrapp-projector-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -330,4 +374,24 @@ test("CLI writes a reviewed projection without editing election data", async (t)
   assert.equal(projection.county.issues.length, 1);
   assert.ok(projection.county.coverage.source_age_hours_at_review >= 12);
   assert.equal((await readFile(electionsPath, "utf8")), JSON.stringify({ elections: [election] }));
+});
+
+test("CLI review fails when the requested elections data lacks the snapshot election", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "vtrapp-projector-wrong-election-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const { snapshot } = fixture();
+  const snapshotPath = join(directory, "snapshot.json");
+  const electionsPath = join(directory, "elections.json");
+  await writeFile(snapshotPath, JSON.stringify(snapshot));
+  await writeFile(electionsPath, JSON.stringify({ elections: [] }));
+
+  const result = spawnSync(process.execPath, [
+    new URL("../scripts/project-vtrapp.mjs", import.meta.url).pathname,
+    "--snapshot", snapshotPath,
+    "--elections", electionsPath,
+  ], { encoding: "utf8" });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /election 2026-11-03-general is absent from --elections data/);
+  assert.equal(result.stdout, "");
 });

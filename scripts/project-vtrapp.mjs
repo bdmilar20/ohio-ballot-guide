@@ -148,13 +148,17 @@ function arraysEqual(left, right) {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
+function possiblePublishedRaceMatches(contest, election) {
+  if (!election || contest.kind !== "office") return [];
+  return election.statewide_races.filter(
+    (race) => comparableOffice(race.office) === comparableOffice(contest.title),
+  );
+}
+
 function publishedRaceMatch(contest, election) {
-  if (!election || contest.kind !== "office") return null;
   const candidates = sourceCandidateSet(contest);
-  const matches = election.statewide_races.filter(
-    (race) =>
-      comparableOffice(race.office) === comparableOffice(contest.title) &&
-      arraysEqual(publishedCandidateSet(race), candidates),
+  const matches = possiblePublishedRaceMatches(contest, election).filter(
+    (race) => arraysEqual(publishedCandidateSet(race), candidates),
   );
   invariant(matches.length <= 1, `contest "${contest.title}" matches multiple published statewide races`);
   return matches[0]?.id ?? null;
@@ -169,6 +173,8 @@ function possiblePublishedIssueMatch(contest, election) {
 }
 
 function reportEntry(entry, precinctTotal, election) {
+  const possibleStatewideRaceIds = possiblePublishedRaceMatches(entry.contest, election)
+    .map(({ id }) => id);
   return {
     fingerprint: entry.fingerprint,
     kind: entry.contest.kind,
@@ -179,6 +185,7 @@ function reportEntry(entry, precinctTotal, election) {
     sample_precinct_ids: [...entry.precinct_ids].slice(0, 5),
     orders: [...entry.orders].sort((left, right) => left - right),
     published_statewide_race_id: publishedRaceMatch(entry.contest, election),
+    possible_statewide_race_ids: possibleStatewideRaceIds,
     possible_statewide_issue_id: possiblePublishedIssueMatch(entry.contest, election),
     uncertain: entry.contest.uncertain,
     contest: entry.contest,
@@ -313,6 +320,7 @@ function productIssue(entry, snapshot) {
 export function projectCounty(snapshot, election, {
   maxSourceAgeHours,
   officeMappings = {},
+  statewideRaceMappings = {},
   statewideIssueMappings = {},
   countyName = displayCounty(snapshot.county.id),
   reviewedAt = new Date(),
@@ -322,6 +330,10 @@ export function projectCounty(snapshot, election, {
   invariant(
     officeMappings && typeof officeMappings === "object" && !Array.isArray(officeMappings),
     "officeMappings must be an object",
+  );
+  invariant(
+    statewideRaceMappings && typeof statewideRaceMappings === "object" && !Array.isArray(statewideRaceMappings),
+    "statewideRaceMappings must be an object",
   );
   invariant(
     statewideIssueMappings && typeof statewideIssueMappings === "object" && !Array.isArray(statewideIssueMappings),
@@ -352,6 +364,19 @@ export function projectCounty(snapshot, election, {
     }
 
     if (entry.kind === "office") {
+      const statewideRaceId = mappingFor(statewideRaceMappings, entry);
+      if (statewideRaceId) {
+        invariant(
+          entry.possible_statewide_race_ids.includes(statewideRaceId),
+          `statewide race mapping for "${entry.title}" references ${statewideRaceId}, which does not match its office`,
+        );
+        removedStatewide.push({ fingerprint: entry.fingerprint, id: statewideRaceId });
+        continue;
+      }
+      invariant(
+        entry.possible_statewide_race_ids.length === 0,
+        `office "${entry.title}" may duplicate ${entry.possible_statewide_race_ids.join(" or ")}; add an explicit statewide race mapping`,
+      );
       const mapping = mappingFor(officeMappings, entry);
       if (!mapping) {
         unmapped.push(entry.title);
@@ -417,6 +442,9 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
     const snapshot = await readJson(args.snapshot);
     const electionData = args.elections ? await readJson(args.elections) : null;
     const election = electionData?.elections?.find(({ id }) => id === snapshot.election.id) ?? null;
+    if (args.elections) {
+      invariant(election, `election ${snapshot.election.id} is absent from --elections data`);
+    }
     const review = analyzeSnapshot(snapshot, election);
     let artifact = { review };
 
@@ -426,6 +454,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
       artifact = projectCounty(snapshot, election, {
         maxSourceAgeHours: config.max_source_age_hours,
         officeMappings: config.office_mappings,
+        statewideRaceMappings: config.statewide_race_mappings,
         statewideIssueMappings: config.statewide_issue_mappings,
         countyName: config.county_name,
       });
