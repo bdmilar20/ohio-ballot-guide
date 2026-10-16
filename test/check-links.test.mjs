@@ -104,18 +104,23 @@ test("collects the generated locations file's own sources", async () => {
   );
 });
 
-test("a missing locations argument cannot silently drop the source audit", async () => {
-  // Calling it the old way must not throw, but it must also not be mistaken
-  // for a complete audit: the three build inputs are simply absent.
-  const citations = collectCitations(
-    await readData("elections.json"),
-    await readData("offices.json"),
-    await readData("county-boards.json"),
+test("refuses to build an audit without the locations file", async () => {
+  const elections = await readData("elections.json");
+  const offices = await readData("offices.json");
+  const boards = await readData("county-boards.json");
+
+  // Completeness fails closed: an incomplete sweep must not be returnable as
+  // if it covered every cited URL.
+  assert.throws(
+    () => collectCitations(elections, offices, boards),
+    /needs data\/locations\.json/,
+    "omitting locations must throw, not silently skip the build inputs",
   );
-  const locations = await readData("locations.json");
-  for (const source of locations.meta.sources) {
-    assert.ok(!citations.has(source.url), "no phantom citations without the file");
-  }
+  assert.throws(() => collectCitations(elections, offices, boards, {}), /needs data\/locations\.json/);
+  assert.throws(
+    () => collectCitations(elections, offices, boards, { meta: {} }),
+    /needs data\/locations\.json/,
+  );
 });
 
 // 429 and 5xx mean the origin never served the document. An honest 404 on the

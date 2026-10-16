@@ -25,6 +25,15 @@ const NAVIGATION_TIMEOUT_MS = 30_000;
 const SLOW_HOST_PATTERN = /(^|\.)boe\.ohio\.gov$/;
 
 export function collectCitations(elections, offices, countyBoards, locations) {
+  // Required, not optional. An audit that quietly skips a data file is worse
+  // than no audit: it reports "every cited URL" over an incomplete sweep. The
+  // build inputs went unchecked for exactly this reason, so this fails closed.
+  if (locations?.meta?.sources == null) {
+    throw new TypeError(
+      "collectCitations needs data/locations.json as its fourth argument: its meta.sources are cited URLs too",
+    );
+  }
+
   const citations = [];
   const cite = (url, label) => {
     if (typeof url === "string" && url.length > 0) citations.push({ url, label });
@@ -68,8 +77,8 @@ export function collectCitations(elections, offices, countyBoards, locations) {
   // locations.json is generated, but the Census and GeoNames files it is
   // generated from are cited in its meta and rot like anything else. Leaving
   // them out meant the build inputs were the one thing never audited.
-  cite(locations?.meta?.source_url, "locations.meta.source_url");
-  for (const source of locations?.meta?.sources ?? []) {
+  cite(locations.meta.source_url, "locations.meta.source_url");
+  for (const source of locations.meta.sources) {
     cite(source.url, `locations — ${source.id ?? source.name}`);
   }
 
@@ -323,11 +332,13 @@ async function describe(client) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// One retry, because a 429 says "later", not "gone".
+// One retry, because a 429 or a 5xx says "later", not "gone". Both get the
+// same single retry so that describeResult can say "after a retry" about every
+// status isRetryableStatus() covers.
 async function probe(client, url, pause) {
   let attempt = await probeOnce(client, url);
   let page = attempt.response?.mimeType?.startsWith("text/html") ? await describe(client) : {};
-  if (attempt.response?.status === 429) {
+  if (isRetryableStatus(attempt.response?.status)) {
     await sleep(Math.max(pause, 1000) * 4);
     attempt = await probeOnce(client, url);
     page = attempt.response?.mimeType?.startsWith("text/html") ? await describe(client) : {};
