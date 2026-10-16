@@ -3,7 +3,8 @@
 // www.boe.ohio.gov, which hosts about fifty county board sites and rate-limits
 // concurrent callers. See CONTRIBUTING.md.
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { constants as fsConstants } from "node:fs";
+import { access, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -23,7 +24,7 @@ const NAVIGATION_TIMEOUT_MS = 30_000;
 // www.boe.ohio.gov answered concurrency 4 with 429s and its maintenance page.
 const SLOW_HOST_PATTERN = /(^|\.)boe\.ohio\.gov$/;
 
-export function collectCitations(elections, offices, countyBoards) {
+export function collectCitations(elections, offices, countyBoards, locations) {
   const citations = [];
   const cite = (url, label) => {
     if (typeof url === "string" && url.length > 0) citations.push({ url, label });
@@ -64,12 +65,39 @@ export function collectCitations(elections, offices, countyBoards) {
     cite(url, `county-boards.${countyId}`);
   }
 
+  // locations.json is generated, but the Census and GeoNames files it is
+  // generated from are cited in its meta and rot like anything else. Leaving
+  // them out meant the build inputs were the one thing never audited.
+  cite(locations?.meta?.source_url, "locations.meta.source_url");
+  for (const source of locations?.meta?.sources ?? []) {
+    cite(source.url, `locations — ${source.id ?? source.name}`);
+  }
+
   const byUrl = new Map();
   for (const { url, label } of citations) {
     if (!byUrl.has(url)) byUrl.set(url, []);
     byUrl.get(url).push(label);
   }
   return byUrl;
+}
+
+// 429 and 5xx say "ask again later", not "gone". The origin never served the
+// document, so nothing was read and no control can make the silence mean
+// something: an honest 404 on the control proves the origin discriminates, not
+// that this URL is dead. Calling these broken is the one mistake this tool
+// exists to avoid.
+export function isRetryableStatus(status) {
+  return status === 429 || (typeof status === "number" && status >= 500 && status < 600);
+}
+
+// Pure so the verdict table can be pinned by tests instead of by a live sweep.
+export function classify({ status, failure, hasResponse, challenged, byStatus, byMime, byPage }) {
+  if (failure && !hasResponse) return "error";
+  if (isRetryableStatus(status)) return "unverified";
+  if (challenged) return "unverified";
+  if (!byStatus && !byMime && !byPage) return "unverified";
+  if (typeof status === "number" && status >= 200 && status < 300) return "ok";
+  return "broken";
 }
 
 // A bogus sibling of the same shape. If this resolves the way the real URL
@@ -113,10 +141,28 @@ export function controlFor(url) {
   return control.toString();
 }
 
+// `.filter(Boolean)` already dropped an unset CHROME_PATH, so picking the first
+// truthy candidate would always pick the first *path* — on Linux, the macOS
+// Google Chrome path that is not there. Only an executable file counts.
+export async function findChrome(candidates = CHROME_CANDIDATES) {
+  for (const candidate of candidates) {
+    try {
+      await access(candidate, fsConstants.X_OK);
+      // X_OK on a directory only means "searchable", so it passes for /tmp.
+      if ((await stat(candidate)).isFile()) return candidate;
+    } catch {
+      // Not installed here; try the next one.
+    }
+  }
+  return null;
+}
+
 async function launchChrome() {
-  const executablePath = CHROME_CANDIDATES.find(Boolean);
+  const executablePath = await findChrome();
   if (!executablePath) {
-    throw new Error("No Chrome found. Set CHROME_PATH to a Chrome or Chromium binary.");
+    throw new Error(
+      `No Chrome or Chromium executable found. Looked at:\n  ${CHROME_CANDIDATES.join("\n  ")}\nSet CHROME_PATH to a Chrome or Chromium binary.`,
+    );
   }
   const userDataDir = await mkdtemp(join(tmpdir(), "obg-check-links-"));
   const chrome = spawn(executablePath, [
@@ -140,10 +186,20 @@ async function launchChrome() {
         resolve(Number(match[1]));
       }
     });
+    // An unhandled "error" event on a child process throws, so a binary that
+    // cannot be executed has to be caught here rather than left to crash.
+    chrome.on("error", (error) => {
+      clearTimeout(timer);
+      reject(new Error(`Could not start ${executablePath}: ${error.message}`));
+    });
     chrome.on("exit", (code) => {
       clearTimeout(timer);
-      reject(new Error(`Chrome exited with ${code}`));
+      reject(new Error(`Chrome exited with ${code} before reporting a debugging port`));
     });
+  }).catch(async (error) => {
+    chrome.kill();
+    await rm(userDataDir, { recursive: true, force: true }).catch(() => {});
+    throw error;
   });
 
   return { chrome, port, userDataDir };
@@ -322,9 +378,11 @@ function describeResult(result, controlProbe) {
       ? `control discriminates by rendered page, not status (control reads "${controlProbe.heading ?? controlProbe.title}")`
       : null,
     result.verdict === "unverified"
-      ? result.challenged
-        ? `origin is serving a challenge or maintenance page: ${result.title ?? controlProbe.title}`
-        : `control returned ${result.control.status ?? "nothing"} with the same page`
+      ? isRetryableStatus(result.status)
+        ? `origin answered ${result.status} after a retry, which means later, not gone`
+        : result.challenged
+          ? `origin is serving a challenge or maintenance page: ${result.title ?? controlProbe.title}`
+          : `control returned ${result.control.status ?? "nothing"} with the same page`
       : null,
     result.saved ? `saved ${result.saved}` : null,
   ]
@@ -348,6 +406,7 @@ export async function main(argv = process.argv.slice(2)) {
     await read("elections.json"),
     await read("offices.json"),
     await read("county-boards.json"),
+    await read("locations.json"),
   );
 
   const urls = [...citations.keys()]
@@ -422,11 +481,15 @@ export async function main(argv = process.argv.slice(2)) {
       controlProbe.title !== null &&
       (attempt.title !== controlProbe.title || attempt.heading !== controlProbe.heading);
 
-    let verdict;
-    if (attempt.failure && !attempt.response) verdict = "error";
-    else if (challenged || (!byStatus && !byMime && !byPage)) verdict = "unverified";
-    else if (status >= 200 && status < 300) verdict = "ok";
-    else verdict = "broken";
+    const verdict = classify({
+      status,
+      failure: attempt.failure,
+      hasResponse: Boolean(attempt.response),
+      challenged,
+      byStatus,
+      byMime,
+      byPage,
+    });
 
     const result = {
       url,
@@ -479,9 +542,9 @@ export async function main(argv = process.argv.slice(2)) {
 
   const unverified = results.filter(({ verdict }) => verdict === "unverified");
   if (unverified.length > 0) {
-    console.log(`\n${unverified.length} unverified. Unverified is not broken: the origin answered`);
-    console.log("the control the same way it answered the real URL, so its status carries");
-    console.log("no information. Change nothing on that basis.");
+    console.log(`\n${unverified.length} unverified. Unverified is not broken: either the origin`);
+    console.log("answered the control the same way it answered the real URL, or it asked us to");
+    console.log("come back later. Its status carries no information. Change nothing on that basis.");
   }
 
   return broken.length > 0 ? 1 : 0;

@@ -108,9 +108,9 @@ crosswalk.
 Boards of elections replace dated and GUID-stamped documents rather than
 updating them, so a citation that resolved last month can rot without any
 change on our side. `npm run check:links` resolves every `source_url`,
-`official_info_url`, supplemental source, office-description source and county
-board homepage in the data, one at a time, in a headless Chrome it launches
-itself.
+`official_info_url`, supplemental source, office-description source, county
+board homepage, and the Census and GeoNames files that `data/locations.json` is
+generated from, one at a time, in a headless Chrome it launches itself.
 
 **Run it by hand. Never wire it into CI or into `npm run check`.** It makes
 roughly two hundred requests to live government sites, about fifty of them to
@@ -118,13 +118,21 @@ roughly two hundred requests to live government sites, about fifty of them to
 concurrency four with 429s and a maintenance page. The script is serial and
 paced for that reason; `--delay` and `--slow-delay` set the pauses.
 
-It reports three outcomes, and the distinction is the point:
+It reports four outcomes, and the distinction is the point:
 
 | verdict | means |
 |---|---|
 | `ok` | the URL resolved **and** a control proved the origin discriminates |
-| `broken` | the URL failed and that same control proved the failure is real |
-| `unverified` | the origin answered the control exactly as it answered the real URL, so its answer carries no information |
+| `broken` | the URL returned a real, non-retryable failure and that same control proved the failure is real |
+| `unverified` | nothing could be concluded: the origin answered the control exactly as it answered the real URL, or it was serving a challenge or maintenance page, or it asked us to come back later |
+| `error` | no response at all — a timeout or a navigation failure |
+
+A `429` or any `5xx`, even after the script's retry, is always `unverified` and
+never `broken`. The origin never served the document, so there is nothing for a
+control to discriminate: an honest `404` on the control proves the origin
+answers honestly, not that the unread URL is gone. `scripts/check-links.mjs`
+exports `classify()` for exactly this reason, and the verdict table is pinned
+in `test/check-links.test.mjs` rather than trusted to a live sweep.
 
 Every URL is checked against a deliberately bogus sibling first. Without that
 control a 403 from a site behind bot management, or a 200 from a site that
@@ -154,7 +162,9 @@ boards take documents down, and a saved copy is the difference between a review
 that can check a candidate list and one that has to take a contributor's word
 for it. `.cache/` is ignored by git, so the copies stay out of the repository.
 
-Set `CHROME_PATH` if the script cannot find Chrome or Chromium.
+Set `CHROME_PATH` if the script cannot find Chrome or Chromium. It checks each
+known install path for an executable file and reports every path it tried, so a
+Chromium-only machine or a Linux box does not need any configuration.
 
 ## Design changes
 
