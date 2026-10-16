@@ -18,12 +18,13 @@ year with:
 npm run generate:schedule -- --year=2028
 ```
 
-Each stored election carries a `schedule_rule` (`ohio-primary`,
+Every stored election must carry a supported `schedule_rule` (`ohio-primary`,
 `ohio-august-special`, or `ohio-general`). `npm run check` recomputes its
 election day, registration deadline, early-voting end, and poll hours and fails
-if the JSON drifts. The generator knows that presidential-year primaries move
-from May to March and that registration can roll through consecutive legal
-holidays.
+if the JSON drifts. It also rejects an election with no rule, so a new local or
+special-election category must be implemented in the generator before it can
+ship. The generator knows that presidential-year primaries move from May to
+March and that registration can roll through consecutive legal holidays.
 
 The output is still an expected statutory schedule. Compare it with the
 Secretary of State's annual calendar before publishing a new year because the

@@ -99,6 +99,22 @@ test("validator cannot bypass an August rule by changing the month", async (t) =
   assert.match(result.stderr, /date disagrees with Ohio law/);
 });
 
+test("validator cannot bypass schedule checks with a non-August special", async (t) => {
+  const result = await validateFixture(t, {
+    elections: (data) => {
+      const election = data.elections[2];
+      election.id = "2027-05-04-special";
+      election.date = "2027-05-04";
+      election.registration_deadline = "2027-05-03";
+      election.early_voting_end = "2027-05-01";
+      delete election.schedule_rule;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /schedule_rule is required for every election/);
+});
+
 test("validator accepts a documented one-off office closure", async (t) => {
   const result = await validateFixture(t, {
     elections: (data) => {

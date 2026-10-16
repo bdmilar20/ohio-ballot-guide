@@ -138,56 +138,40 @@ for (const election of data.elections) {
   assertDate(election.date, `${election.id}.date`);
   assert.ok(election.id.startsWith(`${election.date}-`), `${election.id} must start with its election date`);
   assert.ok(electionTypes.has(election.type), `${election.id} has an invalid type`);
-  const requiredScheduleRule =
-    election.type === "general"
-      ? "ohio-general"
-      : election.type === "primary"
-        ? "ohio-primary"
-        : election.type === "special" && election.date.slice(5, 7) === "08"
-          ? "ohio-august-special"
-        : null;
-  if (requiredScheduleRule) {
-    assert.equal(
-      election.schedule_rule,
-      requiredScheduleRule,
-      `${election.id}.schedule_rule must be ${requiredScheduleRule}`,
-    );
+  assert.ok(election.schedule_rule, `${election.id}.schedule_rule is required for every election`);
+  assert.ok(
+    OHIO_SCHEDULE_RULES.has(election.schedule_rule),
+    `${election.id}.schedule_rule is not recognized`,
+  );
+  const typeForRule = {
+    "ohio-primary": "primary",
+    "ohio-august-special": "special",
+    "ohio-general": "general",
+  }[election.schedule_rule];
+  assert.equal(election.type, typeForRule, `${election.id}.type disagrees with its schedule rule`);
+  const additionalClosedDates = election.schedule_exceptions?.additional_closed_dates ?? [];
+  assert.ok(
+    Array.isArray(additionalClosedDates),
+    `${election.id}.schedule_exceptions.additional_closed_dates must be an array`,
+  );
+  for (const date of additionalClosedDates) {
+    assertDate(date, `${election.id}.schedule_exceptions.additional_closed_dates`);
   }
-  if (election.schedule_rule) {
-    assert.ok(
-      OHIO_SCHEDULE_RULES.has(election.schedule_rule),
-      `${election.id}.schedule_rule is not recognized`,
-    );
-    const typeForRule = {
-      "ohio-primary": "primary",
-      "ohio-august-special": "special",
-      "ohio-general": "general",
-    }[election.schedule_rule];
-    assert.equal(election.type, typeForRule, `${election.id}.type disagrees with its schedule rule`);
-    const additionalClosedDates = election.schedule_exceptions?.additional_closed_dates ?? [];
-    assert.ok(
-      Array.isArray(additionalClosedDates),
-      `${election.id}.schedule_exceptions.additional_closed_dates must be an array`,
-    );
-    for (const date of additionalClosedDates) {
-      assertDate(date, `${election.id}.schedule_exceptions.additional_closed_dates`);
-    }
-    const expectedSchedule = scheduleFields(Number(election.date.slice(0, 4)), election.schedule_rule, {
-      additionalClosedDates,
-    });
-    assert.equal(election.date, expectedSchedule.date, `${election.id}.date disagrees with Ohio law`);
-    assert.equal(
-      election.registration_deadline,
-      expectedSchedule.registration_deadline,
-      `${election.id}.registration_deadline disagrees with Ohio law`,
-    );
-    assert.equal(
-      election.early_voting_end,
-      expectedSchedule.early_voting_end,
-      `${election.id}.early_voting_end disagrees with Ohio law`,
-    );
-    assert.deepEqual(election.polls, expectedSchedule.polls, `${election.id}.polls disagree with Ohio law`);
-  }
+  const expectedSchedule = scheduleFields(Number(election.date.slice(0, 4)), election.schedule_rule, {
+    additionalClosedDates,
+  });
+  assert.equal(election.date, expectedSchedule.date, `${election.id}.date disagrees with Ohio law`);
+  assert.equal(
+    election.registration_deadline,
+    expectedSchedule.registration_deadline,
+    `${election.id}.registration_deadline disagrees with Ohio law`,
+  );
+  assert.equal(
+    election.early_voting_end,
+    expectedSchedule.early_voting_end,
+    `${election.id}.early_voting_end disagrees with Ohio law`,
+  );
+  assert.deepEqual(election.polls, expectedSchedule.polls, `${election.id}.polls disagree with Ohio law`);
   assert.ok(electionScopes.has(election.scope), `${election.id} has an invalid scope`);
   assert.ok(election.jurisdiction_ids.length > 0, `${election.id} needs a jurisdiction`);
   assertHttpsUrl(election.official_info_url, `${election.id}.official_info_url`);

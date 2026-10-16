@@ -63,7 +63,10 @@ Copy the generated `schedule_rule`, `date`, `registration_deadline`,
 them with the Secretary of State's annual calendar before publishing. The
 generator handles presidential-year March primaries and the ORC 1.14 holiday
 rollovers that move registration deadlines. `npm run check` recalculates those
-fields and rejects drift.
+fields and rejects drift. Every election must name a supported `schedule_rule`;
+if a local or special election does not fit an existing rule, add its rule and
+tests to the generator before adding the record. The validator will not accept
+an unchecked schedule.
 
 If the annual calendar moves a deadline because an office is closed on a
 one-off holiday, record that source-backed exception on the election rather
