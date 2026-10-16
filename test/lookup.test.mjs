@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   daysUntilElection,
   hasPublishedBallotDetails,
+  issuesForCounty,
   normalizeQuery,
   partitionCandidates,
   racesForCounty,
@@ -86,6 +87,20 @@ test("returns county races only after a county is selected", () => {
   assert.equal(racesForCounty("franklin", election.counties).length, 2);
   assert.deepEqual(racesForCounty("delaware", election.counties), []);
   assert.deepEqual(racesForCounty("unknown", election.counties), []);
+});
+
+test("returns county issues only after a county is selected", () => {
+  const counties = {
+    adams: { races: [], issues: [{ id: "adams-levy" }] },
+    brown: { races: [], issues: [] },
+  };
+  assert.deepEqual(issuesForCounty("adams", counties), [{ id: "adams-levy" }]);
+  assert.deepEqual(issuesForCounty("brown", counties), []);
+  assert.deepEqual(issuesForCounty("unknown", counties), []);
+  assert.equal(
+    hasPublishedBallotDetails({ statewide_races: [], issues: [], counties }),
+    true,
+  );
 });
 
 test("keeps visible race source labels before the office and scope", () => {

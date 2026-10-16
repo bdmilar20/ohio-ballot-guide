@@ -254,6 +254,53 @@ Parser tests run against captured fixtures in `test/fixtures/vtrapp`, so
 `npm test` never touches the network. Re-capture them only when the vendor's
 markup changes, and say so in the commit.
 
+## Reviewing and projecting a ballot snapshot
+
+The projector never edits `data/elections.json`. First, create a review report
+that lists content common to every enumerated precinct separately from
+precinct-specific content:
+
+```bash
+npm run project:vtrapp -- \
+  --snapshot .cache/vtrapp-adams-20261103G.json \
+  --elections data/elections.json \
+  --out .cache/vtrapp-adams-review.json
+```
+
+Review every uncertain parse and every possible statewide duplicate. To emit a
+candidate county record, pass a JSON config with an explicit freshness limit,
+office mappings, and mappings for issues already published statewide:
+
+```json
+{
+  "max_source_age_hours": 72,
+  "county_name": "Adams",
+  "office_mappings": {
+    "For County Commissioner": {
+      "office_id": "county-commissioner",
+      "office": "County Commissioner"
+    }
+  },
+  "statewide_issue_mappings": {
+    "Issue 3": "state-issue-3"
+  }
+}
+```
+
+```bash
+npm run project:vtrapp -- \
+  --snapshot .cache/vtrapp-adams-20261103G.json \
+  --elections data/elections.json \
+  --config .cache/vtrapp-adams-config.json \
+  --out .cache/vtrapp-adams-projection.json
+```
+
+Projection fails when the snapshot is incomplete or altered, the source is
+older at review time than the accepted limit, common content has an uncertain
+parse, an office lacks a mapping, or a statewide duplicate has not been
+resolved explicitly. The result contains county data for review and manual
+application; precinct-specific content remains only in the report.
+
 ## Design changes
 
 Read [`docs/DESIGN.md`](docs/DESIGN.md) before changing `styles.css` or the page

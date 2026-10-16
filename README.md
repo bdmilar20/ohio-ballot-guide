@@ -52,6 +52,15 @@ it and [docs/BALLOT_INGESTION.md](docs/BALLOT_INGESTION.md) for the contract it
 is built to — what the source is, where the adapter stops, and why each gate
 fails closed.
 
+The projector turns a complete snapshot into a review report without editing
+published data. A reviewed config may then emit only content whose complete
+normalized form appears on every enumerated precinct ballot:
+
+```bash
+npm run project:vtrapp -- --snapshot .cache/vtrapp-adams-20261103G.json \
+  --elections data/elections.json --out .cache/vtrapp-adams-review.json
+```
+
 ## Data model
 
 The data is split by how it is maintained.
@@ -64,7 +73,7 @@ The data is split by how it is maintained.
 
 [`data/county-boards.json`](data/county-boards.json) is the curated directory of official county Board of Elections websites. Its county IDs must match the generated location registry exactly; validation fails if any of Ohio's 88 counties is missing or a link is not HTTPS.
 
-Each election includes a stable ID, date, type, scope, official information URL, voting deadlines, statewide contests, covered county records, and issues. A populated county record also declares whether its coverage is `partial` or `complete`, names the included scope, states what can be missing, and links to the full official county candidate list. Every contest must include:
+Each election includes a stable ID, date, type, scope, official information URL, voting deadlines, statewide contests, covered county records, and issues. County records can contain races and ballot issues. A populated county record also declares whether its coverage is `partial` or `complete`, names the included scope, states what can be missing, and links to the official source. Generated `common_to_all_precincts` coverage also records the precinct count, source update time, review time, and a fingerprint for every projected record. Every contest must include:
 
 - a stable ID;
 - its geographic scope and office;

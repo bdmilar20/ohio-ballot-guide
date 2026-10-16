@@ -174,13 +174,16 @@
                 { "name": "Michael Stinziano", "party": "Democratic" }
               ]
             }
-          ]
+          ],
+          "issues": []
         },
         "delaware": {
-          "races": []
+          "races": [],
+          "issues": []
         },
         "fairfield": {
-          "races": []
+          "races": [],
+          "issues": []
         },
         "cuyahoga": {
           "coverage": {
@@ -215,7 +218,8 @@
                 { "name": "Jacob Westfall", "party": "Nonpartisan" }
               ]
             }
-          ]
+          ],
+          "issues": []
         },
         "hamilton": {
           "coverage": {
@@ -250,7 +254,8 @@
                 { "name": "Jessica E. Miranda", "party": "Democratic" }
               ]
             }
-          ]
+          ],
+          "issues": []
         },
         "montgomery": {
           "coverage": {
@@ -367,7 +372,8 @@
                 { "name": "Nicholas Sylvain", "party": "Nonpartisan" }
               ]
             }
-          ]
+          ],
+          "issues": []
         },
         "summit": {
           "coverage": {
@@ -430,7 +436,8 @@
                 { "name": "Job Esau Perry", "party": "Nonpartisan" }
               ]
             }
-          ]
+          ],
+          "issues": []
         }
       },
       "issues": [

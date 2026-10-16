@@ -29,12 +29,16 @@ export function resolveLocation(query, index) {
 
 export function countiesWithContests(election) {
   return Object.entries(election.counties)
-    .filter(([, county]) => county.races.length > 0)
+    .filter(([, county]) => county.races.length > 0 || (county.issues?.length ?? 0) > 0)
     .map(([countyId]) => countyId);
 }
 
 export function racesForCounty(countyId, counties) {
   return counties[countyId]?.races ?? [];
+}
+
+export function issuesForCounty(countyId, counties) {
+  return counties[countyId]?.issues ?? [];
 }
 
 export function sourceLabel(race, label) {
@@ -45,7 +49,9 @@ export function hasPublishedBallotDetails(election) {
   return (
     election.statewide_races.length > 0 ||
     election.issues.length > 0 ||
-    Object.values(election.counties).some(({ races }) => races.length > 0)
+    Object.values(election.counties).some(
+      ({ races, issues = [] }) => races.length > 0 || issues.length > 0,
+    )
   );
 }
 

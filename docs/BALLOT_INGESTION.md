@@ -151,8 +151,24 @@ is not:
 Missing identity evidence fails the same way a mismatch does. A stamp that is
 absent is not agreement.
 
-## What is not built yet
+## Review and projection
 
-The projector, the county-issue schema and UI, and the review report. The
-current schema has no county-level issues collection; the adapter extracts
-issues anyway, but publishing them needs that separate reviewed change.
+`scripts/project-vtrapp.mjs` validates the complete snapshot and produces a
+review artifact with two explicit lists: content common to every enumerated
+precinct and content that appears on only some precinct ballots. Its contest
+fingerprint covers every normalized content field by default and excludes only
+the per-precinct order and source URL.
+
+Publishing is a separate, reviewed operation. A projection config must set the
+maximum acceptable source age, map every common office to a known
+`data/offices.json` record, and explicitly identify issues already published at
+the statewide level. The projector calculates freshness again at review time,
+rejects uncertain common parses, and emits a candidate county record without
+editing `data/elections.json`.
+
+County records now support `issues[]` alongside `races[]`. Projected records
+carry their source-content fingerprint, and `coverage` records the source
+update time, age at review, review timestamp, and the number of precincts
+verified. The UI labels the result as content common to every enumerated
+precinct and continues to direct voters to the official sample ballot for
+their exact precinct.

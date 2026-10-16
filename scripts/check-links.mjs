@@ -56,6 +56,9 @@ export function collectCitations(elections, offices, countyBoards, locations) {
           cite(source.url, `${race.id} — ${source.label}`);
         }
       }
+      for (const issue of county.issues ?? []) {
+        cite(issue.source_url, `${issue.id}.source_url`);
+      }
     }
     for (const issue of election.issues) {
       cite(issue.source_url, `${issue.id}.source_url`);

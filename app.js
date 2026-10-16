@@ -2,6 +2,7 @@ import {
   countiesWithContests,
   daysUntilElection,
   hasPublishedBallotDetails,
+  issuesForCounty,
   partitionCandidates,
   racesForCounty,
   resolveLocation,
@@ -29,6 +30,8 @@ const localSection = document.querySelector("#local-section");
 const localTitle = document.querySelector("#local-title");
 const localCoverageSummary = document.querySelector("#local-coverage-summary");
 const localSource = document.querySelector("#local-source");
+const localIssueSection = document.querySelector("#local-issue-section");
+const localIssuesContainer = document.querySelector("#local-issues");
 const countyChoice = document.querySelector("#county-choice");
 const countyChoicePrompt = document.querySelector("#county-choice-prompt");
 const countyOptions = document.querySelector("#county-options");
@@ -181,6 +184,11 @@ function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY) {
     }
 
     list.after(lead, writeInList);
+  } else if (race.write_in_available) {
+    const lead = document.createElement("p");
+    lead.className = "write-in-lead";
+    lead.textContent = "The official ballot includes a write-in line. Check the county board for the qualified write-in list.";
+    list.after(lead);
   }
 
   if (onBallot.length === 0) list.remove();
@@ -197,7 +205,7 @@ function renderRaces(container, races, collapseAfter = Number.POSITIVE_INFINITY)
   );
 }
 
-function renderIssues(issues) {
+function renderIssues(container, issues) {
   const cards = issues.map((issue) => {
     const article = document.createElement("article");
     article.className = "issue-card";
@@ -211,22 +219,46 @@ function renderIssues(issues) {
     heading.append(label, title);
 
     const copy = document.createElement("div");
-    const description = document.createElement("p");
     const source = document.createElement("a");
     const verified = document.createElement("p");
-    description.textContent = issue.summary;
+    if (issue.summary) {
+      const description = document.createElement("p");
+      description.textContent = issue.summary;
+      copy.append(description);
+    }
+    if (issue.ballot_text) {
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      const ballotText = document.createElement("p");
+      details.className = "issue-ballot-text";
+      summary.textContent = "Read the exact ballot text";
+      ballotText.textContent = issue.ballot_text;
+      details.append(summary, ballotText);
+      copy.append(details);
+    }
+    if (issue.choices?.length) {
+      const choices = document.createElement("ul");
+      choices.className = "issue-choices";
+      choices.setAttribute("aria-label", `Choices for ${issue.label}`);
+      choices.replaceChildren(...issue.choices.map((choice) => {
+        const item = document.createElement("li");
+        item.textContent = choice;
+        return item;
+      }));
+      copy.append(choices);
+    }
     setHttpsHref(source, issue.source_url);
     source.target = "_blank";
     source.rel = "noreferrer";
     source.textContent = "Read the official ballot language ↗";
     verified.className = "verified";
     verified.textContent = `Verified ${displayDate(issue.last_verified)}`;
-    copy.append(description, source, verified);
+    copy.append(source, verified);
     article.append(heading, copy);
     return article;
   });
 
-  issuesContainer.replaceChildren(...cards);
+  container.replaceChildren(...cards);
 }
 
 function renderElectionOverview() {
@@ -271,7 +303,7 @@ function renderElectionOverview() {
   renderRaces(statewideContainer, activeElection.statewide_races, 3);
   issueSection.hidden = activeElection.issues.length === 0;
   issueKicker.textContent = activeElection.scope === "statewide" ? "On every Ohio ballot" : "Ballot questions";
-  renderIssues(activeElection.issues);
+  renderIssues(issuesContainer, activeElection.issues);
 
   const later = scheduledElections.slice(1);
   laterElections.hidden = later.length === 0;
@@ -304,8 +336,8 @@ function renderCoverageSummary() {
     `Every Ohio location resolves to a county: ${number(counts.zips)} ZIP codes and`,
     `${number(counts.places)} place names across all ${countyCount} counties.`,
     curated.length > 0
-      ? `Selected countywide contests are verified for ${countyNames(curated)} so far, and statewide contests apply everywhere.`
-      : "Statewide contests apply everywhere; countywide contests are not verified yet.",
+      ? `County-level ballot content is verified for ${countyNames(curated)} so far, and statewide contests apply everywhere.`
+      : "Statewide contests apply everywhere; county-level ballot content is not verified yet.",
     "It does not predict an exact ballot.",
   ].join(" ");
 }
@@ -325,22 +357,26 @@ function showCounty(countyId) {
   const county = locations.counties[countyId];
   const countyElection = activeElection.counties[countyId];
   const races = racesForCounty(countyId, activeElection.counties);
+  const issues = issuesForCounty(countyId, activeElection.counties);
+  const detailCount = races.length + issues.length;
   countyChoice.hidden = true;
   showCountyResource(countyId);
-  localSection.hidden = races.length === 0;
+  localSection.hidden = detailCount === 0;
+  localIssueSection.hidden = issues.length === 0;
+  renderIssues(localIssuesContainer, issues);
 
-  if (races.length === 0) {
+  if (detailCount === 0) {
     const curated = countiesWithContests(activeElection);
     setNotice(
       `${county.name} contests are not verified yet.`,
       curated.length > 0
-        ? `Selected countywide contests are verified so far for ${countyNames(curated)}. Statewide contests and the published schedule are below — use the official sample-ballot link for your exact local contests.`
+        ? `County-level ballot content is verified so far for ${countyNames(curated)}. Statewide contests and the published schedule are below — use the official sample-ballot link for your exact local contests.`
         : "The published election schedule is ready below. Use the official sample-ballot link for your exact local contests.",
     );
     return;
   }
 
-  localTitle.textContent = `${county.name} contests`;
+  localTitle.textContent = `${county.name} ballot content`;
   localCoverageSummary.textContent = `${countyElection.coverage.scope}. ${countyElection.coverage.summary}`;
   setHttpsHref(localSource, countyElection.coverage.source_url);
   localSource.setAttribute(
@@ -352,8 +388,8 @@ function showCounty(countyId) {
   setNotice(
     hasPartialCoverage ? "Approximate location and partial coverage." : "Approximate location.",
     hasPartialCoverage
-      ? `This match points to ${county.name}. The county section contains ${races.length} selected, verified countywide ${races.length === 1 ? "contest" : "contests"}, not a complete ballot. Verify your precinct with the official sample-ballot link below.`
-      : `This match points to ${county.name}. The county section covers every verified countywide contest in the official list, but it is not a complete precinct ballot. Verify your precinct with the official sample-ballot link below.`,
+      ? `This match points to ${county.name}. The county section contains ${races.length} selected ${races.length === 1 ? "contest" : "contests"} and ${issues.length} ${issues.length === 1 ? "issue" : "issues"}, not a complete ballot. Verify your precinct with the official sample-ballot link below.`
+      : `This match points to ${county.name}. The county section contains only content verified on every enumerated precinct ballot, but it is not a complete precinct ballot. Verify your precinct with the official sample-ballot link below.`,
   );
 }
 
@@ -405,6 +441,7 @@ function showGuide(query) {
   countyChoice.hidden = true;
   countyResource.hidden = true;
   localSection.hidden = true;
+  localIssueSection.hidden = true;
 
   if (!hasBallotDetails) {
     setNotice(

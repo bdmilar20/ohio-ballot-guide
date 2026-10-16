@@ -16,10 +16,23 @@ const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const electionTypes = new Set(["general", "primary", "special", "local"]);
 const electionScopes = new Set(["statewide", "county", "municipal"]);
 const coverageStatuses = new Set(["partial", "complete"]);
+const coverageMethods = new Set(["common_to_all_precincts"]);
 const orderBases = new Set(["population-2010", "land-area-2020", "single-county"]);
 // Ohio has had 88 counties since 1851. A generated file that disagrees has lost
 // rows or picked up another state.
 const OHIO_COUNTY_COUNT = 88;
+
+function ohioDate(instant) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date(instant)).map((part) => [part.type, part.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
 
 function assertDate(value, label) {
   assert.match(value, datePattern, `${label} must use YYYY-MM-DD`);
@@ -130,6 +143,27 @@ const electionIds = new Set();
 let raceCount = 0;
 let issueCount = 0;
 
+function assertIssue(issue, label, seenIssueIds) {
+  assert.ok(issue.id, `${label} has an issue without an id`);
+  assert.ok(!seenIssueIds.has(issue.id), `duplicate issue id in ${label}: ${issue.id}`);
+  seenIssueIds.add(issue.id);
+  assert.ok(issue.label && issue.title, `${issue.id} needs display copy`);
+  assert.ok(issue.summary || issue.ballot_text, `${issue.id} needs a summary or exact ballot text`);
+  if (issue.ballot_text !== undefined) {
+    assert.equal(typeof issue.ballot_text, "string", `${issue.id}.ballot_text must be a string`);
+    assert.ok(issue.ballot_text.trim(), `${issue.id}.ballot_text cannot be empty`);
+  }
+  if (issue.choices !== undefined) {
+    assert.ok(Array.isArray(issue.choices) && issue.choices.length > 0, `${issue.id}.choices must be a nonempty array`);
+    assert.ok(issue.choices.every((choice) => typeof choice === "string" && choice.trim()), `${issue.id} has an empty choice`);
+  }
+  if (issue.source_fingerprint) {
+    assert.match(issue.source_fingerprint, /^sha256:[0-9a-f]{64}$/, `${issue.id} has an invalid source fingerprint`);
+  }
+  assertHttpsUrl(issue.source_url, `${issue.id}.source_url`);
+  assertDate(issue.last_verified, `${issue.id}.last_verified`);
+}
+
 for (const election of data.elections) {
   assert.ok(election.id, "each election needs an id");
   assert.ok(!electionIds.has(election.id), `duplicate election id: ${election.id}`);
@@ -182,6 +216,7 @@ for (const election of data.elections) {
   assert.ok(Array.isArray(election.issues), `${election.id}.issues must be an array`);
 
   const raceIds = new Set();
+  const issueIds = new Set();
   const allRaces = [
     ...election.statewide_races,
     ...Object.values(election.counties).flatMap((county) => county.races),
@@ -203,19 +238,24 @@ for (const election of data.elections) {
       assertHttpsUrl(source.url, `${race.id}.${source.label}`);
     }
     assertDate(race.last_verified, `${race.id}.last_verified`);
+    if (race.source_fingerprint) {
+      assert.match(race.source_fingerprint, /^sha256:[0-9a-f]{64}$/, `${race.id} has an invalid source fingerprint`);
+    }
+    if (race.write_in_available !== undefined) {
+      assert.equal(typeof race.write_in_available, "boolean", `${race.id}.write_in_available must be boolean`);
+    }
   }
 
   for (const issue of election.issues) {
-    assert.ok(issue.id, `${election.id} has an issue without an id`);
-    assert.ok(issue.label && issue.title && issue.summary, `${issue.id} needs display copy`);
-    assertHttpsUrl(issue.source_url, `${issue.id}.source_url`);
-    assertDate(issue.last_verified, `${issue.id}.last_verified`);
+    assertIssue(issue, election.id, issueIds);
   }
 
   for (const [countyId, county] of Object.entries(election.counties)) {
     assert.ok(counties[countyId], `${election.id} references unknown county ${countyId}`);
     assert.ok(Array.isArray(county.races), `${countyId}.races must be an array`);
-    if (county.races.length > 0) {
+    assert.ok(Array.isArray(county.issues), `${countyId}.issues must be an array`);
+    for (const issue of county.issues) assertIssue(issue, `${election.id}.${countyId}`, issueIds);
+    if (county.races.length > 0 || county.issues.length > 0) {
       assert.ok(county.coverage, `${countyId} needs coverage metadata`);
       assert.ok(
         coverageStatuses.has(county.coverage.status),
@@ -225,11 +265,71 @@ for (const election of data.elections) {
       assert.ok(county.coverage.summary, `${countyId}.coverage needs a summary`);
       assertHttpsUrl(county.coverage.source_url, `${countyId}.coverage.source_url`);
       assertDate(county.coverage.last_verified, `${countyId}.coverage.last_verified`);
+      if (county.coverage.method !== undefined) {
+        assert.ok(
+          coverageMethods.has(county.coverage.method),
+          `${countyId}.coverage has an invalid projection method`,
+        );
+        assert.equal(
+          county.coverage.status,
+          "complete",
+          `${countyId}.coverage common projection must have complete status`,
+        );
+        assert.ok(
+          Number.isInteger(county.coverage.precincts_verified) && county.coverage.precincts_verified > 0,
+          `${countyId}.coverage.precincts_verified must be a positive integer`,
+        );
+        assert.match(
+          county.coverage.source_updated_at,
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$/,
+          `${countyId}.coverage.source_updated_at needs an exact timezone`,
+        );
+        assert.match(
+          county.coverage.reviewed_at,
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+          `${countyId}.coverage.reviewed_at needs an exact UTC timestamp`,
+        );
+        assert.ok(
+          Number.isFinite(county.coverage.source_age_hours_at_review) &&
+            county.coverage.source_age_hours_at_review >= 0,
+          `${countyId}.coverage.source_age_hours_at_review must be a nonnegative number`,
+        );
+        const sourceUpdatedAt = Date.parse(county.coverage.source_updated_at);
+        const reviewedAt = Date.parse(county.coverage.reviewed_at);
+        assert.ok(reviewedAt >= sourceUpdatedAt, `${countyId}.coverage review cannot precede the source update`);
+        const sourceAgeAtReview = Number(((reviewedAt - sourceUpdatedAt) / 3_600_000).toFixed(1));
+        assert.equal(
+          county.coverage.source_age_hours_at_review,
+          sourceAgeAtReview,
+          `${countyId}.coverage source age disagrees with its timestamps`,
+        );
+        assert.equal(
+          county.coverage.last_verified,
+          ohioDate(reviewedAt),
+          `${countyId}.coverage.last_verified must be the Ohio review date`,
+        );
+        for (const race of county.races) {
+          assert.match(
+            race.source_fingerprint,
+            /^sha256:[0-9a-f]{64}$/,
+            `${race.id} needs a source fingerprint for common projection`,
+          );
+        }
+        for (const issue of county.issues) {
+          assert.match(
+            issue.source_fingerprint,
+            /^sha256:[0-9a-f]{64}$/,
+            `${issue.id} needs a source fingerprint for common projection`,
+          );
+          assert.ok(issue.ballot_text, `${issue.id} needs exact ballot text for common projection`);
+          assert.ok(issue.choices?.length, `${issue.id} needs ballot choices for common projection`);
+        }
+      }
     }
   }
 
   raceCount += allRaces.length;
-  issueCount += election.issues.length;
+  issueCount += election.issues.length + Object.values(election.counties).reduce((total, county) => total + county.issues.length, 0);
 }
 
 console.log(

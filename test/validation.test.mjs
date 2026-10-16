@@ -206,6 +206,119 @@ test("validator rejects populated county data without coverage metadata", async 
   assert.match(result.stderr, /franklin needs coverage metadata/);
 });
 
+test("validator accepts exact county ballot text with projection provenance", async (t) => {
+  const result = await validateFixture(t, {
+    elections: (data) => {
+      const county = data.elections[0].counties.franklin;
+      for (const race of county.races) race.source_fingerprint = `sha256:${"b".repeat(64)}`;
+      county.issues.push({
+        id: "franklin-children-services-levy",
+        label: "Proposed Tax Levy (Additional)",
+        title: "Franklin County children services levy",
+        ballot_text: "Exact ballot language retained from the source.",
+        choices: ["For the Levy", "Against the Levy"],
+        source_url: "https://lookup.boe.ohio.gov/vtrapp/franklin/xmlview.aspx",
+        source_fingerprint: `sha256:${"a".repeat(64)}`,
+        last_verified: "2026-10-16",
+      });
+      county.coverage = {
+        status: "complete",
+        method: "common_to_all_precincts",
+        scope: "Content present on all 10 enumerated precinct ballots",
+        summary: "Precinct-specific content remains excluded.",
+        source_url: "https://lookup.boe.ohio.gov/vtrapp/franklin/ballotlist.aspx",
+        source_updated_at: "2026-10-16T10:00:00-04:00",
+        source_age_hours_at_review: 4,
+        precincts_verified: 10,
+        reviewed_at: "2026-10-16T18:00:00.000Z",
+        last_verified: "2026-10-16",
+      };
+    },
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test("validator rejects a county issue that lost both summary and ballot text", async (t) => {
+  const result = await validateFixture(t, {
+    elections: (data) => {
+      data.elections[0].counties.franklin.issues.push({
+        id: "franklin-empty-issue",
+        label: "Issue",
+        title: "Missing content",
+        source_url: "https://example.gov/issue",
+        last_verified: "2026-10-16",
+      });
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /needs a summary or exact ballot text/);
+});
+
+test("validator rejects common projection metadata without a precinct count", async (t) => {
+  const result = await validateFixture(t, {
+    elections: (data) => {
+      const coverage = data.elections[0].counties.franklin.coverage;
+      coverage.status = "complete";
+      coverage.method = "common_to_all_precincts";
+      coverage.source_updated_at = "2026-10-16T10:00:00-04:00";
+      coverage.source_age_hours_at_review = 4;
+      coverage.reviewed_at = "2026-10-16T18:00:00.000Z";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /precincts_verified must be a positive integer/);
+});
+
+test("validator rejects projected county content without source fingerprints", async (t) => {
+  const result = await validateFixture(t, {
+    elections: (data) => {
+      const county = data.elections[0].counties.franklin;
+      county.coverage = {
+        status: "complete",
+        method: "common_to_all_precincts",
+        scope: "Content present on all 10 enumerated precinct ballots",
+        summary: "Precinct-specific content remains excluded.",
+        source_url: "https://lookup.boe.ohio.gov/vtrapp/franklin/ballotlist.aspx",
+        source_updated_at: "2026-10-16T10:00:00-04:00",
+        source_age_hours_at_review: 4,
+        precincts_verified: 10,
+        reviewed_at: "2026-10-16T18:00:00.000Z",
+        last_verified: "2026-10-16",
+      };
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /needs a source fingerprint for common projection/);
+});
+
+test("validator rejects projected coverage whose recorded age disagrees with its timestamps", async (t) => {
+  const result = await validateFixture(t, {
+    elections: (data) => {
+      const county = data.elections[0].counties.franklin;
+      for (const race of county.races) race.source_fingerprint = `sha256:${"b".repeat(64)}`;
+      county.coverage = {
+        status: "complete",
+        method: "common_to_all_precincts",
+        scope: "Content present on all 10 enumerated precinct ballots",
+        summary: "Precinct-specific content remains excluded.",
+        source_url: "https://lookup.boe.ohio.gov/vtrapp/franklin/ballotlist.aspx",
+        source_updated_at: "2026-10-16T10:00:00-04:00",
+        source_age_hours_at_review: 1,
+        precincts_verified: 10,
+        reviewed_at: "2026-10-16T18:00:00.000Z",
+        last_verified: "2026-10-16",
+      };
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /source age disagrees with its timestamps/);
+});
+
 test("validator rejects a contest whose office has no description", async (t) => {
   const result = await validateFixture(t, {
     elections: (data) => {

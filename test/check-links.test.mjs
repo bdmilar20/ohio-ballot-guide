@@ -104,6 +104,24 @@ test("collects the generated locations file's own sources", async () => {
   );
 });
 
+test("collects county-level issue sources", async () => {
+  const elections = await readData("elections.json");
+  elections.elections[0].counties.franklin.issues.push({
+    id: "franklin-test-levy",
+    source_url: "https://example.gov/franklin-test-levy",
+  });
+  const citations = collectCitations(
+    elections,
+    await readData("offices.json"),
+    await readData("county-boards.json"),
+    await readData("locations.json"),
+  );
+
+  assert.deepEqual(citations.get("https://example.gov/franklin-test-levy"), [
+    "franklin-test-levy.source_url",
+  ]);
+});
+
 test("refuses to build an audit without the locations file", async () => {
   const elections = await readData("elections.json");
   const offices = await readData("offices.json");
