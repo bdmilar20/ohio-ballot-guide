@@ -255,7 +255,7 @@
           "coverage": {
             "status": "partial",
             "scope": "County offices and Common Pleas Court races",
-            "summary": "The Court of Appeals race and all congressional, state legislative, municipal, school, and precinct contests may be omitted.",
+            "summary": "The Court of Appeals race and any other countywide contest may be omitted, along with all congressional, state legislative, municipal, school, and precinct contests.",
             "source_url": "https://www.montgomery.boe.ohio.gov/wp-content/uploads/2023/10/9.11.2026-Candidate-Petition-Report.pdf",
             "last_verified": "2026-10-16"
           },
