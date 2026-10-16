@@ -221,7 +221,7 @@ The snapshot deliberately stops short of `data/elections.json`. The vendor keys
 ballots by precinct split and contests genuinely differ within a county, while
 the current lookup resolves only to a county; a projector owns the decision
 about what a county-only guide may publish. See
-`PLANS/OHIO_BALLOT_INGESTION_ARCHITECTURE.md`.
+[docs/BALLOT_INGESTION.md](docs/BALLOT_INGESTION.md).
 
 The adapter fails rather than returning a partial snapshot, because a snapshot
 covering fewer precincts than the county listed looks like coverage and is not.

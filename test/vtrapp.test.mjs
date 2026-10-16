@@ -126,6 +126,28 @@ test("reports a row whose two ballot links disagree instead of trusting one", ()
   assert.match(skipped[0].reason, /disagree on prsid/);
 });
 
+// The election key and style are read off the PDF link but the accessible link
+// is the one fetched, so the two have to be checked as one identity. The vendor
+// varies their case between the links, which is why that comparison folds case
+// and the precinct id's does not.
+test("declines a row whose links disagree on election or style", () => {
+  const row = (accessible) => `<table>
+    <tr><th id="Precinct_Split">s</th><th id="Link">l</th></tr>
+    <tr><td headers="Precinct_Split">01 1</td><td headers="Link">
+      <a href='getballot.aspx?elect=20261103G&prsid=01____1&bpty=X'>View</a>
+      <a href='${accessible}'>Accessible</a>
+    </td></tr></table>`;
+  const reasonFor = (accessible) => parsePrecincts(row(accessible)).skipped[0].reason;
+
+  assert.match(reasonFor("xmlview.aspx?bpty=x&elec=20260505P&prsid=01____1&lang=en"), /disagree on election/);
+  assert.match(reasonFor("xmlview.aspx?bpty=d&elec=20261103g&prsid=01____1&lang=en"), /disagree on style/);
+  assert.match(reasonFor("xmlview.aspx?prsid=01____1&lang=en"), /missing election, style/);
+  assert.match(reasonFor("xmlview.aspx?bpty=x&elec=20261103g&lang=en"), /missing prsid/);
+
+  // Case is the vendor's own convention on these two links, not a disagreement.
+  assert.equal(parsePrecincts(row("xmlview.aspx?bpty=x&elec=20261103g&prsid=01____1&lang=en")).precincts.length, 1);
+});
+
 // --------------------------------------------------------------- the contests
 
 test("keeps candidates in ballot order with their party and write-in status", async () => {
@@ -228,6 +250,39 @@ test("hashes the ballot content, not the vendor's style label", async () => {
   assert.notEqual(ballotId([one]), ballotId([changed]));
 });
 
+// Hashing a hand-written field list let the adapter preserve text in raw_lines,
+// show it to a reviewer, and still collapse two different ballots into one id.
+// A third choice line lands only in raw_lines: name is the first line and party
+// stays null, so [name, party, write_in] is identical for both of these.
+test("distinguishes two ballots that differ only in a preserved raw line", () => {
+  const withThirdLine = (last) =>
+    normalizeContest(
+      `<h2 class="balofficename">For Mayor</h2>
+       <ul class="candidates"><li>Ada Lovelace<br>Democratic<br>${last}</li></ul>`,
+      { order: 1 },
+    );
+  const incumbent = withThirdLine("Incumbent");
+  const endorsed = withThirdLine("Endorsed");
+
+  assert.deepEqual(incumbent.choices[0].raw_lines, ["Ada Lovelace", "Democratic", "Incumbent"]);
+  assert.deepEqual(endorsed.choices[0].raw_lines, ["Ada Lovelace", "Democratic", "Endorsed"]);
+  assert.equal(incumbent.choices[0].name, endorsed.choices[0].name);
+  assert.equal(incumbent.choices[0].party, endorsed.choices[0].party);
+  assert.equal(incumbent.uncertain.length, 1);
+
+  assert.notEqual(ballotId([incumbent]), ballotId([endorsed]));
+});
+
+// source_url carries the precinct, so hashing it would give every precinct a
+// unique id and deduplication would never fire.
+test("ignores the per-precinct source url when hashing a ballot", async () => {
+  const html = await fixture("adams-contest-01");
+  const first = parseContestPage(html, { sourceUrl: "https://x/?prsid=01____1" }).contest;
+  const second = parseContestPage(html, { sourceUrl: "https://x/?prsid=02____3" }).contest;
+  assert.notEqual(first.source_url, second.source_url);
+  assert.equal(ballotId([first]), ballotId([second]));
+});
+
 // ------------------------------------------------------------ the whole county
 
 // A tiny stand-in for the vendor so the gates can be driven without the
@@ -238,21 +293,36 @@ function fakeVendor({
   precinctBody,
   ballots,
   precinctStatus = 200,
-  stampAfterSubmit = null,
+  finalStatus = 200,
+  // The real vendor prints its update stamp on every page of the flow, so by
+  // default both the precinct list and the post-walk re-read carry the one the
+  // listing showed. A test passing "" takes the stamp away.
+  stampAfterSubmit,
+  stampAfterWalk,
 } = {}) {
+  const listingStamp = listingBody?.match(/Election data last updated:\s*([^<]+)/)?.[1]?.trim() ?? null;
+  const orDefault = (value) => (value === undefined ? listingStamp : value);
+  const stamped = (stamp, html) => (stamp ? `Election data last updated: ${stamp}<${html}` : html);
+
   const page = (inner, viewstate) =>
     `<html><form><input type="hidden" name="__VIEWSTATE" value="${viewstate}" />${inner}</form></html>`;
   const calls = [];
+  let enumerated = false;
   const fetchImpl = async (url, init = {}) => {
     const body = init.body ? new URLSearchParams(init.body) : null;
     calls.push({ url, method: init.method ?? "GET" });
     const respond = (status, text) => ({ status, headers: {}, text: async () => text });
 
     if (url.includes("ballotlist.aspx")) {
-      if (!body) return respond(200, listingBody);
+      // A bare GET after enumeration is the adapter re-reading the listing to
+      // prove the source did not move during the ballot walk.
+      if (!body) {
+        if (!enumerated) return respond(200, listingBody);
+        return respond(finalStatus, stamped(orDefault(stampAfterWalk), "<html>final</html>"));
+      }
       if (body.has("btnsubmit")) {
-        const stamp = stampAfterSubmit ? `Election data last updated: ${stampAfterSubmit}<` : "";
-        return respond(precinctStatus, `${stamp}${precinctBody}`);
+        enumerated = true;
+        return respond(precinctStatus, stamped(orDefault(stampAfterSubmit), precinctBody));
       }
       return respond(200, listingBody);
     }
@@ -386,7 +456,36 @@ test("refuses a snapshot that parsed fewer precincts than were listed", async ()
 test("refuses a run in which the source's own timestamp moved", async () => {
   await assert.rejects(
     runCounty({ stampAfterSubmit: "10/14/26 09:00:00 AM" }),
-    /source changed during the run/,
+    /source changed during the run .* at the precinct list/,
+  );
+});
+
+// Enumeration is the cheap end of the run; the ballot walk is ~550 requests for
+// Adams. A gate that stops before it leaves the whole expensive window unwatched
+// and produces a snapshot mixing two versions of the ballot.
+test("refuses a source change that happens during the ballot walk", async () => {
+  await assert.rejects(
+    runCounty({ stampAfterWalk: "10/14/26 09:00:00 AM" }),
+    /source changed during the run .* at the listing re-read after the ballot walk/,
+  );
+});
+
+// A missing stamp is missing identity evidence, not evidence of agreement.
+test("refuses a run whose stamp is absent rather than unchanged", async () => {
+  await assert.rejects(
+    runCounty({ stampAfterSubmit: "" }),
+    /the precinct list carries no "Election data last updated" stamp/,
+  );
+  await assert.rejects(
+    runCounty({ stampAfterWalk: "" }),
+    /the listing re-read after the ballot walk carries no "Election data last updated" stamp/,
+  );
+});
+
+test("reports a failed post-walk re-read as that boundary", async () => {
+  await assert.rejects(
+    runCounty({ finalStatus: 503 }),
+    /re-reading the listing after the ballot walk returned HTTP 503/,
   );
 });
 
@@ -500,8 +599,13 @@ test("extracts a panel by nesting depth, not the first close tag", () => {
   );
 });
 
+// Both links have to move together here: a row where only one of them changes
+// is now declined earlier, by the link-identity check, so mutating one would
+// no longer reach the gate this test is about.
 test("refuses rows listed under a different election than the one selected", async () => {
-  const mismatched = twoRowTable.replace(/elect=20261103G/g, "elect=20260505P");
+  const mismatched = twoRowTable
+    .replace(/elect=20261103G/g, "elect=20260505P")
+    .replace(/elec=20261103g/g, "elec=20260505p");
   await assert.rejects(
     runCounty({ precinctBody: mismatched }),
     /is listed under election 20260505P, not 20261103G/,

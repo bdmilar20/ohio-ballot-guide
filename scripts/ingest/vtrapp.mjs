@@ -3,8 +3,8 @@
 //
 // This emits a versioned source snapshot. It does NOT write data/elections.json.
 // A separate projector owns the product decision about what a county-only
-// lookup may publish. See PLANS/OHIO_BALLOT_INGESTION_ARCHITECTURE.md and
-// RESEARCH/OHIO_COUNTY_BALLOT_SOURCE_SURVEY.md.
+// lookup may publish. See docs/BALLOT_INGESTION.md for the contract this is
+// built to and for what the survey of all 88 county boards found.
 //
 //   node scripts/ingest/vtrapp.mjs --county adams --election 20261103G \
 //     --out .cache/vtrapp-adams-20261103G.json
@@ -196,9 +196,31 @@ export function parsePrecincts(html) {
     }
     const pdfParams = new URLSearchParams(decodeEntities(pdf));
     const accessibleParams = new URLSearchParams(decodeEntities(accessible));
+
+    // The two links are one identity and have to be checked as one. We fetch
+    // the accessible link but read the election key and style off the PDF link,
+    // so a row whose links point at different ballots would be fetched as a
+    // ballot it is not. The vendor names the election differently on each link
+    // and varies the case of both the key and the style
+    // (elect=20261103G vs elec=20261103g), so those two fold case; a precinct
+    // id is a key we store, so it must match exactly.
     const precinctId = pdfParams.get("prsid");
-    if (!precinctId || precinctId !== accessibleParams.get("prsid")) {
-      skipped.push({ row: cells.map((cell) => cell.text), reason: "the two ballot links disagree on prsid" });
+    const identity = [
+      { name: "prsid", pdf: precinctId, accessible: accessibleParams.get("prsid"), foldCase: false },
+      { name: "election", pdf: pdfParams.get("elect"), accessible: accessibleParams.get("elec"), foldCase: true },
+      { name: "style", pdf: pdfParams.get("bpty"), accessible: accessibleParams.get("bpty"), foldCase: true },
+    ];
+    const rowText = cells.map((cell) => cell.text);
+    const absent = identity.filter((field) => !field.pdf || !field.accessible).map((field) => field.name);
+    if (absent.length > 0) {
+      skipped.push({ row: rowText, reason: `the ballot links are missing ${absent.join(", ")}` });
+      continue;
+    }
+    const agrees = (field) =>
+      field.foldCase ? field.pdf.toLowerCase() === field.accessible.toLowerCase() : field.pdf === field.accessible;
+    const disagree = identity.filter((field) => !agrees(field)).map((field) => field.name);
+    if (disagree.length > 0) {
+      skipped.push({ row: rowText, reason: `the two ballot links disagree on ${disagree.join(", ")}` });
       continue;
     }
     precincts.push({
@@ -351,19 +373,40 @@ export function verifyTextCoverage(panelHtml, contest) {
   }
 }
 
-/** Stable identity for a complete normalized ballot. */
+// Per-precinct provenance rather than ballot content: source_url carries the
+// precinct in its query string, so hashing it would make every precinct unique
+// and defeat deduplication entirely. Everything else in a contest record is
+// content and takes part in the ballot's identity.
+const NON_CONTENT_CONTEST_FIELDS = new Set(["source_url"]);
+
+/**
+ * Stable identity for a complete normalized ballot.
+ *
+ * Naming the hashed fields by hand let a ballot change without changing its id:
+ * a choice's third line is preserved in raw_lines and shown to a reviewer, but
+ * was left out of the canonical form, so two different ballots deduplicated
+ * into one. The identity is therefore the whole record minus an explicit
+ * exclusion list, which hashes a field added later by default instead of
+ * silently ignoring it.
+ */
 export function ballotId(contests) {
-  const canonical = contests.map((contest) => [
-    contest.order,
-    contest.kind,
-    contest.title,
-    contest.subtitles,
-    contest.instructions,
-    contest.vote_for,
-    contest.issue_text_lines,
-    contest.choices.map((choice) => [choice.name, choice.party, choice.write_in]),
-  ]);
+  const canonical = contests.map((contest) =>
+    canonicalize(
+      Object.fromEntries(Object.entries(contest).filter(([key]) => !NON_CONTENT_CONTEST_FIELDS.has(key))),
+    ),
+  );
   return `sha256:${createHash("sha256").update(JSON.stringify(canonical)).digest("hex")}`;
+}
+
+/** Sorts object keys at every depth so the hash cannot depend on key order. */
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, canonicalize(value[key])]),
+  );
 }
 
 const HIDDEN_INPUT = /<input[^>]*type="hidden"[^>]*>/gi;
@@ -412,9 +455,9 @@ export function createVendorClient({ fetchImpl = fetch, base = VENDOR_BASE, dela
 /**
  * Fetches one county's complete precinct ballots for one election.
  *
- * Every gate in PLANS/OHIO_BALLOT_INGESTION_ARCHITECTURE.md throws rather than
- * returning a partial snapshot, because a snapshot that silently covers fewer
- * precincts than the county listed looks like coverage and is not.
+ * Every gate in docs/BALLOT_INGESTION.md throws rather than returning a partial
+ * snapshot, because a snapshot that silently covers fewer precincts than the
+ * county listed looks like coverage and is not.
  */
 export async function ingestCounty({
   countyId,
@@ -456,14 +499,7 @@ export async function ingestCounty({
     throw new Error(`${countyId}: listing precincts returned HTTP ${listed.status}`);
   }
 
-  // The stamp is printed on both pages; a change mid-run means the source moved
-  // underneath us and the snapshot would mix two versions of the data.
-  const afterStamp = parseListing(listed.body).sourceUpdatedRaw;
-  if (afterStamp && afterStamp !== parsedListing.sourceUpdatedRaw) {
-    throw new Error(
-      `${countyId}: source changed during the run ("${parsedListing.sourceUpdatedRaw}" -> "${afterStamp}")`,
-    );
-  }
+  requireSameStamp(countyId, parsedListing.sourceUpdatedRaw, listed.body, "the precinct list");
 
   const { listed: listedCount, precincts, skipped } = parsePrecincts(listed.body);
   if (precincts.length === 0) {
@@ -514,6 +550,17 @@ export async function ingestCounty({
     await client.pause();
   }
 
+  // Checking the stamp at enumeration only covers the cheap end of the run. The
+  // ballot walk is the long part — roughly one request per contest per precinct,
+  // about 550 for Adams — so re-read the listing afterwards and require the same
+  // stamp. Without this, a source update partway through yields a snapshot that
+  // mixes two versions of the ballot and reports success.
+  const final = await client.request(listing);
+  if (final.status !== 200) {
+    throw new Error(`${countyId}: re-reading the listing after the ballot walk returned HTTP ${final.status}`);
+  }
+  requireSameStamp(countyId, parsedListing.sourceUpdatedRaw, final.body, "the listing re-read after the ballot walk");
+
   const fetchedAt = now();
   return {
     schema_version: SCHEMA_VERSION,
@@ -529,6 +576,21 @@ export async function ingestCounty({
     precincts: precinctRecords,
     ballots,
   };
+}
+
+/**
+ * The vendor prints its own update stamp on every page of the flow, which makes
+ * it the source's version marker for the run. A missing stamp is missing
+ * identity evidence, not agreement, so absence fails here rather than passing.
+ */
+function requireSameStamp(countyId, expected, body, where) {
+  const actual = parseListing(body).sourceUpdatedRaw;
+  if (!actual) {
+    throw new Error(`${countyId}: ${where} carries no "Election data last updated" stamp`);
+  }
+  if (actual !== expected) {
+    throw new Error(`${countyId}: source changed during the run ("${expected}" -> "${actual}") at ${where}`);
+  }
 }
 
 async function walkBallot({ client, url, countyId, precinct }) {

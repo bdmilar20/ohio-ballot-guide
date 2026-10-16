@@ -47,8 +47,10 @@ node scripts/ingest/vtrapp.mjs --county adams --election 20261103G \
   --out .cache/vtrapp-adams-20261103G.json
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md#ingesting-county-ballots) and
-`PLANS/OHIO_BALLOT_INGESTION_ARCHITECTURE.md`.
+See [CONTRIBUTING.md](CONTRIBUTING.md#ingesting-county-ballots) for how to run
+it and [docs/BALLOT_INGESTION.md](docs/BALLOT_INGESTION.md) for the contract it
+is built to — what the source is, where the adapter stops, and why each gate
+fails closed.
 
 ## Data model
 
