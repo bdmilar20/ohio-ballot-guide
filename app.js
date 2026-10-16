@@ -140,7 +140,7 @@ function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY) {
   const sourceGroup = node.querySelector(".race-sources");
   const source = node.querySelector(".race-source");
   setHttpsHref(source, race.source_url);
-  source.setAttribute("aria-label", `Official source for ${race.office}`);
+  source.setAttribute("aria-label", `Official source for ${race.office} — ${race.scope}`);
   for (const supplemental of race.supplemental_sources ?? []) {
     const link = document.createElement("a");
     link.className = "race-source";
