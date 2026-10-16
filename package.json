@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "check": "node scripts/validate-data.mjs",
+    "check:links": "node scripts/check-links.mjs",
     "test": "node --test"
   }
 }

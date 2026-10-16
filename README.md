@@ -23,6 +23,13 @@ npm run check
 npm test
 ```
 
+Both run offline and are the gate for every change.
+
+Separately, `npm run check:links` resolves every official URL the data cites
+and reports the ones that have rotted. It drives a headless Chrome and talks to
+live government sites, so it is **run by hand, never from CI**. See
+[CONTRIBUTING.md](CONTRIBUTING.md#auditing-the-cited-urls).
+
 ## Data model
 
 The data is split by how it is maintained.
