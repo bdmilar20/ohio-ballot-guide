@@ -92,7 +92,7 @@ test("publishes sourced, explicitly partial coverage for each covered county", (
     franklin: 2,
     cuyahoga: 2,
     hamilton: 2,
-    montgomery: 2,
+    montgomery: 9,
     summit: 3,
   };
 
@@ -126,6 +126,83 @@ test("uses Montgomery County's current candidate report", () => {
           { name: "Karl Keith", party: "Democratic" },
           { name: "Tammy L. Murphy", party: "Republican" },
         ],
+      },
+      {
+        id: "montgomery-common-pleas-2027-01-01",
+        candidates: [{ name: "Susan D. Solle", party: "Nonpartisan" }],
+      },
+      {
+        id: "montgomery-common-pleas-2027-01-02",
+        candidates: [
+          { name: "Anne Keeton", party: "Nonpartisan" },
+          { name: "Derek Muncy", party: "Nonpartisan" },
+        ],
+      },
+      {
+        id: "montgomery-common-pleas-2027-01-03",
+        candidates: [
+          { name: "Michele S.H. Henne", party: "Nonpartisan" },
+          { name: "Kelly D. Madzey", party: "Nonpartisan" },
+        ],
+      },
+      {
+        id: "montgomery-common-pleas-2027-07-01",
+        candidates: [
+          { name: "Steve Abshire", party: "Nonpartisan" },
+          { name: "Richard Glennon", party: "Nonpartisan" },
+        ],
+      },
+      {
+        id: "montgomery-common-pleas-2027-07-02",
+        candidates: [{ name: "Elizabeth A. Ellis", party: "Nonpartisan" }],
+      },
+      {
+        id: "montgomery-common-pleas-probate-2027-02-09",
+        candidates: [
+          { name: "David Brannon", party: "Nonpartisan" },
+          { name: "Cassandra A. Rice", party: "Nonpartisan" },
+        ],
+      },
+      {
+        id: "montgomery-common-pleas-juvenile-unexpired-2028-12-31",
+        candidates: [
+          { name: "Hope L. Smalls", party: "Nonpartisan" },
+          { name: "Nicholas Sylvain", party: "Nonpartisan" },
+        ],
+      },
+    ],
+  );
+
+  assert.deepEqual(
+    races.slice(2).map(({ id, scope }) => ({ id, scope })),
+    [
+      {
+        id: "montgomery-common-pleas-2027-01-01",
+        scope: "Montgomery County · Term beginning January 1, 2027 · Vote for one",
+      },
+      {
+        id: "montgomery-common-pleas-2027-01-02",
+        scope: "Montgomery County · Term beginning January 2, 2027 · Vote for one",
+      },
+      {
+        id: "montgomery-common-pleas-2027-01-03",
+        scope: "Montgomery County · Term beginning January 3, 2027 · Vote for one",
+      },
+      {
+        id: "montgomery-common-pleas-2027-07-01",
+        scope: "Montgomery County · Term beginning July 1, 2027 · Vote for one",
+      },
+      {
+        id: "montgomery-common-pleas-2027-07-02",
+        scope: "Montgomery County · Term beginning July 2, 2027 · Vote for one",
+      },
+      {
+        id: "montgomery-common-pleas-probate-2027-02-09",
+        scope: "Montgomery County · Term beginning February 9, 2027 · Vote for one",
+      },
+      {
+        id: "montgomery-common-pleas-juvenile-unexpired-2028-12-31",
+        scope: "Montgomery County · Unexpired term ending December 31, 2028 · Vote for one",
       },
     ],
   );
