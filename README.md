@@ -37,6 +37,19 @@ Secretary of State's annual calendar:
 npm run generate:schedule -- --year=2028
 ```
 
+`npm run ingest:vtrapp` pulls one county's real per-precinct ballots from the
+application the state hosts for 72 of the 88 county boards, and writes a source
+snapshot for review rather than product data. It also talks to a live
+government site and is **run by hand, never from CI**:
+
+```bash
+node scripts/ingest/vtrapp.mjs --county adams --election 20261103G \
+  --out .cache/vtrapp-adams-20261103G.json
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md#ingesting-county-ballots) and
+`PLANS/OHIO_BALLOT_INGESTION_ARCHITECTURE.md`.
+
 ## Data model
 
 The data is split by how it is maintained.

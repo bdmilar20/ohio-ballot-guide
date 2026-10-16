@@ -199,6 +199,61 @@ Set `CHROME_PATH` if the script cannot find Chrome or Chromium. It checks each
 known install path for an executable file and reports every path it tried, so a
 Chromium-only machine or a Linux box does not need any configuration.
 
+## Ingesting county ballots
+
+`lookup.boe.ohio.gov/vtrapp` is one application the state hosts for 72 of the
+88 county boards, and it publishes real per-precinct ballots: contests,
+candidates, parties, vote-for counts, and the full text of each ballot issue.
+`node scripts/ingest/vtrapp.mjs --county adams --election 20261103G` writes a
+**source snapshot**, not product data:
+
+```bash
+node scripts/ingest/vtrapp.mjs --county adams --election 20261103G \
+  --out .cache/vtrapp-adams-20261103G.json
+```
+
+**Run it by hand. Never wire it into CI or into `npm run check`.** One county
+costs roughly one request per contest per precinct — Adams is 27 precincts and
+20 contests, so about 550 requests — because the accessible ballot paginates one
+contest at a time behind a WebForms postback. The client is serial and paced.
+
+The snapshot deliberately stops short of `data/elections.json`. The vendor keys
+ballots by precinct split and contests genuinely differ within a county, while
+the current lookup resolves only to a county; a projector owns the decision
+about what a county-only guide may publish. See
+`PLANS/OHIO_BALLOT_INGESTION_ARCHITECTURE.md`.
+
+The adapter fails rather than returning a partial snapshot, because a snapshot
+covering fewer precincts than the county listed looks like coverage and is not.
+It refuses to continue when the county is not a vendor customer, the election is
+absent, enumeration finds no ballots, the parsed precinct count differs from the
+listed count, a ballot walk ends before its reported contest total, a contest
+cannot be represented without dropping source text, or the source's own update
+stamp moves mid-run.
+
+Four things about this source are not guessable and are pinned by tests:
+
+- A county that does **not** use the application still answers **HTTP 200**,
+  with an 861-byte `Not a Customer` page. A nonexistent slug answers 500. A
+  status check alone reports success for a county that published nothing.
+- The vendor slug is not our county id: it has no hyphens, so `van-wert` is
+  served as `vanwert` and `van-wert` returns 500.
+- The precinct table's links are **single-quoted**, so an `href="..."` pattern
+  matches nothing and a populated county looks empty.
+- A user agent that does not begin with `Mozilla/5.0` gets a degraded page and
+  an error instead of the precinct table, so the client sends
+  `Mozilla/5.0 (compatible; ohio-ballot-guide/0.1; manual ingest)`.
+
+Each snapshot stores the vendor's `Election data last updated` stamp, resolved
+to an exact instant in Ohio's time zone, plus its age in hours. Across the 72
+served counties that stamp ranged from September 1 to October 13 2026, so
+**successful HTTP does not mean current ballot data** and publishing an old
+snapshot is an explicit review decision rather than a default.
+
+Parser tests run against captured fixtures in `test/fixtures/vtrapp`, so
+`npm test` never touches the network. Re-capture them only when the vendor's
+markup changes, and say so in the commit.
+
 ## Design changes
 
 Read [`docs/DESIGN.md`](docs/DESIGN.md) before changing `styles.css` or the page

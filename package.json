@@ -7,6 +7,7 @@
     "generate:schedule": "node scripts/build-election-schedule.mjs",
     "check": "node scripts/validate-data.mjs",
     "check:links": "node scripts/check-links.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "ingest:vtrapp": "node scripts/ingest/vtrapp.mjs"
   }
 }

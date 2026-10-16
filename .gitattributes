@@ -1,0 +1,6 @@
+# Captured vendor responses, kept byte for byte. The vendor serves CRLF, and a
+# test asserts the "Not a Customer" placeholder is exactly 861 bytes, so EOL
+# normalization would both rewrite the fixtures and break that assertion.
+# -diff also keeps `git diff --check` from reporting every line as trailing
+# whitespace.
+test/fixtures/vtrapp/*.html -text -diff
