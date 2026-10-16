@@ -400,6 +400,12 @@
               "office_id": "common-pleas-judge",
               "last_verified": "2026-10-15",
               "source_url": "https://www.boe.ohio.gov/summit/c/upload/Election_CandidateList.pdf",
+              "supplemental_sources": [
+                {
+                  "label": "Summit County General Division judges",
+                  "url": "https://www.summitcpcourt.net/judges/"
+                }
+              ],
               "candidates": [
                 { "name": "Tania Nemer", "party": "Nonpartisan" },
                 { "name": "Tammy O’Brien", "party": "Nonpartisan" }
@@ -412,6 +418,12 @@
               "office_id": "common-pleas-judge",
               "last_verified": "2026-10-15",
               "source_url": "https://www.boe.ohio.gov/summit/c/upload/Election_CandidateList.pdf",
+              "supplemental_sources": [
+                {
+                  "label": "Summit County General Division judges",
+                  "url": "https://www.summitcpcourt.net/judges/"
+                }
+              ],
               "candidates": [
                 { "name": "Alison McCarty", "party": "Nonpartisan" },
                 { "name": "Job Esau Perry", "party": "Nonpartisan" }
