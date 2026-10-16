@@ -5,6 +5,7 @@ import {
   partitionCandidates,
   racesForCounty,
   resolveLocation,
+  sourceLabel,
   upcomingElections,
 } from "./src/lookup.mjs";
 
@@ -123,6 +124,7 @@ function renderOfficeNote(node, race) {
       link.target = "_blank";
       link.rel = "noreferrer";
       link.textContent = `${source.label} ↗`;
+      link.setAttribute("aria-label", sourceLabel(race, source.label));
       return link;
     }),
   );
@@ -140,7 +142,7 @@ function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY) {
   const sourceGroup = node.querySelector(".race-sources");
   const source = node.querySelector(".race-source");
   setHttpsHref(source, race.source_url);
-  source.setAttribute("aria-label", `Official source for ${race.office} — ${race.scope}`);
+  source.setAttribute("aria-label", sourceLabel(race));
   for (const supplemental of race.supplemental_sources ?? []) {
     const link = document.createElement("a");
     link.className = "race-source";
@@ -148,6 +150,7 @@ function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY) {
     link.target = "_blank";
     link.rel = "noreferrer";
     link.textContent = `${supplemental.label} ↗`;
+    link.setAttribute("aria-label", sourceLabel(race, supplemental.label));
     sourceGroup.append(link);
   }
 

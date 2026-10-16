@@ -37,6 +37,13 @@ export function racesForCounty(countyId, counties) {
   return counties[countyId]?.races ?? [];
 }
 
+export function sourceLabel(race, label) {
+  const lead = label
+    ? `${label} — ${race.office}`
+    : `Official source for ${race.office}`;
+  return `${lead} — ${race.scope}`;
+}
+
 export function hasPublishedBallotDetails(election) {
   return (
     election.statewide_races.length > 0 ||
