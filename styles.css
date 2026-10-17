@@ -591,6 +591,15 @@ h2 {
   text-transform: uppercase;
 }
 
+.race-sequence {
+  margin: 0 0 0.28rem;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .race-sources {
   display: flex;
   flex: none;

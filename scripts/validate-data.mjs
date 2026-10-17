@@ -279,6 +279,12 @@ for (const election of data.elections) {
           Number.isInteger(county.coverage.precincts_verified) && county.coverage.precincts_verified > 0,
           `${countyId}.coverage.precincts_verified must be a positive integer`,
         );
+        for (const field of ["precinct_specific_races", "precinct_specific_issues"]) {
+          assert.ok(
+            Number.isInteger(county.coverage[field]) && county.coverage[field] >= 0,
+            `${countyId}.coverage.${field} must be a nonnegative integer`,
+          );
+        }
         assert.match(
           county.coverage.source_updated_at,
           /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$/,

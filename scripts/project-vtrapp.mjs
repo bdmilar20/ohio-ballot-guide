@@ -11,7 +11,7 @@ import { dirname } from "node:path";
 
 import { ballotId, parseArgs, SCHEMA_VERSION as SNAPSHOT_SCHEMA_VERSION } from "./ingest/vtrapp.mjs";
 
-export const PROJECTION_SCHEMA_VERSION = 1;
+export const PROJECTION_SCHEMA_VERSION = 2;
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message);
@@ -31,22 +31,66 @@ function canonicalize(value) {
   );
 }
 
-// Per-precinct position and provenance may differ while voter-facing contest
-// content is identical. Every other field participates by default, so adding a
-// normalized content field cannot silently fall outside the projection hash.
+function canonicalString(value) {
+  return JSON.stringify(canonicalize(value));
+}
+
+function compareKeys(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+// Per-precinct position and provenance describe where a contest was printed,
+// not which contest it is. Every content field still participates by default,
+// so adding normalized content cannot silently fall outside the projection
+// hash.
 const NON_CONTENT_CONTEST_FIELDS = new Set(["order", "source_url"]);
 
-/**
- * Fingerprints substantive normalized content, excluding only source position
- * and URL. A contest may move when precinct-specific contests are inserted;
- * that does not make its voter-facing content different.
- */
-export function contestContentId(contest) {
-  return hash(
+function officeChoicePairs(contest) {
+  invariant(Array.isArray(contest.choices), `office contest "${contest.title}" needs choices`);
+  invariant(
+    Array.isArray(contest.raw?.choice_lines) && contest.raw.choice_lines.length === contest.choices.length,
+    `office contest "${contest.title}" needs one raw choice line group per choice`,
+  );
+
+  return contest.choices
+    .map((choice, index) => ({ choice, raw_choice_lines: contest.raw.choice_lines[index] }))
+    .sort((left, right) => {
+      const leftChoice = left.choice;
+      const rightChoice = right.choice;
+      const leftKey = `${leftChoice.write_in ? "1" : "0"}\0${comparable(leftChoice.name)}\0${comparable(leftChoice.party)}\0${canonicalString(left)}`;
+      const rightKey = `${rightChoice.write_in ? "1" : "0"}\0${comparable(rightChoice.name)}\0${comparable(rightChoice.party)}\0${canonicalString(right)}`;
+      return compareKeys(leftKey, rightKey);
+    });
+}
+
+function contestIdentityContent(contest) {
+  const content = structuredClone(
     Object.fromEntries(
       Object.entries(contest).filter(([key]) => !NON_CONTENT_CONTEST_FIELDS.has(key)),
     ),
   );
+
+  // ORC 3505.03 rotates candidate names between precinct ballots. `choices`
+  // and `raw.choice_lines` are two representations of that same presentation
+  // order, so they have to move together. Issue choices remain order-sensitive:
+  // the statute rotates candidates, not FOR/AGAINST or YES/NO responses.
+  if (content.kind === "office") {
+    const pairs = officeChoicePairs(content);
+    content.choices = pairs.map(({ choice }) => choice);
+    content.raw.choice_lines = pairs.map(({ raw_choice_lines: lines }) => lines);
+  }
+
+  return content;
+}
+
+/**
+ * Fingerprints contest identity. Source position, URL, and the legally rotated
+ * order of candidates may differ by precinct while the contest itself is the
+ * same. Titles are not identities: every other normalized content field still
+ * participates, including issue text and candidate raw lines.
+ */
+export function contestContentId(contest) {
+  return hash(contestIdentityContent(contest));
 }
 
 function timestamp(value, label) {
@@ -189,6 +233,42 @@ function possiblePublishedIssueMatch(contest, election) {
   return matches[0]?.id ?? null;
 }
 
+function presentedChoiceOrder(contest) {
+  if (contest.kind !== "office") return null;
+  return contest.choices.map(({ name, party, write_in: writeIn }) => ({
+    name,
+    party,
+    write_in: writeIn,
+  }));
+}
+
+function addObservedChoiceOrder(entry, contest, precinctId) {
+  const choices = presentedChoiceOrder(contest);
+  if (!choices) return;
+  const key = hash(choices);
+  const observed = entry.choice_orders.get(key) ?? { choices, precinct_ids: new Set() };
+  observed.precinct_ids.add(precinctId);
+  entry.choice_orders.set(key, observed);
+}
+
+function observedChoiceOrders(entry) {
+  return [...entry.choice_orders.values()].map(({ choices, precinct_ids: precinctIds }) => ({
+    choices,
+    precinct_count: precinctIds.size,
+    sample_precinct_ids: [...precinctIds].slice(0, 5),
+  }));
+}
+
+function observedPositions(entry) {
+  return [...entry.positions.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([position, precinctIds]) => ({
+      position,
+      precinct_count: precinctIds.size,
+      sample_precinct_ids: [...precinctIds].slice(0, 5),
+    }));
+}
+
 function reportEntry(entry, precinctTotal, election) {
   const possibleStatewideRaceIds = possiblePublishedRaceMatches(entry.contest, election)
     .map(({ id }) => id);
@@ -201,6 +281,8 @@ function reportEntry(entry, precinctTotal, election) {
     precinct_total: precinctTotal,
     sample_precinct_ids: [...entry.precinct_ids].slice(0, 5),
     orders: [...entry.orders].sort((left, right) => left - right),
+    observed_positions: observedPositions(entry),
+    observed_choice_orders: observedChoiceOrders(entry),
     published_statewide_race_id: publishedRaceMatch(entry.contest, election),
     possible_statewide_race_ids: possibleStatewideRaceIds,
     possible_statewide_issue_id: possiblePublishedIssueMatch(entry.contest, election),
@@ -231,9 +313,15 @@ export function analyzeSnapshot(snapshot, election = null) {
         contest,
         precinct_ids: new Set(),
         orders: new Set(),
+        positions: new Map(),
+        choice_orders: new Map(),
       };
       entry.precinct_ids.add(precinct.id);
       entry.orders.add(contest.order);
+      const positionPrecincts = entry.positions.get(contest.order) ?? new Set();
+      positionPrecincts.add(precinct.id);
+      entry.positions.set(contest.order, positionPrecincts);
+      addObservedChoiceOrder(entry, contest, precinct.id);
       occurrences.set(fingerprint, entry);
     }
   }
@@ -298,7 +386,11 @@ function productRace(entry, mapping, snapshot, countyName) {
   const office = typeof mapping === "string" ? contest.title.replace(/^For\s+/i, "") : mapping.office;
   const officeId = typeof mapping === "string" ? mapping : mapping.office_id;
   invariant(officeId && office, `office mapping for "${contest.title}" needs office_id and office`);
-  const candidates = contest.choices
+  // No precinct's rotation is authoritative for the county. Publish the same
+  // deterministic alphabetical order used by the identity normalizer and tell
+  // the voter explicitly that their official ballot order will differ.
+  const candidates = officeChoicePairs(contest)
+    .map(({ choice }) => choice)
     .filter((choice) => !choice.write_in)
     .map((choice) => ({
       name: choice.name,
@@ -312,7 +404,7 @@ function productRace(entry, mapping, snapshot, countyName) {
     office,
     office_id: officeId,
     last_verified: ohioDate(timestamp(snapshot.source.fetched_at, "snapshot.source.fetched_at")),
-    source_url: contest.source_url ?? snapshot.source.listing_url,
+    source_url: snapshot.source.listing_url,
     source_fingerprint: entry.fingerprint,
     write_in_available: contest.allows_write_in,
     candidates,
@@ -329,7 +421,7 @@ function productIssue(entry, snapshot) {
     ballot_text: (contest.issue_text_lines ?? []).join("\n"),
     choices: contest.choices.map((choice) => choice.name).filter(Boolean),
     last_verified: ohioDate(timestamp(snapshot.source.fetched_at, "snapshot.source.fetched_at")),
-    source_url: contest.source_url ?? snapshot.source.listing_url,
+    source_url: snapshot.source.listing_url,
     source_fingerprint: entry.fingerprint,
   };
 }
@@ -422,6 +514,8 @@ export function projectCounty(snapshot, election, {
   invariant(unmapped.length === 0, `common office contests need mappings: ${unmapped.join(", ")}`);
   const ids = [...races, ...issues].map((entry) => entry.id);
   invariant(new Set(ids).size === ids.length, "projection generated duplicate product ids");
+  const precinctSpecificRaces = review.precinct_specific.filter(({ kind }) => kind === "office").length;
+  const precinctSpecificIssues = review.precinct_specific.filter(({ kind }) => kind === "issue").length;
 
   return {
     schema_version: PROJECTION_SCHEMA_VERSION,
@@ -432,11 +526,13 @@ export function projectCounty(snapshot, election, {
         status: "complete",
         method: "common_to_all_precincts",
         scope: `Content present on all ${snapshot.precincts.length} enumerated precinct ballots`,
-        summary: "Only contests and issues with identical normalized content on every enumerated precinct ballot are shown. Precinct-specific content remains excluded.",
+        summary: "Every office and issue shown appears on every enumerated precinct ballot. Candidate names are alphabetical because Ohio rotates their order by precinct. Additional precinct-specific content remains excluded.",
         source_url: snapshot.source.listing_url,
         source_updated_at: snapshot.source.source_updated_at,
         source_age_hours_at_review: sourceAgeAtReview,
         precincts_verified: snapshot.precincts.length,
+        precinct_specific_races: precinctSpecificRaces,
+        precinct_specific_issues: precinctSpecificIssues,
         reviewed_at: new Date(reviewedAtInstant).toISOString(),
         last_verified: ohioDate(reviewedAtInstant),
       },

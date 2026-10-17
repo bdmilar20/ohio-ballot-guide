@@ -230,6 +230,8 @@ test("validator accepts exact county ballot text with projection provenance", as
         source_updated_at: "2026-10-16T10:00:00-04:00",
         source_age_hours_at_review: 4,
         precincts_verified: 10,
+        precinct_specific_races: 0,
+        precinct_specific_issues: 3,
         reviewed_at: "2026-10-16T18:00:00.000Z",
         last_verified: "2026-10-16",
       };
@@ -272,6 +274,30 @@ test("validator rejects common projection metadata without a precinct count", as
   assert.match(result.stderr, /precincts_verified must be a positive integer/);
 });
 
+test("validator requires projected coverage to disclose precinct-specific content counts", async (t) => {
+  const result = await validateFixture(t, {
+    elections: (data) => {
+      const county = data.elections[0].counties.franklin;
+      for (const race of county.races) race.source_fingerprint = `sha256:${"b".repeat(64)}`;
+      county.coverage = {
+        status: "complete",
+        method: "common_to_all_precincts",
+        scope: "Content present on all 10 enumerated precinct ballots",
+        summary: "Precinct-specific content remains excluded.",
+        source_url: "https://lookup.boe.ohio.gov/vtrapp/franklin/ballotlist.aspx",
+        source_updated_at: "2026-10-16T10:00:00-04:00",
+        source_age_hours_at_review: 4,
+        precincts_verified: 10,
+        reviewed_at: "2026-10-16T18:00:00.000Z",
+        last_verified: "2026-10-16",
+      };
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /precinct_specific_races must be a nonnegative integer/);
+});
+
 test("validator rejects projected county content without source fingerprints", async (t) => {
   const result = await validateFixture(t, {
     elections: (data) => {
@@ -285,6 +311,8 @@ test("validator rejects projected county content without source fingerprints", a
         source_updated_at: "2026-10-16T10:00:00-04:00",
         source_age_hours_at_review: 4,
         precincts_verified: 10,
+        precinct_specific_races: 0,
+        precinct_specific_issues: 3,
         reviewed_at: "2026-10-16T18:00:00.000Z",
         last_verified: "2026-10-16",
       };
@@ -309,6 +337,8 @@ test("validator rejects projected coverage whose recorded age disagrees with its
         source_updated_at: "2026-10-16T10:00:00-04:00",
         source_age_hours_at_review: 1,
         precincts_verified: 10,
+        precinct_specific_races: 0,
+        precinct_specific_issues: 3,
         reviewed_at: "2026-10-16T18:00:00.000Z",
         last_verified: "2026-10-16",
       };

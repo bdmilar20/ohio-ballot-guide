@@ -1,5 +1,6 @@
 import {
   countiesWithContests,
+  contestSequenceLabels,
   countyCoverageNotice,
   daysUntilElection,
   hasPublishedBallotDetails,
@@ -121,7 +122,7 @@ function candidateItem(candidate, { showParty }) {
 
 // Plain-language description of the office itself, collapsed by default so the
 // candidate list stays the first thing a voter reads.
-function renderOfficeNote(node, race) {
+function renderOfficeNote(node, race, sequenceLabel) {
   const note = node.querySelector(".office-note");
   const office = offices[race.office_id];
 
@@ -135,7 +136,7 @@ function renderOfficeNote(node, race) {
       link.target = "_blank";
       link.rel = "noreferrer";
       setExternalLinkText(link, source.label);
-      link.setAttribute("aria-label", sourceLabel(race, source.label));
+      link.setAttribute("aria-label", sourceLabel(race, source.label, sequenceLabel));
       return link;
     }),
   );
@@ -144,16 +145,21 @@ function renderOfficeNote(node, race) {
   note.hidden = false;
 }
 
-function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY) {
+function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY, sequenceLabel = null) {
   const node = raceTemplate.content.firstElementChild.cloneNode(true);
   node.dataset.secondary = String(index >= collapseAfter);
   node.querySelector(".race-scope").textContent = race.scope;
   node.querySelector("h3").textContent = race.office;
+  if (sequenceLabel) {
+    const sequence = node.querySelector(".race-sequence");
+    sequence.textContent = sequenceLabel;
+    sequence.hidden = false;
+  }
 
   const sourceGroup = node.querySelector(".race-sources");
   const source = node.querySelector(".race-source");
   setHttpsHref(source, race.source_url);
-  source.setAttribute("aria-label", sourceLabel(race, "Official ballot"));
+  source.setAttribute("aria-label", sourceLabel(race, "Official ballot", sequenceLabel));
   for (const supplemental of race.supplemental_sources ?? []) {
     const link = document.createElement("a");
     link.className = "race-source";
@@ -161,7 +167,7 @@ function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY) {
     link.target = "_blank";
     link.rel = "noreferrer";
     setExternalLinkText(link, supplemental.label);
-    link.setAttribute("aria-label", sourceLabel(race, supplemental.label));
+    link.setAttribute("aria-label", sourceLabel(race, supplemental.label, sequenceLabel));
     sourceGroup.append(link);
   }
 
@@ -194,15 +200,16 @@ function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY) {
 
   if (onBallot.length === 0) list.remove();
 
-  renderOfficeNote(node, race);
+  renderOfficeNote(node, race, sequenceLabel);
 
   node.querySelector(".verified").textContent = `Verified ${displayDate(race.last_verified)}`;
   return node;
 }
 
 function renderRaces(container, races, collapseAfter = Number.POSITIVE_INFINITY) {
+  const sequenceLabels = contestSequenceLabels(races);
   container.replaceChildren(
-    ...races.map((race, index) => renderRace(race, index, collapseAfter)),
+    ...races.map((race, index) => renderRace(race, index, collapseAfter, sequenceLabels[index])),
   );
 }
 

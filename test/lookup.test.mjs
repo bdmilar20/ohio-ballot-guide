@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  contestSequenceLabels,
   countyCoverageNotice,
   daysUntilElection,
   hasPublishedBallotDetails,
@@ -107,11 +108,19 @@ test("returns county issues only after a county is selected", () => {
 test("describes precinct verification only for common-precinct projections", () => {
   const projected = countyCoverageNotice(
     "Adams",
-    { status: "complete", method: "common_to_all_precincts" },
+    {
+      status: "complete",
+      method: "common_to_all_precincts",
+      precinct_specific_races: 0,
+      precinct_specific_issues: 14,
+    },
     1,
     1,
   );
   assert.match(projected.copy, /verified on every enumerated precinct ballot/);
+  assert.match(projected.copy, /Candidate names are alphabetical/);
+  assert.match(projected.copy, /14 additional local issues appear only on some precinct ballots/);
+  assert.match(projected.copy, /exact contests and candidate order/);
 
   const curated = countyCoverageNotice("Franklin", { status: "complete" }, 2, 0);
   assert.match(curated.copy, /covers every verified countywide contest and issue/);
@@ -121,6 +130,24 @@ test("describes precinct verification only for common-precinct projections", () 
   assert.equal(partial.lead, "Approximate location and partial coverage.");
   assert.match(partial.copy, /2 selected contests and 0 issues/);
   assert.doesNotMatch(partial.copy, /enumerated precinct ballot/);
+});
+
+test("labels repeated office headings as separate contests without inventing seat names", () => {
+  const labels = contestSequenceLabels([
+    { office: "Justice of the Supreme Court" },
+    { office: "Justice of the Supreme Court" },
+    { office: "County Auditor" },
+    { office: "Judge of the Court of Appeals" },
+    { office: "Judge of the Court of Appeals" },
+  ]);
+
+  assert.deepEqual(labels, [
+    "Separate contest 1 of 2",
+    "Separate contest 2 of 2",
+    null,
+    "Separate contest 1 of 2",
+    "Separate contest 2 of 2",
+  ]);
 });
 
 test("keeps visible race source labels before the office and scope", () => {
@@ -135,6 +162,10 @@ test("keeps visible race source labels before the office and scope", () => {
   assert.equal(
     sourceLabel(race, "Summit County General Division judges"),
     "Summit County General Division judges — Judge of the Court of Common Pleas, General Division — Summit County · Term beginning January 5, 2027 · Vote for one",
+  );
+  assert.equal(
+    sourceLabel(race, "Official ballot", "Separate contest 2 of 2"),
+    "Official ballot — Judge of the Court of Common Pleas, General Division — Separate contest 2 of 2 — Summit County · Term beginning January 5, 2027 · Vote for one",
   );
 });
 

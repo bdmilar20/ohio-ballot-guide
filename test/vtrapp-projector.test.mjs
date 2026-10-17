@@ -10,6 +10,7 @@ import {
   analyzeSnapshot,
   assertCompleteSnapshot,
   contestContentId,
+  PROJECTION_SCHEMA_VERSION,
   projectCounty,
 } from "../scripts/project-vtrapp.mjs";
 
@@ -138,11 +139,34 @@ function rehashSnapshot(snapshot) {
 }
 
 test("fingerprints complete normalized content but not source position", () => {
-  const first = office("For County Commissioner", 2, [["Ada Lovelace", "Democratic"]]);
+  const first = office("For County Commissioner", 2, [
+    ["Ada Lovelace", "Democratic"],
+    ["Grace Hopper", "Republican"],
+  ]);
   const moved = structuredClone(first);
   moved.order = 12;
   moved.source_url = "https://example.gov/another-precinct";
   assert.equal(contestContentId(first), contestContentId(moved));
+
+  const rotated = structuredClone(first);
+  rotated.choices.reverse();
+  rotated.raw.choice_lines.reverse();
+  assert.equal(contestContentId(first), contestContentId(rotated));
+  assert.notEqual(ballotId([first]), ballotId([rotated]), "the source snapshot must retain printed rotation");
+
+  const choicesOnly = structuredClone(first);
+  choicesOnly.choices.reverse();
+  assert.notEqual(contestContentId(first), contestContentId(choicesOnly));
+
+  const missingRawChoice = structuredClone(first);
+  missingRawChoice.raw.choice_lines.pop();
+  assert.throws(() => contestContentId(missingRawChoice), /one raw choice line group per choice/);
+
+  const issueFirst = issue("Issue 7", 3, "Shall the levy be adopted?");
+  const issueReordered = structuredClone(issueFirst);
+  issueReordered.choices.reverse();
+  issueReordered.raw.choice_lines.reverse();
+  assert.notEqual(contestContentId(issueFirst), contestContentId(issueReordered));
 
   const changed = structuredClone(first);
   changed.choices[0].raw_lines.push("Incumbent");
@@ -154,6 +178,65 @@ test("fingerprints complete normalized content but not source position", () => {
 
   const reordered = Object.fromEntries(Object.entries(first).reverse());
   assert.equal(contestContentId(first), contestContentId(reordered));
+});
+
+test("normalizes printed office rotation while retaining every observed order", () => {
+  const { snapshot, election } = fixture();
+  const secondBallot = snapshot.ballots[snapshot.precincts[1].ballot_id];
+  const governor = secondBallot.contests[0];
+  governor.order = 7;
+  governor.choices = [governor.choices[1], governor.choices[0], governor.choices[2]];
+  governor.raw.choice_lines = [
+    governor.raw.choice_lines[1],
+    governor.raw.choice_lines[0],
+    governor.raw.choice_lines[2],
+  ];
+  const commissioner = secondBallot.contests[1];
+  commissioner.order = 8;
+  commissioner.choices = [commissioner.choices[1], commissioner.choices[0], commissioner.choices[2]];
+  commissioner.raw.choice_lines = [
+    commissioner.raw.choice_lines[1],
+    commissioner.raw.choice_lines[0],
+    commissioner.raw.choice_lines[2],
+  ];
+  rehashSnapshot(snapshot);
+
+  const review = analyzeSnapshot(snapshot, election);
+  assert.equal(review.schema_version, PROJECTION_SCHEMA_VERSION);
+  assert.equal(review.summary.distinct_contests, 5);
+  assert.equal(review.summary.common_to_all_precincts, 4);
+  const governorReview = review.common_to_all_precincts.find(
+    ({ title }) => title === "For Governor and Lieutenant Governor",
+  );
+  assert.deepEqual(governorReview.orders, [1, 7]);
+  assert.deepEqual(
+    governorReview.observed_positions.map(({ position, precinct_count: count }) => [position, count]),
+    [[1, 1], [7, 1]],
+  );
+  assert.deepEqual(
+    governorReview.observed_choice_orders.map(({ precinct_count: count }) => count),
+    [1, 1],
+  );
+  assert.deepEqual(
+    governorReview.observed_choice_orders[0].choices.map(({ name }) => name),
+    ["Amy Acton and David Pepper", "Vivek Ramaswamy and Robert A. McColley", "Write-in"],
+  );
+  assert.deepEqual(
+    governorReview.observed_choice_orders[1].choices.map(({ name }) => name),
+    ["Vivek Ramaswamy and Robert A. McColley", "Amy Acton and David Pepper", "Write-in"],
+  );
+
+  const result = projectCounty(snapshot, election, {
+    maxSourceAgeHours: 24,
+    reviewedAt: "2026-10-16T18:00:00.000Z",
+    officeMappings: { "For County Commissioner": "county-commissioner" },
+    statewideIssueMappings: { "Issue 3": "state-issue-3" },
+  });
+  assert.deepEqual(
+    result.county.races[0].candidates.map(({ name }) => name),
+    ["Ada Lovelace", "Grace Hopper"],
+  );
+  assert.equal(result.county.races[0].source_url, snapshot.source.listing_url);
 });
 
 test("refuses incomplete, inconsistent, and altered snapshots", () => {
@@ -241,10 +324,14 @@ test("projects reviewed countywide content and keeps precinct content out", () =
     countyName: "Adams",
   });
 
+  assert.equal(result.schema_version, PROJECTION_SCHEMA_VERSION);
   assert.equal(result.county.coverage.method, "common_to_all_precincts");
   assert.equal(result.county.coverage.precincts_verified, 2);
+  assert.equal(result.county.coverage.precinct_specific_races, 1);
+  assert.equal(result.county.coverage.precinct_specific_issues, 0);
   assert.equal(result.county.coverage.source_age_hours_at_review, 12);
   assert.equal(result.county.coverage.reviewed_at, "2026-10-16T18:00:00.000Z");
+  assert.match(result.county.coverage.summary, /Candidate names are alphabetical/);
   assert.deepEqual(result.removed_statewide_duplicates.map(({ id }) => id).sort(), ["governor", "state-issue-3"]);
   assert.equal(result.county.races.length, 1);
   assert.equal(result.county.races[0].office_id, "county-commissioner");
@@ -317,9 +404,12 @@ test("requires explicit freshness, office, issue-duplicate, and uncertainty deci
 test("refuses to publish a possible statewide race as county content", () => {
   const { snapshot, election } = fixture();
   for (const ballot of Object.values(snapshot.ballots)) {
-    ballot.contests[0].choices = ballot.contests[0].choices.filter(
-      ({ name }) => name !== "Vivek Ramaswamy and Robert A. McColley",
+    const contest = ballot.contests[0];
+    const candidateIndex = contest.choices.findIndex(
+      ({ name }) => name === "Vivek Ramaswamy and Robert A. McColley",
     );
+    contest.choices.splice(candidateIndex, 1);
+    contest.raw.choice_lines.splice(candidateIndex, 1);
   }
   rehashSnapshot(snapshot);
 

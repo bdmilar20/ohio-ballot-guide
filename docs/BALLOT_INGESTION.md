@@ -196,9 +196,15 @@ a parser having looked at a single row.
 
 `scripts/project-vtrapp.mjs` validates the complete snapshot and produces a
 review artifact with two explicit lists: content common to every enumerated
-precinct and content that appears on only some precinct ballots. Its contest
-fingerprint covers every normalized content field by default and excludes only
-the per-precinct order and source URL.
+precinct and content that appears on only some precinct ballots. Contest
+identity is the complete normalized content, never its title: same-title issues
+with different ballot text and same-title offices with different candidate sets
+remain different contests. Position, source URL, and candidate sequence are
+presentation rather than identity. Ohio rotates candidate names between
+precinct ballots under [ORC 3505.03](https://codes.ohio.gov/ohio-revised-code/section-3505.03),
+so the projector canonicalizes `choices` together with `raw.choice_lines` for
+office contests while retaining every observed candidate order and contest
+position in the review report. Issue choices remain order-sensitive.
 
 Publishing is a separate, reviewed operation. A projection config must set the
 maximum acceptable source age, map every common county office to a known
@@ -214,8 +220,10 @@ County records now support `issues[]` alongside `races[]`. Projected records
 carry their source-content fingerprint, and `coverage` records the source
 update time, age at review, review timestamp, and the number of precincts
 verified. The UI labels the result as content common to every enumerated
-precinct and continues to direct voters to the official sample ballot for
-their exact precinct.
+precinct, lists candidates in a deterministic alphabetical order with an
+explicit precinct-rotation caveat, reports how many additional contests or
+issues appear only on some precinct ballots, and continues to direct voters to
+the official sample ballot for their exact contests and candidate order.
 
 `scripts/refresh-vtrapp.mjs` is the operator layer over those two contracts. A
 reviewed manifest can refresh several counties serially, retain each immutable

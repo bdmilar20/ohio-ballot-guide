@@ -270,10 +270,14 @@ npm run project:vtrapp -- \
 Review every uncertain parse and every possible statewide duplicate. A
 `published_statewide_race_id` is an exact office-and-candidate match;
 `possible_statewide_race_ids` are office-name matches whose candidate sets may
-differ. To emit a candidate county record, pass a JSON config with an explicit
-freshness limit, office mappings, and mappings for races or issues already
-published statewide. Mapping keys may be a report fingerprint or contest title;
-use fingerprints when same-title contests need different statewide mappings.
+differ. Contest identity comes from its complete content, never its title.
+Candidate and contest position may rotate between precincts, so the report's
+`observed_choice_orders` and `observed_positions` retain that evidence while a
+single fingerprint joins the same office across precincts. To emit a candidate
+county record, pass a JSON config with an explicit freshness limit, office
+mappings, and mappings for races or issues already published statewide.
+Mapping keys may be a report fingerprint or contest title; use fingerprints
+when same-title contests need different statewide mappings.
 
 ```json
 {

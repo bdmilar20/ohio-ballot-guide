@@ -41,11 +41,39 @@ export function issuesForCounty(countyId, counties) {
   return counties[countyId]?.issues ?? [];
 }
 
+export function contestSequenceLabels(races) {
+  const totals = new Map();
+  for (const { office } of races) totals.set(office, (totals.get(office) ?? 0) + 1);
+
+  const seen = new Map();
+  return races.map(({ office }) => {
+    const total = totals.get(office);
+    if (total === 1) return null;
+    const current = (seen.get(office) ?? 0) + 1;
+    seen.set(office, current);
+    return `Separate contest ${current} of ${total}`;
+  });
+}
+
+function countPhrase(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
 export function countyCoverageNotice(countyName, coverage, raceCount, issueCount) {
   if (coverage.method === "common_to_all_precincts") {
+    const precinctSpecific = [];
+    if (coverage.precinct_specific_races > 0) {
+      precinctSpecific.push(countPhrase(coverage.precinct_specific_races, "additional local contest"));
+    }
+    if (coverage.precinct_specific_issues > 0) {
+      precinctSpecific.push(countPhrase(coverage.precinct_specific_issues, "additional local issue"));
+    }
+    const variationCopy = precinctSpecific.length > 0
+      ? `${precinctSpecific.join(" and ")} appear only on some precinct ballots and are not shown here. `
+      : "";
     return {
       lead: "Approximate location.",
-      copy: `This match points to ${countyName}. The county section contains only content verified on every enumerated precinct ballot, but it is not a complete precinct ballot. Verify your precinct with the official sample-ballot link below.`,
+      copy: `This match points to ${countyName}. The county section contains content verified on every enumerated precinct ballot. Candidate names are alphabetical here because Ohio rotates their order by precinct. ${variationCopy}Verify your exact contests and candidate order with the official sample-ballot link below.`,
     };
   }
 
@@ -62,8 +90,8 @@ export function countyCoverageNotice(countyName, coverage, raceCount, issueCount
   };
 }
 
-export function sourceLabel(race, label) {
-  return `${label} — ${race.office} — ${race.scope}`;
+export function sourceLabel(race, label, sequenceLabel = null) {
+  return [label, race.office, sequenceLabel, race.scope].filter(Boolean).join(" — ");
 }
 
 export function hasPublishedBallotDetails(election) {
