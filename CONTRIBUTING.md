@@ -272,7 +272,8 @@ Review every uncertain parse and every possible statewide duplicate. A
 `possible_statewide_race_ids` are office-name matches whose candidate sets may
 differ. To emit a candidate county record, pass a JSON config with an explicit
 freshness limit, office mappings, and mappings for races or issues already
-published statewide:
+published statewide. Mapping keys may be a report fingerprint or contest title;
+use fingerprints when same-title contests need different statewide mappings.
 
 ```json
 {
