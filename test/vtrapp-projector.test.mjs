@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { ballotId } from "../scripts/ingest/vtrapp.mjs";
+import { ballotId, SCHEMA_VERSION as SNAPSHOT_SCHEMA_VERSION } from "../scripts/ingest/vtrapp.mjs";
 import {
   analyzeSnapshot,
   assertCompleteSnapshot,
@@ -88,7 +88,7 @@ function fixture() {
   const firstId = ballotId(first);
   const secondId = ballotId(second);
   const snapshot = {
-    schema_version: 1,
+    schema_version: SNAPSHOT_SCHEMA_VERSION,
     election: { id: "2026-11-03-general", vendor_key: "20261103G" },
     county: { id: "adams", vendor_slug: "adams" },
     source: {
@@ -97,7 +97,7 @@ function fixture() {
       source_updated_at: "2026-10-16T02:00:00-04:00",
       source_age_hours: 12,
     },
-    enumeration: { listed_precincts: 2, parsed_precincts: 2, skipped: [] },
+    enumeration: { listed_precincts: 2, parsed_precincts: 2, skipped: [], unexplained_rows: [] },
     precincts: [
       { id: "01____1", ballot_id: firstId },
       { id: "02____1", ballot_id: secondId },
@@ -175,6 +175,32 @@ test("refuses incomplete, inconsistent, and altered snapshots", () => {
   const dishonestAge = structuredClone(snapshot);
   dishonestAge.source.source_age_hours = 1;
   assert.throws(() => assertCompleteSnapshot(dishonestAge), /disagrees with its timestamps/);
+});
+
+// A snapshot read from disk was not necessarily produced by the adapter in this
+// working tree, so every ingest gate has to hold here too. These two are the
+// replay side of the results-table gate: an unparsed row means the precinct
+// list may be a page rather than the county, and intersecting over fewer
+// precincts admits *more* content as common to all of them.
+test("refuses a snapshot with no evidence that every results-table row was parsed", () => {
+  const { snapshot } = fixture();
+
+  const unparsed = structuredClone(snapshot);
+  unparsed.enumeration.unexplained_rows.push({ row: ["2"], reason: "neither the header row nor a precinct row" });
+  assert.throws(() => assertCompleteSnapshot(unparsed), /rows the adapter did not parse/);
+
+  // Absence is missing evidence, not agreement. A pre-fix snapshot omits the
+  // field entirely, and before this gate it projected as a complete county.
+  const omitted = structuredClone(snapshot);
+  delete omitted.enumeration.unexplained_rows;
+  assert.throws(() => assertCompleteSnapshot(omitted), /unexplained_rows must be an array/);
+
+  // The schema version is what actually distinguishes a pre-fix snapshot: the
+  // field check alone cannot, because a hand-written file can carry an empty
+  // array without a parser ever having checked a row.
+  const oldSchema = structuredClone(snapshot);
+  oldSchema.schema_version = 1;
+  assert.throws(() => assertCompleteSnapshot(oldSchema), /schema_version must be 2/);
 });
 
 test("reports only full-content contests present on every precinct", () => {

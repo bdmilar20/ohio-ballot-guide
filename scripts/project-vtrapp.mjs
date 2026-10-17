@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import { ballotId, parseArgs } from "./ingest/vtrapp.mjs";
+import { ballotId, parseArgs, SCHEMA_VERSION as SNAPSHOT_SCHEMA_VERSION } from "./ingest/vtrapp.mjs";
 
 export const PROJECTION_SCHEMA_VERSION = 1;
 
@@ -68,7 +68,10 @@ function ohioDate(instant) {
 }
 
 export function assertCompleteSnapshot(snapshot) {
-  invariant(snapshot?.schema_version === 1, "snapshot.schema_version must be 1");
+  invariant(
+    snapshot?.schema_version === SNAPSHOT_SCHEMA_VERSION,
+    `snapshot.schema_version must be ${SNAPSHOT_SCHEMA_VERSION}`,
+  );
   invariant(snapshot.election?.id && snapshot.election?.vendor_key, "snapshot needs an election identity");
   invariant(snapshot.county?.id && snapshot.county?.vendor_slug, "snapshot needs a county identity");
   invariant(snapshot.source?.listing_url, "snapshot needs source.listing_url");
@@ -84,6 +87,20 @@ export function assertCompleteSnapshot(snapshot) {
   );
   invariant(Array.isArray(snapshot.enumeration?.skipped), "snapshot.enumeration.skipped must be an array");
   invariant(snapshot.enumeration.skipped.length === 0, "snapshot contains skipped precinct rows");
+  // Every ingest gate has to hold at this boundary too: a snapshot read from
+  // disk was not necessarily produced by the adapter in this working tree.
+  // Without this, a snapshot whose results table carried an unparsed row --- a
+  // pager, a repeated header --- projects as if its precinct list were the
+  // whole county, and intersecting over fewer precincts admits *more* content
+  // as common to all of them. Absence is missing evidence, not agreement.
+  invariant(
+    Array.isArray(snapshot.enumeration?.unexplained_rows),
+    "snapshot.enumeration.unexplained_rows must be an array",
+  );
+  invariant(
+    snapshot.enumeration.unexplained_rows.length === 0,
+    "snapshot contains results-table rows the adapter did not parse",
+  );
   invariant(Array.isArray(snapshot.precincts), "snapshot.precincts must be an array");
   invariant(snapshot.precincts.length > 0, "snapshot contains no precincts");
   invariant(

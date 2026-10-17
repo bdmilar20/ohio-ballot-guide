@@ -99,7 +99,7 @@ writing `data/elections.json`:
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "election": { "id": "2026-11-03-general", "vendor_key": "20261103G" },
   "county": { "id": "adams", "vendor_slug": "adams" },
   "source": {
@@ -179,6 +179,18 @@ is not:
 
 Missing identity evidence fails the same way a mismatch does. A stamp that is
 absent is not agreement.
+
+**Every one of those gates has to hold again at the replay boundary.** A
+snapshot read from disk was not necessarily produced by the adapter in the
+working tree reading it, so `assertCompleteSnapshot` re-checks the enumeration
+rather than trusting the file --- including requiring `unexplained_rows` to be
+present *and* empty, because an absent field is missing evidence rather than
+agreement. `schema_version` is 2 for exactly this reason: a v1 snapshot came
+from a parser that took the first `<table>` on the page and never checked that
+it understood every row, so it carries no evidence that its precinct list was
+the whole county, and the version is what lets a consumer refuse it. The field
+check alone cannot, since a hand-written file can carry an empty array without
+a parser having looked at a single row.
 
 ## Review and projection
 

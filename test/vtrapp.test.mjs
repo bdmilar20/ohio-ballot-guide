@@ -19,6 +19,7 @@ import {
   parsePrecincts,
   parseVendorTimestamp,
   PRECINCT_TABLE_ID,
+  SCHEMA_VERSION,
   vendorSlug,
 } from "../scripts/ingest/vtrapp.mjs";
 
@@ -463,7 +464,7 @@ async function runCounty(overrides = {}, ingestOverrides = {}) {
 
 test("builds a snapshot that keeps precincts and deduplicates identical ballots", async () => {
   const { snapshot } = await runCounty();
-  assert.equal(snapshot.schema_version, 1);
+  assert.equal(snapshot.schema_version, SCHEMA_VERSION);
   assert.deepEqual(snapshot.election, { id: "2026-11-03-general", vendor_key: "20261103G" });
   assert.deepEqual(snapshot.county, { id: "adams", vendor_slug: "adams" });
   assert.equal(snapshot.source.listing_url, listingUrl("adams"));

@@ -16,7 +16,12 @@
 import { createHash } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 
-export const SCHEMA_VERSION = 1;
+// Bumped to 2 when enumeration gained `unexplained_rows`. A v1 snapshot was
+// produced by a parser that took the first <table> on the page and never
+// checked that it understood every row, so it carries no evidence that its
+// precinct list was the whole county. The version is what lets a consumer
+// refuse one; the field alone cannot, since both versions say 1 otherwise.
+export const SCHEMA_VERSION = 2;
 export const VENDOR_BASE = "https://lookup.boe.ohio.gov/vtrapp";
 
 // The vendor's "Not a Customer" placeholder. A county that does not use this
