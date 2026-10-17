@@ -61,6 +61,13 @@ npm run project:vtrapp -- --snapshot .cache/vtrapp-adams-20261103G.json \
   --elections data/elections.json --out .cache/vtrapp-adams-review.json
 ```
 
+Once projection decisions have been reviewed, `npm run refresh:vtrapp` runs a
+manifest of counties serially and writes a new review bundle. The bundle keeps
+every source snapshot and projection, a compact change summary, and a validated
+`elections.candidate.json`; it never overwrites `data/elections.json`. See
+[CONTRIBUTING.md](CONTRIBUTING.md#refreshing-reviewed-counties) for the manifest
+format and replay workflow.
+
 ## Data model
 
 The data is split by how it is maintained.

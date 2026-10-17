@@ -9,6 +9,7 @@
     "check:links": "node scripts/check-links.mjs",
     "test": "node --test",
     "ingest:vtrapp": "node scripts/ingest/vtrapp.mjs",
-    "project:vtrapp": "node scripts/project-vtrapp.mjs"
+    "project:vtrapp": "node scripts/project-vtrapp.mjs",
+    "refresh:vtrapp": "node scripts/refresh-vtrapp.mjs"
   }
 }

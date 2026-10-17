@@ -216,3 +216,12 @@ update time, age at review, review timestamp, and the number of precincts
 verified. The UI labels the result as content common to every enumerated
 precinct and continues to direct voters to the official sample ballot for
 their exact precinct.
+
+`scripts/refresh-vtrapp.mjs` is the operator layer over those two contracts. A
+reviewed manifest can refresh several counties serially, retain each immutable
+snapshot and projection, and assemble a validated candidate elections file.
+It does not edit production data. Every run directory carries an explicit
+status, and a failed or interrupted run never contains the candidate file that
+marks a complete refresh ready for diff review. Dataset-wide metadata stays as
+reviewed in the input: refreshing some counties cannot advance the whole
+dataset's review date or replace its coverage description.

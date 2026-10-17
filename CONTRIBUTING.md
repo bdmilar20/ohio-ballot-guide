@@ -308,6 +308,72 @@ parse, an office lacks a mapping, or a statewide duplicate has not been
 resolved explicitly. The result contains county data for review and manual
 application; precinct-specific content remains only in the report.
 
+## Refreshing reviewed counties
+
+After the mappings for one or more counties have been reviewed, record them in
+a manifest and run the adapter and projector together. Jobs run serially so the
+stateful vendor application is not flooded with concurrent ballot walks.
+The entry below shows the manifest shape; its mapping list is shortened, so use
+the county's complete review report rather than treating it as a ready-to-run
+Adams configuration.
+
+```json
+{
+  "schema_version": 1,
+  "jobs": [
+    {
+      "county": "adams",
+      "election": "20261103G",
+      "projection": {
+        "max_source_age_hours": 72,
+        "county_name": "Adams",
+        "office_mappings": {
+          "For County Commissioner": {
+            "office_id": "county-commissioner",
+            "office": "County Commissioner"
+          }
+        },
+        "statewide_race_mappings": {},
+        "statewide_issue_mappings": {
+          "Issue 3": "state-issue-3"
+        }
+      }
+    }
+  ]
+}
+```
+
+```bash
+npm run refresh:vtrapp -- \
+  --manifest config/vtrapp-20261103G.json \
+  --out .cache/vtrapp-refresh-2026-10-17
+```
+
+The output directory must be new. Its `status.json` says `running`, `failed`,
+or `complete`, so artifacts from an interrupted multi-county run cannot be
+mistaken for a finished refresh. Successful county snapshots and projections
+are retained even if a later job fails, but `elections.candidate.json` is
+written only after every job succeeds and the normal data validator accepts
+the candidate file. Review its diff against `data/elections.json`; applying
+that diff remains a separate publishing decision. A county refresh preserves
+the root `meta.last_reviewed` and `meta.coverage_note` values: changing either
+would make a dataset-wide claim that the manifest's county jobs did not
+establish.
+
+To reproduce projection and validation without another long network walk, pass
+the directory containing the saved `*-snapshot.json` files:
+
+```bash
+npm run refresh:vtrapp -- \
+  --manifest config/vtrapp-20261103G.json \
+  --snapshots .cache/vtrapp-refresh-2026-10-17 \
+  --out .cache/vtrapp-replay-2026-10-17
+```
+
+Like the adapter, live refresh is manual and must never run in CI. Replaying
+saved snapshots is offline, but freshness is recalculated at replay time and
+the manifest's maximum source age still applies.
+
 ## Design changes
 
 Read [`docs/DESIGN.md`](docs/DESIGN.md) before changing `styles.css` or the page
