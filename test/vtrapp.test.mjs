@@ -18,6 +18,7 @@ import {
   parseListing,
   parsePrecincts,
   parseVendorTimestamp,
+  PRECINCT_TABLE_ID,
   vendorSlug,
 } from "../scripts/ingest/vtrapp.mjs";
 
@@ -114,7 +115,7 @@ test("finds every precinct split even though the links are single-quoted", async
 });
 
 test("reports a row whose two ballot links disagree instead of trusting one", () => {
-  const html = `<table>
+  const html = `<table id="tblvtrlist">
     <tr><th id="Precinct_Split">s</th><th id="Link">l</th></tr>
     <tr><td headers="Precinct_Split">01 1</td><td headers="Link">
       <a href='getballot.aspx?elect=20261103G&prsid=01____1&bpty=X'>View</a>
@@ -128,10 +129,9 @@ test("reports a row whose two ballot links disagree instead of trusting one", ()
 
 // The election key and style are read off the PDF link but the accessible link
 // is the one fetched, so the two have to be checked as one identity. The vendor
-// varies their case between the links, which is why that comparison folds case
-// and the precinct id's does not.
+// lowercases its whole accessible query string, so every field folds case.
 test("declines a row whose links disagree on election or style", () => {
-  const row = (accessible) => `<table>
+  const row = (accessible) => `<table id="tblvtrlist">
     <tr><th id="Precinct_Split">s</th><th id="Link">l</th></tr>
     <tr><td headers="Precinct_Split">01 1</td><td headers="Link">
       <a href='getballot.aspx?elect=20261103G&prsid=01____1&bpty=X'>View</a>
@@ -146,6 +146,84 @@ test("declines a row whose links disagree on election or style", () => {
 
   // Case is the vendor's own convention on these two links, not a disagreement.
   assert.equal(parsePrecincts(row("xmlview.aspx?bpty=x&elec=20261103g&prsid=01____1&lang=en")).precincts.length, 1);
+});
+
+// Requiring prsid to match exactly between the two links looks like the safe
+// rule and is not. Adams precinct ids are digits, so folding case is a no-op
+// there and the strict rule passes its tests; Lucas ids carry letters, and the
+// strict rule declined 267 of that county's 315 rows, which failed the whole
+// county closed. The row below is Lucas's own markup, unedited.
+test("accepts the vendor's lowercased prsid while storing the cased id", () => {
+  const html = `<table id="${PRECINCT_TABLE_ID}">
+    <tr><th id="Precinct_Split">s</th><th id="Precinct_Name">n</th><th id="Style">y</th><th id="Link">l</th></tr>
+    <tr><td headers="Precinct_Split">001A 1</td><td headers="Precinct_Name">TOLEDO 1A</td>
+    <td headers="Style">X - NON</td><td headers="Link">
+      <a href='getballot.aspx?elect=20261103G&prsid=001A__1&bpty=X' target=_blank>View Ballot</a>
+      <a href='xmlview.aspx?bpty=x&elec=20261103g&prsid=001a__1&lang=en' target='_blank' >View Accessible Ballot</a>
+    </td></tr></table>`;
+  const { listed, precincts, skipped } = parsePrecincts(html);
+  assert.equal(listed, 1);
+  assert.deepEqual(skipped, []);
+  assert.equal(precincts.length, 1);
+
+  // The id we store and republish is the PDF link's, verbatim. Only agreement
+  // between the two links folds case.
+  assert.equal(precincts[0].id, "001A__1");
+  assert.equal(precincts[0].name, "TOLEDO 1A");
+
+  // Folding case must not fold two genuinely different ids together.
+  assert.match(
+    parsePrecincts(html.replace("prsid=001a__1", "prsid=001b__1")).skipped[0].reason,
+    /disagree on prsid/,
+  );
+});
+
+// This is the one enumeration failure the listed-vs-parsed count cannot catch:
+// a pager row is not a precinct row, so both numbers describe the page the
+// vendor served rather than the county, and a projection intersected over
+// fewer precincts admits *more* content as common to all of them.
+test("refuses a results table carrying rows it does not parse", () => {
+  const pager = `<table id="${PRECINCT_TABLE_ID}">
+    <tr><th id="Precinct_Split">s</th><th id="Link">l</th></tr>
+    <tr><td headers="Precinct_Split">01 1</td><td headers="Link">
+      <a href='getballot.aspx?elect=20261103G&prsid=01____1&bpty=X'>View</a>
+      <a href='xmlview.aspx?bpty=x&elec=20261103g&prsid=01____1&lang=en'>Accessible</a>
+    </td></tr>
+    <tr><td colspan="2"><a href="javascript:__doPostBack('gv','Page$2')">2</a></td></tr></table>`;
+  const paged = parsePrecincts(pager);
+
+  // The trap: without the gate these two numbers agree and report success.
+  assert.equal(paged.listed, 1);
+  assert.equal(paged.precincts.length, 1);
+  assert.equal(paged.unexplained.length, 1);
+  assert.match(paged.unexplained[0].reason, /neither the header row nor a precinct row/);
+  // The row text is kept as the vendor's own markup, so a failed run names the
+  // pager it tripped over rather than printing a bare "2".
+  assert.match(paged.unexplained[0].row[0], /Page\$2/);
+
+  // A second header row is structure we did not parse either.
+  const repeated = parsePrecincts(
+    pager.replace(/<tr><td colspan[\s\S]*?<\/tr>/, '<tr><th id="Precinct_Split">s</th><th id="Link">l</th></tr>'),
+  );
+  assert.equal(repeated.unexplained.length, 1);
+});
+
+// A lazy `<table[\s\S]*?</table>` match stops at a nested table's close tag,
+// dropping every row after it from `precincts` and from `listed` alike, so the
+// counts still agree over a fraction of the county. extractElement counts
+// depth, so the rows survive; the nested table itself is still unexplained
+// structure and stops the run.
+test("reads past a nested table instead of truncating at it", () => {
+  const nested = `<table id="${PRECINCT_TABLE_ID}">
+    <tr><th id="Precinct_Split">s</th><th id="Link">l</th></tr>
+    <tr><td colspan="2"><table><tr><td>pager</td></tr></table></td></tr>
+    <tr><td headers="Precinct_Split">01 1</td><td headers="Link">
+      <a href='getballot.aspx?elect=20261103G&prsid=01____1&bpty=X'>View</a>
+      <a href='xmlview.aspx?bpty=x&elec=20261103g&prsid=01____1&lang=en'>Accessible</a>
+    </td></tr></table>`;
+  const parsed = parsePrecincts(nested);
+  assert.equal(parsed.precincts.length, 1, "the row after the nested table must not be dropped");
+  assert.ok(parsed.unexplained.some((entry) => entry.reason.includes("nested table")));
 });
 
 // --------------------------------------------------------------- the contests
@@ -346,7 +424,7 @@ function fakeVendor({
 const panel = (title, ...names) =>
   `<h2 class="balofficename">${title}</h2><ul class="candidates">${names.map((n) => `<li>${n}</li>`).join("")}</ul>`;
 
-const twoRowTable = `<table>
+const twoRowTable = `<table id="tblvtrlist">
   <tr><th id="Precinct_Split">s</th><th id="Precinct_Name">n</th><th id="Style">y</th><th id="Link">l</th></tr>
   ${["01____1", "01____2"]
     .map(
@@ -391,7 +469,12 @@ test("builds a snapshot that keeps precincts and deduplicates identical ballots"
   assert.equal(snapshot.source.listing_url, listingUrl("adams"));
   assert.equal(snapshot.source.source_updated_at, "2026-10-12T14:32:40-04:00");
   assert.equal(snapshot.source.source_age_hours, 96);
-  assert.deepEqual(snapshot.enumeration, { listed_precincts: 2, parsed_precincts: 2, skipped: [] });
+  assert.deepEqual(snapshot.enumeration, {
+    listed_precincts: 2,
+    parsed_precincts: 2,
+    skipped: [],
+    unexplained_rows: [],
+  });
 
   // Both precincts carry the same two contests, so one ballot is stored twice
   // by reference and never duplicated in the snapshot.
@@ -440,7 +523,45 @@ test("refuses a listing with no update stamp, because age cannot be reported", a
 });
 
 test("refuses an enumeration that produced no ballots", async () => {
-  await assert.rejects(runCounty({ precinctBody: "<table></table>" }), /yielded no ballots/);
+  await assert.rejects(
+    runCounty({ precinctBody: `<table id="${PRECINCT_TABLE_ID}"></table>` }),
+    /yielded no ballots/,
+  );
+});
+
+// The results table used to be "the first <table> on the page", which reads a
+// layout table on a redesigned page as an empty county. Taking it by the
+// vendor's own id instead means a markup change stops the run and says so.
+test("refuses a Find Ballots response with no results table", async () => {
+  await assert.rejects(
+    runCounty({ precinctBody: "<table id='somethingelse'><tr><td headers='Link'>x</td></tr></table>" }),
+    /has no table with id="tblvtrlist"/,
+  );
+  assert.deepEqual(parsePrecincts("<table><tr><td headers='Link'>x</td></tr></table>"), {
+    tableFound: false,
+    listed: 0,
+    precincts: [],
+    skipped: [],
+    unexplained: [],
+  });
+});
+
+// A paged results table is the one case where the listed and parsed counts
+// agree and still describe less than the county, so the run has to stop on the
+// unparsed row itself.
+test("refuses a snapshot whose results table had a row it did not parse", async () => {
+  const paged = twoRowTable.replace(
+    "</table>",
+    `<tr><td colspan="4"><a href="javascript:__doPostBack('gv','Page$2')">2</a></td></tr></table>`,
+  );
+  await assert.rejects(
+    runCounty({ precinctBody: paged }),
+    /1 row\(s\) this adapter does not parse.*Page\$2.*may not be the whole county/s,
+  );
+
+  // Without the gate this is what the snapshot would have claimed.
+  const parsed = parsePrecincts(paged);
+  assert.equal(parsed.listed, parsed.precincts.length);
 });
 
 // A snapshot covering fewer precincts than the county listed looks like

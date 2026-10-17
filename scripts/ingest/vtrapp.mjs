@@ -164,24 +164,60 @@ export function parseListing(html) {
   };
 }
 
+/** The vendor's own id for the "Find Ballots" results table. */
+export const PRECINCT_TABLE_ID = "tblvtrlist";
+
 /**
  * Reads the precinct-split table produced by "Find Ballots".
  *
  * The row links are single-quoted, so an href="..." pattern silently matches
  * nothing here and the table looks empty.
+ *
+ * The table is taken by the vendor's own id and read with extractElement, not
+ * as the first `<table[\s\S]*?</table>` on the page. Both of those shortcuts
+ * fail in the direction of over-reporting coverage: the first table on a
+ * redesigned page may be a layout table, and a lazy close-tag match on a table
+ * containing a nested one stops early, which drops the rows after the nested
+ * table from `precincts` *and* from `listed`, so the two still agree and a
+ * fraction of the county certifies as the whole county.
  */
 export function parsePrecincts(html) {
-  const table = html.match(/<table[\s\S]*?<\/table>/i);
-  if (!table) return { listed: 0, precincts: [], skipped: [] };
+  const table = extractElement(html, new RegExp(`<table[^>]*id="${PRECINCT_TABLE_ID}"[^>]*>`, "i"));
+  if (table === null) return { tableFound: false, listed: 0, precincts: [], skipped: [], unexplained: [] };
 
-  const rows = [...table[0].matchAll(/<tr[\s\S]*?<\/tr>/gi)].map((row) =>
+  const rows = [...table.matchAll(/<tr[\s\S]*?<\/tr>/gi)].map((row) =>
     [...row[0].matchAll(/<t([dh])[^>]*>([\s\S]*?)<\/t\1>/gi)].map((cell) => ({
+      tag: `t${cell[1].toLowerCase()}`,
       header: cell[0].match(/headers="([^"]+)"/)?.[1] ?? null,
       html: cell[2],
       text: collapse(cell[2]),
     })),
   );
-  const dataRows = rows.filter((cells) => cells.length > 0 && cells.some((cell) => cell.header));
+
+  // Every row of this table is either the one `<th>` header row or a precinct
+  // row whose cells carry `headers=`. A third kind of row is structure we did
+  // not parse, and the one we expect is an ASP.NET GridView pager: a paged
+  // table makes `listed` and `parsed` agree on a *subset* of the county, which
+  // is the single failure mode that looks exactly like success, and a
+  // projection intersected over fewer precincts admits more content as common,
+  // not less. No served county pages today — Summit lists all 479 splits in one
+  // 692 KB response, and no county's table carries a `Page$n` postback — so
+  // this exists to stop a vendor change rather than to parse one.
+  const dataRows = [];
+  const unexplained = [];
+  let headerSeen = false;
+  for (const cells of rows) {
+    if (cells.some((cell) => cell.header)) {
+      dataRows.push(cells);
+    } else if (!headerSeen && cells.length > 0 && cells.every((cell) => cell.tag === "th")) {
+      headerSeen = true;
+    } else {
+      unexplained.push({ row: cells.map((cell) => cell.text), reason: "neither the header row nor a precinct row" });
+    }
+  }
+  if (/<table\b/i.test(table)) {
+    unexplained.push({ row: [], reason: "a nested table inside the results table" });
+  }
 
   const precincts = [];
   const skipped = [];
@@ -200,13 +236,19 @@ export function parsePrecincts(html) {
     // The two links are one identity and have to be checked as one. We fetch
     // the accessible link but read the election key and style off the PDF link,
     // so a row whose links point at different ballots would be fetched as a
-    // ballot it is not. The vendor names the election differently on each link
-    // and varies the case of both the key and the style
-    // (elect=20261103G vs elec=20261103g), so those two fold case; a precinct
-    // id is a key we store, so it must match exactly.
+    // ballot it is not. The vendor lowercases its whole accessible query string
+    // and leaves the PDF link cased (elect=20261103G vs elec=20261103g), so
+    // every field here folds case. Requiring prsid to match exactly instead
+    // looks safer and is not: in Adams every precinct id is digits, so the fold
+    // is a no-op and the strict rule passes, but Lucas ids carry letters
+    // (prsid=001A__1 vs prsid=001a__1) and the strict rule declined 267 of its
+    // 315 rows, which failed the whole county closed. Case is not significant
+    // to the vendor either — 001A__1 and 001a__1 return the same 27-contest
+    // ballot, a different id returns a different one, and a bogus id errors.
+    // The *stored* id stays the PDF link's value verbatim; only agreement folds.
     const precinctId = pdfParams.get("prsid");
     const identity = [
-      { name: "prsid", pdf: precinctId, accessible: accessibleParams.get("prsid"), foldCase: false },
+      { name: "prsid", pdf: precinctId, accessible: accessibleParams.get("prsid"), foldCase: true },
       { name: "election", pdf: pdfParams.get("elect"), accessible: accessibleParams.get("elec"), foldCase: true },
       { name: "style", pdf: pdfParams.get("bpty"), accessible: accessibleParams.get("bpty"), foldCase: true },
     ];
@@ -234,7 +276,7 @@ export function parsePrecincts(html) {
       election_key: pdfParams.get("elect"),
     });
   }
-  return { listed: dataRows.length, precincts, skipped };
+  return { tableFound: true, listed: dataRows.length, precincts, skipped, unexplained };
 }
 
 const VOTE_FOR = /\(\s*vote for (?:not more than|no more than|up to)?\s*(\d+)\s*\)/i;
@@ -501,7 +543,21 @@ export async function ingestCounty({
 
   requireSameStamp(countyId, parsedListing.sourceUpdatedRaw, listed.body, "the precinct list");
 
-  const { listed: listedCount, precincts, skipped } = parsePrecincts(listed.body);
+  const { tableFound, listed: listedCount, precincts, skipped, unexplained } = parsePrecincts(listed.body);
+  if (!tableFound) {
+    throw new Error(
+      `${countyId}: the "Find Ballots" response has no table with id="${PRECINCT_TABLE_ID}", so the vendor's results markup changed`,
+    );
+  }
+  // An unparsed row is the only enumeration failure the count check cannot see:
+  // a pager row is not a precinct row, so listed and parsed agree over the page
+  // the vendor happened to serve.
+  if (unexplained.length > 0) {
+    throw new Error(
+      `${countyId}: the results table has ${unexplained.length} row(s) this adapter does not parse` +
+        ` (${unexplained[0].reason}: ${JSON.stringify(unexplained[0].row)}), so ${listedCount} may not be the whole county`,
+    );
+  }
   if (precincts.length === 0) {
     throw new Error(`${countyId}: precinct enumeration yielded no ballots`);
   }
@@ -572,7 +628,12 @@ export async function ingestCounty({
       source_updated_at: parsedListing.sourceUpdatedAt.iso,
       source_age_hours: Number(((fetchedAt.getTime() - parsedListing.sourceUpdatedAt.instant) / 3_600_000).toFixed(1)),
     },
-    enumeration: { listed_precincts: listedCount, parsed_precincts: precinctRecords.length, skipped },
+    enumeration: {
+      listed_precincts: listedCount,
+      parsed_precincts: precinctRecords.length,
+      skipped,
+      unexplained_rows: unexplained,
+    },
     precincts: precinctRecords,
     ballots,
   };

@@ -33,7 +33,7 @@ The 16 counties not on the vendor are not a tail — they include Cuyahoga,
 Franklin and Hamilton, so most of Ohio's population. They need their own
 adapters under `scripts/ingest/`.
 
-### Four things about this source that are not guessable
+### Six things about this source that are not guessable
 
 Each is pinned by a test against captured fixtures in `test/fixtures/vtrapp`,
 because the obvious implementation of each one fails silently rather than
@@ -50,6 +50,25 @@ loudly:
   the listing comes back 2 KB shorter and "Find Ballots" answers an error page
   with no precinct table. The prefix is the whole gate, so the client still
   names itself after it.
+- **The vendor lowercases its whole accessible query string**, including the
+  precinct id, while leaving the PDF link cased: the same row offers
+  `prsid=001A__1` and `prsid=001a__1`. Requiring the two to match exactly looks
+  like the safer rule and is the opposite, because it passes everywhere it is
+  cheap to test — Adams precinct ids are all digits and underscores, so the
+  fold is a no-op there — and then declines 267 of Lucas's 315 rows, which
+  fails that whole county closed. Case is not significant to the vendor either:
+  `001A__1` and `001a__1` return the same 27-contest ballot, a different id
+  returns a different ballot, and a bogus id returns an error page. Only
+  agreement folds; the id stored and republished is the PDF link's, verbatim.
+- **The results table does not paginate, and must not be assumed to.** It is
+  `<table id="tblvtrlist">`, it is the only table in the response, and the
+  largest served county returns all of it at once: Summit lists 479 precinct
+  splits in one 692 KB response, with no `Page$n` postback anywhere on the page.
+  A pager would be the one enumeration failure the listed-vs-parsed count
+  cannot see, since a pager row is not a precinct row and both numbers would
+  then describe the page the vendor served rather than the county — and a
+  projection intersected over fewer precincts admits *more* content as common
+  to all of them, so the failure direction is toward over-publishing.
 
 Each listing also prints its own "Election data last updated" stamp, and across
 the 72 counties those spanned 09/01/26 to 10/13/26 on 2026-10-16. **A successful
@@ -89,7 +108,12 @@ writing `data/elections.json`:
     "source_updated_at": "2026-10-12T14:32:40-04:00",
     "source_age_hours": 96
   },
-  "enumeration": { "listed_precincts": 27, "parsed_precincts": 27, "skipped": [] },
+  "enumeration": {
+    "listed_precincts": 27,
+    "parsed_precincts": 27,
+    "skipped": [],
+    "unexplained_rows": []
+  },
   "precincts": [
     {
       "id": "01____1",
@@ -135,10 +159,15 @@ is not:
   bogus-slug control;
 - the selected election is absent from the listing;
 - the listing carries no update stamp, so age cannot be reported;
+- the "Find Ballots" response carries no `<table id="tblvtrlist">`, so the
+  vendor's results markup changed;
+- the results table carries a row that is neither its header row nor a precinct
+  row — a pager, a repeated header, or a nested table;
 - precinct enumeration yields no ballots;
 - the parsed precinct count differs from the listed count;
 - a row's two ballot links disagree on precinct, election or style, or either
-  link is missing one of them;
+  link is missing one of them (all three fold case, which is the vendor's own
+  convention between the links, not a disagreement);
 - the rows are listed under a different election than the one selected;
 - an accessible ballot walk ends before its reported contest total;
 - a contest cannot be represented without dropping source text; or
