@@ -111,6 +111,9 @@ loudly:
 Each listing also prints its own "Election data last updated" stamp, and across
 the 72 counties those spanned 09/01/26 to 10/13/26 on 2026-10-16. **A successful
 fetch is not a current ballot**, so the stamp is stored and its age reported.
+How that stamp decides whether a county may be published is
+[its own contract](#deciding-a-county-is-settled-enough-to-publish); the short
+version is that the stamp's *age* decides nothing.
 
 ## Precinct-level ingest, conservative county projection
 
@@ -271,3 +274,74 @@ status, and a failed or interrupted run never contains the candidate file that
 marks a complete refresh ready for diff review. Dataset-wide metadata stays as
 reviewed in the input: refreshing some counties cannot advance the whole
 dataset's review date or replace its coverage description.
+
+## Deciding a county is settled enough to publish
+
+Every listing carries the board's own "Election data last updated" stamp, and
+the obvious gate is an age limit. It does not work. On 2026-10-18 the 70
+ingestable counties' stamps spanned 09/01/26 to 10/13/26, and 38 of them had
+not moved in over a month — Huron's was 46 days old. Ohio closes candidate
+filing long before November, so a board that stopped editing in September is as
+likely to be **finished** as behind. The stamp's age cannot tell those apart,
+and any limit tight enough to catch a genuinely stale county rejects most of
+the state. `max_source_age_hours` remains a projection input, but it is a
+backstop against a wildly old snapshot, not the freshness decision.
+
+What does distinguish finished from behind is **movement**. The stamp only ever
+advances, so seeing the same value twice proves no edit happened in between.
+That makes the decision evidential rather than a judgment call:
+
+> A county may be published when its stamp has been observed unchanged at least
+> twice, across sightings spanning at least 48 hours, and the data in hand was
+> walked at that same stamp.
+
+Each `npm run survey:vtrapp` run appends one observation to
+`data/vtrapp-stamp-log.json` — 88 counties for 264 requests, about the cost of
+one county's ingest. `scripts/vtrapp-stamp-log.mjs` holds the rule and
+`npm run gate:vtrapp` applies it:
+
+```bash
+npm run gate:vtrapp                                            # what the log supports today
+npm run gate:vtrapp -- --refresh .cache/vtrapp-refresh-2026-10-20   # gate a bundle
+```
+
+Four properties are deliberate:
+
+- **The span is measured between sightings, not from the stamp.** A stamp six
+  weeks old seen twice two days apart is settled. A stamp edited this morning
+  is not, however current it looks.
+- **The walk counts as a sighting.** `assertSettled` takes the stamp and fetch
+  time from the snapshot itself, which closes the window between the last
+  survey and the ingest: a board that edited in that gap moved the stamp, and
+  the county waits instead of publishing a ballot nobody watched settle.
+- **A later survey may vouch for an earlier walk.** Because the stamp only
+  moves forward, a survey taken after a walk that still reports the same stamp
+  proves the captured ballot is still current. Walking first and settling
+  afterwards is allowed; walking at a stamp the board has since replaced is
+  not, even once the replacement settles.
+- **The log is append-only, and the one file under `data/` that is not
+  rebuildable.** Last week's observation cannot be regenerated, so it is
+  evidence rather than output. `appendObservation` refuses out-of-order
+  appends and another election's stamps, and `npm run check` re-verifies the
+  timeline, because `gate:vtrapp` reads "the stamp did not move" straight out
+  of this file and a scrambled log would answer that confidently and wrongly.
+
+Three limits worth stating.
+
+**"Settled" is an observation, not a promise.** It says the board was not
+editing across the window we watched; it cannot say the board is finished. A
+county quiet for 48 hours can be edited on the third day. That is why the gate
+is re-run against each refresh bundle rather than recorded once as a property
+of the county, and why the walk's own stamp has to match: the question is
+always "is this data still current," never "was this county ever settled."
+
+**A board that edits without touching its stamp is invisible here**, as it is
+to every other consumer of the stamp — including the adapter's own cross-page
+`requireSameStamp` check, which already treats an unchanged stamp as unchanged
+content. This gate inherits that assumption rather than adding one.
+
+**A county seen once can never settle**, so the gate fails closed on a county
+surveyed for the first time. The fix is another survey, not a lower threshold.
+Such a county reports `seen-once` rather than `moving`, because on a first run
+every county has one sighting and calling all 70 of them "moving" would claim
+every board in Ohio is mid-edit when the log has said nothing at all.

@@ -89,6 +89,19 @@ every source snapshot and projection, a compact change summary, and a validated
 [CONTRIBUTING.md](CONTRIBUTING.md#refreshing-reviewed-counties) for the manifest
 format and replay workflow.
 
+`npm run gate:vtrapp` decides which counties a bundle may actually publish. A
+board's "last updated" stamp is no use as an age limit — most of Ohio's stamps
+are weeks old because filing closed, not because anyone is behind — but it only
+ever advances, so seeing the same value twice proves nothing was edited in
+between. A county is cleared once its stamp has held across two sightings at
+least 48 hours apart and the data in hand was walked at that same stamp. Each
+survey run appends one sighting to `data/vtrapp-stamp-log.json`:
+
+```bash
+npm run gate:vtrapp                                                # what the log supports today
+npm run gate:vtrapp -- --refresh .cache/vtrapp-refresh-2026-10-20  # gate a bundle, nonzero if any county fails
+```
+
 ## Data model
 
 The data is split by how it is maintained.

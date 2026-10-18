@@ -4,17 +4,20 @@ import { readFile } from "node:fs/promises";
 import { normalizeQuery, ZIP_PATTERN } from "../src/lookup.mjs";
 import { OHIO_SCHEDULE_RULES, scheduleFields } from "./build-election-schedule.mjs";
 import { SURVEY_SCHEMA_VERSION, summarize } from "./survey-vtrapp.mjs";
+import { STAMP_LOG_SCHEMA_VERSION } from "./vtrapp-stamp-log.mjs";
 
 const dataSource = process.argv[2] ?? new URL("../data/elections.json", import.meta.url);
 const locationSource = process.argv[3] ?? new URL("../data/locations.json", import.meta.url);
 const officeSource = process.argv[4] ?? new URL("../data/offices.json", import.meta.url);
 const countyBoardSource = process.argv[5] ?? new URL("../data/county-boards.json", import.meta.url);
 const coverageSource = process.argv[6] ?? new URL("../data/vtrapp-coverage.json", import.meta.url);
+const stampLogSource = process.argv[7] ?? new URL("../data/vtrapp-stamp-log.json", import.meta.url);
 const data = JSON.parse(await readFile(dataSource, "utf8"));
 const locations = JSON.parse(await readFile(locationSource, "utf8"));
 const officeData = JSON.parse(await readFile(officeSource, "utf8"));
 const countyBoardData = JSON.parse(await readFile(countyBoardSource, "utf8"));
 const coverage = JSON.parse(await readFile(coverageSource, "utf8"));
+const stampLog = JSON.parse(await readFile(stampLogSource, "utf8"));
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const electionTypes = new Set(["general", "primary", "special", "local"]);
 const electionScopes = new Set(["statewide", "county", "municipal"]);
@@ -139,6 +142,53 @@ for (const [countyId, record] of Object.entries(coverage.counties)) {
     assert.ok(!record.transport_error, `${countyId} cannot be enumerable on a request that failed`);
   } else {
     assert.ok(record.blocked, `${countyId} is not enumerable and must say why`);
+  }
+}
+
+// data/vtrapp-stamp-log.json is the one generated file under data/ that cannot
+// be rebuilt from a single run: it is a timeline, and last week's observation
+// is unrepeatable. So the checks here are the ones that protect a timeline --
+// order, no rewriting, one election throughout -- because scripts/gate-vtrapp.mjs
+// reads "the stamp did not move" straight out of it and a scrambled log would
+// answer that question confidently and wrongly.
+assert.equal(
+  stampLog.meta.schema_version,
+  STAMP_LOG_SCHEMA_VERSION,
+  `vtrapp stamp log must be schema ${STAMP_LOG_SCHEMA_VERSION}`,
+);
+assert.ok(Array.isArray(stampLog.observations), "vtrapp stamp log needs an observations array");
+assert.equal(
+  stampLog.meta.observations,
+  stampLog.observations.length,
+  "vtrapp stamp log meta.observations must match the number of observations recorded",
+);
+assert.ok(stampLog.meta.election?.vendor_key, "vtrapp stamp log must name the election it observes");
+const ohioCountyIds = new Set(countyIds);
+let previousObservedAt = null;
+for (const [index, observation] of stampLog.observations.entries()) {
+  const label = `vtrapp stamp log observation ${index + 1}`;
+  const observedAt = Date.parse(observation.observed_at);
+  assert.ok(Number.isFinite(observedAt), `${label} needs a parseable observed_at`);
+  assert.ok(
+    previousObservedAt === null || observedAt > previousObservedAt,
+    `${label} is not after the one before it; the log is read as a timeline`,
+  );
+  previousObservedAt = observedAt;
+  assert.equal(
+    observation.election,
+    stampLog.meta.election.vendor_key,
+    `${label} observes a different election than the log claims`,
+  );
+  assert.ok(Array.isArray(observation.surveyed) && observation.surveyed.length > 0, `${label} must say which counties it looked at`);
+  for (const countyId of observation.surveyed) {
+    assert.ok(ohioCountyIds.has(countyId), `${label} surveyed ${countyId}, which is not an Ohio county`);
+  }
+  for (const [countyId, stamp] of Object.entries(observation.stamps)) {
+    assert.ok(
+      observation.surveyed.includes(countyId),
+      `${label} records a stamp for ${countyId} without listing it as surveyed`,
+    );
+    assert.ok(Number.isFinite(Date.parse(stamp)), `${label} has an unparseable stamp for ${countyId}`);
   }
 }
 
@@ -414,4 +464,8 @@ console.log(
   `Validated vendor coverage surveyed ${coverage.meta.generated_on}: ` +
     `${coverage.meta.summary.enumerable} of ${coverage.meta.summary.counties} counties enumerable, ` +
     `${coverage.meta.summary.precinct_splits} precinct splits.`,
+);
+console.log(
+  `Validated ${stampLog.observations.length} stamp observation(s) for ${stampLog.meta.election.vendor_key}` +
+    `${stampLog.observations.length > 0 ? `, latest ${stampLog.observations.at(-1).observed_at}` : ""}.`,
 );

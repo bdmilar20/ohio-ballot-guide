@@ -225,7 +225,9 @@ one. Do not restate it as "counties we can ingest.
 
 Useful flags: `--counties adams,van-wert` to survey a subset, `--out <path>` to
 write somewhere other than `data/`, and `--delay <ms>` to change the pacing
-(default 600).
+(default 600). Each run also appends one observation to
+`data/vtrapp-stamp-log.json`; pass `--log none` to keep a throwaway survey out
+of the timeline the publication gate reads, or `--log <path>` to redirect it.
 
 A county that cannot be enumerated is a finding, not a failure — the survey
 records the reason and moves on, so one unservable county cannot truncate the
@@ -250,6 +252,55 @@ behind every `enumerable: true`: a served response, the election offered, a
 freshness stamp, parsed rows above zero and equal to the rows the vendor
 listed, no skipped or unparsed rows, no blocker, and no transport error.
 Checking only some of those leaves a hand-edited `true` that still validates.
+
+## Deciding a county is settled enough to publish
+
+A county's stamp age does not decide this; whether the stamp has stopped moving
+does. The reasoning is in
+[docs/BALLOT_INGESTION.md](docs/BALLOT_INGESTION.md#deciding-a-county-is-settled-enough-to-publish).
+In short: the vendor's "Election data last updated" stamp only advances, so
+seeing the same value twice proves no edit in between, and a county may be
+published once its stamp has held across two sightings at least 48 hours apart
+and the data in hand was walked at that same stamp.
+
+See what the log currently supports:
+
+```bash
+npm run gate:vtrapp
+```
+
+The real output after the log's first two observations, which were taken
+minutes apart and so settle nothing — this is the gate failing closed, not a
+problem with the data:
+
+```
+unsettled (72): adams, allen, ashland, ashtabula, athens, ... williams
+unobserved (16): butler, clermont, crawford, cuyahoga, franklin, ... wyandot
+2 observation(s) in the log; a county needs two agreeing 48h apart to publish.
+```
+
+The 16 unobserved counties are the ones not on the vendor at all, so no survey
+can ever record a stamp for them; they need their own adapters before this gate
+has anything to say about them.
+
+Gate a finished refresh bundle before reviewing its diff. This reads
+`summary.json`, so it checks the stamp each county was actually walked at, and
+exits nonzero naming every county that is not settled:
+
+```bash
+npm run gate:vtrapp -- --refresh .cache/vtrapp-refresh-2026-10-20
+```
+
+`--quiet-hours <n>` changes the required window and `--log <path>` reads a
+different log. Lowering the window is a decision to publish on less evidence;
+say so in the pull request if you do it.
+
+`data/vtrapp-stamp-log.json` is the one generated file under `data/` that is
+**not** rebuildable — last week's observation cannot be regenerated, so it is
+evidence rather than output. It is append-only: the appending code refuses
+out-of-order appends and another election's stamps, and `npm run check`
+re-verifies the timeline. Never hand-edit it, and never reorder or drop an
+observation to make a county settle.
 
 ## Ingesting county ballots
 

@@ -39,6 +39,7 @@ import {
   requireSameStamp,
   vendorSlug,
 } from "./ingest/vtrapp.mjs";
+import { appendObservation, emptyLog, observationFromCoverage } from "./vtrapp-stamp-log.mjs";
 
 export const SURVEY_SCHEMA_VERSION = 2;
 
@@ -253,6 +254,30 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
     await writeFile(out, `${JSON.stringify(survey, null, 2)}\n`);
     const { enumerable, counties, precinct_splits: splits } = survey.meta.summary;
     console.log(`Wrote ${out}: ${enumerable} of ${counties} counties enumerable, ${splits} precinct splits`);
+
+    // Coverage answers "can we read this county?" and is rebuilt from scratch
+    // each run. Whether its data is settled is a question about change over
+    // time, which no single run can answer, so the stamps are also appended to
+    // a log. Opting out with --log none keeps a throwaway survey out of the
+    // timeline the publication gate reads.
+    //
+    // One timestamp covers the whole run, though the counties were read over
+    // several minutes. Either choice of instant can misstate a county's quiet
+    // span by at most the run's duration, which is minutes against a window
+    // measured in days, so per-county observation times would be false
+    // precision rather than more accuracy.
+    if (args.log === "none") {
+      console.log("Skipped the stamp log (--log none); this run contributes no settlement evidence.");
+    } else {
+      const logPath = args.log ? resolve(args.log) : fileURLToPath(new URL("../data/vtrapp-stamp-log.json", import.meta.url));
+      const existing = await readFile(logPath, "utf8").then(JSON.parse, (error) => {
+        if (error.code === "ENOENT") return emptyLog({ election: survey.meta.election });
+        throw error;
+      });
+      const log = appendObservation(existing, observationFromCoverage(survey, { observedAt: new Date() }));
+      await writeFile(logPath, `${JSON.stringify(log, null, 2)}\n`);
+      console.log(`Appended observation ${log.observations.length} to ${logPath}; run npm run gate:vtrapp to see what it settles.`);
+    }
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;
