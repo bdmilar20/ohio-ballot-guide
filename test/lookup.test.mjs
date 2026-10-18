@@ -118,7 +118,8 @@ test("describes precinct verification only for common-precinct projections", () 
     1,
   );
   assert.match(projected.copy, /verified on every enumerated precinct ballot/);
-  assert.match(projected.copy, /Candidate names are alphabetical/);
+  assert.match(projected.copy, /candidate order here may differ from your ballot/);
+  assert.doesNotMatch(projected.copy, /alphabetical/);
   assert.match(projected.copy, /14 additional local issues appear only on some precinct ballots/);
   assert.match(projected.copy, /exact contests and candidate order/);
 
@@ -132,18 +133,18 @@ test("describes precinct verification only for common-precinct projections", () 
   assert.doesNotMatch(partial.copy, /enumerated precinct ballot/);
 });
 
-test("labels repeated office headings as separate contests without inventing seat names", () => {
+test("labels repeated office headings only when scope does not distinguish them", () => {
   const labels = contestSequenceLabels([
-    { office: "Justice of the Supreme Court" },
-    { office: "Justice of the Supreme Court" },
-    { office: "County Auditor" },
-    { office: "Judge of the Court of Appeals" },
-    { office: "Judge of the Court of Appeals" },
+    { office: "Justice of the Supreme Court", scope: "Statewide · Term beginning January 1, 2027" },
+    { office: "Justice of the Supreme Court", scope: "Statewide · Term beginning January 2, 2027" },
+    { office: "County Auditor", scope: "Adams County · Vote for one" },
+    { office: "Judge of the Court of Appeals", scope: "Adams County · Vote for one" },
+    { office: "Judge of the Court of Appeals", scope: "Adams County · Vote for one" },
   ]);
 
   assert.deepEqual(labels, [
-    "Separate contest 1 of 2",
-    "Separate contest 2 of 2",
+    null,
+    null,
     null,
     "Separate contest 1 of 2",
     "Separate contest 2 of 2",

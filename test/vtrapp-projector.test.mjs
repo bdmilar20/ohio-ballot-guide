@@ -331,7 +331,8 @@ test("projects reviewed countywide content and keeps precinct content out", () =
   assert.equal(result.county.coverage.precinct_specific_issues, 0);
   assert.equal(result.county.coverage.source_age_hours_at_review, 12);
   assert.equal(result.county.coverage.reviewed_at, "2026-10-16T18:00:00.000Z");
-  assert.match(result.county.coverage.summary, /Candidate names are alphabetical/);
+  assert.match(result.county.coverage.summary, /Candidate order here may differ from the official ballot/);
+  assert.doesNotMatch(result.county.coverage.summary, /alphabetical/);
   assert.deepEqual(result.removed_statewide_duplicates.map(({ id }) => id).sort(), ["governor", "state-issue-3"]);
   assert.equal(result.county.races.length, 1);
   assert.equal(result.county.races[0].office_id, "county-commissioner");

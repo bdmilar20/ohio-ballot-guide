@@ -43,14 +43,19 @@ export function issuesForCounty(countyId, counties) {
 
 export function contestSequenceLabels(races) {
   const totals = new Map();
-  for (const { office } of races) totals.set(office, (totals.get(office) ?? 0) + 1);
+  const keyFor = ({ office, scope }) => `${office}\0${scope ?? ""}`;
+  for (const race of races) {
+    const key = keyFor(race);
+    totals.set(key, (totals.get(key) ?? 0) + 1);
+  }
 
   const seen = new Map();
-  return races.map(({ office }) => {
-    const total = totals.get(office);
+  return races.map((race) => {
+    const key = keyFor(race);
+    const total = totals.get(key);
     if (total === 1) return null;
-    const current = (seen.get(office) ?? 0) + 1;
-    seen.set(office, current);
+    const current = (seen.get(key) ?? 0) + 1;
+    seen.set(key, current);
     return `Separate contest ${current} of ${total}`;
   });
 }
@@ -73,7 +78,7 @@ export function countyCoverageNotice(countyName, coverage, raceCount, issueCount
       : "";
     return {
       lead: "Approximate location.",
-      copy: `This match points to ${countyName}. The county section contains content verified on every enumerated precinct ballot. Candidate names are alphabetical here because Ohio rotates their order by precinct. ${variationCopy}Verify your exact contests and candidate order with the official sample-ballot link below.`,
+      copy: `This match points to ${countyName}. The county section contains content verified on every enumerated precinct ballot. The candidate order here may differ from your ballot because Ohio rotates candidate order by precinct. ${variationCopy}Verify your exact contests and candidate order with the official sample-ballot link below.`,
     };
   }
 

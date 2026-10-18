@@ -387,7 +387,7 @@ function productRace(entry, mapping, snapshot, countyName) {
   const officeId = typeof mapping === "string" ? mapping : mapping.office_id;
   invariant(officeId && office, `office mapping for "${contest.title}" needs office_id and office`);
   // No precinct's rotation is authoritative for the county. Publish the same
-  // deterministic alphabetical order used by the identity normalizer and tell
+  // deterministic canonical order used by the identity normalizer and tell
   // the voter explicitly that their official ballot order will differ.
   const candidates = officeChoicePairs(contest)
     .map(({ choice }) => choice)
@@ -526,7 +526,7 @@ export function projectCounty(snapshot, election, {
         status: "complete",
         method: "common_to_all_precincts",
         scope: `Content present on all ${snapshot.precincts.length} enumerated precinct ballots`,
-        summary: "Every office and issue shown appears on every enumerated precinct ballot. Candidate names are alphabetical because Ohio rotates their order by precinct. Additional precinct-specific content remains excluded.",
+        summary: "Every office and issue shown appears on every enumerated precinct ballot. Candidate order here may differ from the official ballot because Ohio rotates candidate order by precinct. Additional precinct-specific content remains excluded.",
         source_url: snapshot.source.listing_url,
         source_updated_at: snapshot.source.source_updated_at,
         source_age_hours_at_review: sourceAgeAtReview,

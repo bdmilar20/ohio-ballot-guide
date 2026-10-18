@@ -220,7 +220,7 @@ County records now support `issues[]` alongside `races[]`. Projected records
 carry their source-content fingerprint, and `coverage` records the source
 update time, age at review, review timestamp, and the number of precincts
 verified. The UI labels the result as content common to every enumerated
-precinct, lists candidates in a deterministic alphabetical order with an
+precinct, lists candidates in a deterministic canonical order with an
 explicit precinct-rotation caveat, reports how many additional contests or
 issues appear only on some precinct ballots, and continues to direct voters to
 the official sample ballot for their exact contests and candidate order.
