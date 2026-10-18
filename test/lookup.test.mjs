@@ -23,7 +23,24 @@ const data = JSON.parse(
 const locations = JSON.parse(
   await readFile(new URL("../data/locations.json", import.meta.url), "utf8"),
 );
+const offices = JSON.parse(
+  await readFile(new URL("../data/offices.json", import.meta.url), "utf8"),
+).offices;
 const election = data.elections[0];
+
+function raceSourceNames(races) {
+  const sequenceLabels = contestSequenceLabels(races);
+
+  return races.flatMap((race, index) => {
+    const labels = [
+      "Official ballot",
+      ...(race.supplemental_sources ?? []).map(({ label }) => label),
+      ...(offices[race.office_id]?.sources ?? []).map(({ label }) => label),
+    ];
+
+    return labels.map((label) => sourceLabel(race, label, sequenceLabels[index]));
+  });
+}
 
 test("normalizes Ohio city suffixes with or without comma spacing", () => {
   assert.equal(normalizeQuery("  Cleveland, Ohio "), "cleveland");
@@ -168,6 +185,30 @@ test("keeps visible race source labels before the office and scope", () => {
     sourceLabel(race, "Official ballot", "Separate contest 2 of 2"),
     "Official ballot — Judge of the Court of Common Pleas, General Division — Separate contest 2 of 2 — Summit County · Term beginning January 5, 2027 · Vote for one",
   );
+});
+
+test("keeps every rendered race source name unique on each county page", () => {
+  for (const currentElection of data.elections) {
+    const statewideNames = raceSourceNames(currentElection.statewide_races);
+    const statewideDuplicates = statewideNames.filter(
+      (name, index) => statewideNames.indexOf(name) !== index,
+    );
+    assert.deepEqual(
+      [...new Set(statewideDuplicates)],
+      [],
+      `${currentElection.id} statewide race sources need unique accessible names`,
+    );
+
+    for (const [countyId, county] of Object.entries(currentElection.counties)) {
+      const names = [...statewideNames, ...raceSourceNames(county.races)];
+      const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
+      assert.deepEqual(
+        [...new Set(duplicates)],
+        [],
+        `${currentElection.id}/${countyId} race sources need unique accessible names`,
+      );
+    }
+  }
 });
 
 test("publishes sourced, explicitly partial coverage for each covered county", () => {
