@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-import { createVendorClient } from "../scripts/ingest/vtrapp.mjs";
+import { createVendorClient, VendorTransportError } from "../scripts/ingest/vtrapp.mjs";
 import { SURVEY_SCHEMA_VERSION, summarize, surveyCounty, surveyVtrapp } from "../scripts/survey-vtrapp.mjs";
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -217,6 +217,52 @@ test("refuses a survey with no counties rather than writing an empty artifact", 
   await assert.rejects(
     surveyVtrapp({ countyIds: [], electionKey: "20261103G" }),
     /at least one county/,
+  );
+});
+
+test("records an unanswered request as one county's finding and keeps surveying", async () => {
+  // The failure this is here for: a single vendor timeout used to propagate out
+  // of the loop and discard every county already surveyed.
+  const attempted = [];
+  const survey = async ({ countyId }) => {
+    attempted.push(countyId);
+    if (countyId === "ottawa") {
+      throw new VendorTransportError("https://vendor.example/ballotlist.aspx", new Error("The operation was aborted due to timeout"));
+    }
+    return { enumerable: true, response: "served", precinct_rows_parsed: 2 };
+  };
+
+  const result = await surveyVtrapp({
+    countyIds: ["adams", "ottawa", "wyandot"],
+    electionKey: "20261103G",
+    client: clientFor(fakeVendor()),
+    survey,
+  });
+
+  assert.deepEqual(attempted, ["adams", "ottawa", "wyandot"], "a timeout must not end the run");
+  assert.equal(result.counties.ottawa.transport_error, true);
+  assert.equal(result.counties.ottawa.enumerable, false);
+  assert.match(result.counties.ottawa.blocked, /failed rather than answering/);
+  assert.equal(result.counties.adams.enumerable, true);
+  assert.equal(result.counties.wyandot.enumerable, true);
+  assert.equal(result.meta.summary.transport_errors, 1);
+});
+
+test("lets a parse failure end the run instead of filing it as a timeout", async () => {
+  // `transport_error` means the vendor never answered, and the artifact tells a
+  // reader to re-run. A parser regression answers every re-run the same way, so
+  // recording it under that field would ship a broken adapter as 88 counties
+  // of weather.
+  await assert.rejects(
+    surveyVtrapp({
+      countyIds: ["adams", "wyandot"],
+      electionKey: "20261103G",
+      client: clientFor(fakeVendor()),
+      survey: async () => {
+        throw new TypeError("Cannot read properties of undefined (reading 'precincts')");
+      },
+    }),
+    /Cannot read properties of undefined/,
   );
 });
 

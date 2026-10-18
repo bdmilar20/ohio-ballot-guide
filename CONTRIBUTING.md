@@ -221,7 +221,7 @@ The artifact's per-county field is `enumerable`, not `ingestable`, and the
 difference is load-bearing: it means the vendor served a complete precinct list
 this adapter parsed in full, which is the *precondition* for an ingest. It does
 not mean a full ballot walk would succeed, because the survey never attempts
-one. Do not restate it as "counties we can ingest.
+one. Do not restate it as "counties we can ingest."
 
 Useful flags: `--counties adams,van-wert` to survey a subset, `--out <path>` to
 write somewhere other than `data/`, and `--delay <ms>` to change the pacing
@@ -236,6 +236,11 @@ not reach at all is recorded with `transport_error: true`, which is flagged
 separately because it is not evidence about the county: the vendor declining to
 serve a ballot stays true until a board changes something, while a timeout is
 answered by running the survey again.
+
+Only an unanswered request earns that field. The survey catches the adapter's
+typed `VendorTransportError` and nothing else, so a parser regression or a bug
+in the survey ends the run rather than shipping as 88 counties told to try
+again — a remedy that cannot fix either one.
 
 The reasons come from `assertEnumeration` and `requireSameStamp` in the adapter
 rather than from rules restated here. That matters: a second copy of those

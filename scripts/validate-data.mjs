@@ -117,8 +117,11 @@ for (const [countyId, record] of Object.entries(coverage.counties)) {
     // evidence the adapter's own gates require. Checking only some of them
     // leaves a hand-edited true that validates: a record can otherwise say the
     // county is not served, or that the election was never offered, and still
-    // pass. The tuple below is assertEnumeration's requirements, not a
-    // stricter set -- parsed === listed already implies no row was skipped.
+    // pass. The tuple below is assertEnumeration's requirements, not a stricter
+    // set. On a real run some of them are redundant -- parsed === listed cannot
+    // hold while a row was skipped -- but a hand-edited record is exactly where
+    // that stops being true, so each one is asserted and each one has a test
+    // that fails when only it is deleted.
     assert.equal(record.response, "served", `${countyId} is marked enumerable but the vendor did not serve it`);
     assert.equal(record.election_offered, true, `${countyId} is marked enumerable but does not offer this election`);
     assert.ok(record.source_updated_at, `${countyId} is marked enumerable without a source update stamp`);

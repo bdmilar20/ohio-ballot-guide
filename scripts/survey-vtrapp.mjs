@@ -38,6 +38,7 @@ import {
   parsePrecincts,
   requireSameStamp,
   vendorSlug,
+  VendorTransportError,
 } from "./ingest/vtrapp.mjs";
 import { appendObservation, emptyLog, observationFromCoverage } from "./vtrapp-stamp-log.mjs";
 
@@ -174,6 +175,12 @@ export async function surveyVtrapp({
     try {
       record = await survey({ client, countyId, electionKey });
     } catch (error) {
+      // Only an unanswered request survives as a finding. Catching everything
+      // here would file a parser regression or a bug in this file as 88
+      // counties flagged `transport_error`, whose documented remedy is "run it
+      // again" -- advice that cannot fix either one, on an artifact that would
+      // ship looking like a bad afternoon at the vendor. Those stop the run.
+      if (!(error instanceof VendorTransportError)) throw error;
       // Flagged separately because it is not evidence about the county. The
       // vendor declining to serve a ballot is a finding that stays true until
       // the board changes something; failing to reach it is answered by running
