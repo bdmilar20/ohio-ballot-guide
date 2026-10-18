@@ -17,7 +17,14 @@ async function readData(name) {
 // one and watch the validator refuse it.
 async function validateFixture(
   t,
-  { elections = () => {}, locations = () => {}, offices = () => {}, countyBoards = () => {}, coverage = () => {} },
+  {
+    elections = () => {},
+    locations = () => {},
+    offices = () => {},
+    countyBoards = () => {},
+    coverage = () => {},
+    stampLog = () => {},
+  },
 ) {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "ohio-ballot-guide-"));
   t.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
@@ -27,26 +34,30 @@ async function validateFixture(
   const officeData = await readData("offices.json");
   const countyBoardData = await readData("county-boards.json");
   const coverageData = await readData("vtrapp-coverage.json");
+  const stampLogData = await readData("vtrapp-stamp-log.json");
   elections(electionData);
   locations(locationData);
   offices(officeData);
   countyBoards(countyBoardData);
   coverage(coverageData);
+  stampLog(stampLogData);
 
   const electionFixture = join(temporaryDirectory, "elections.json");
   const locationFixture = join(temporaryDirectory, "locations.json");
   const officeFixture = join(temporaryDirectory, "offices.json");
   const countyBoardFixture = join(temporaryDirectory, "county-boards.json");
   const coverageFixture = join(temporaryDirectory, "vtrapp-coverage.json");
+  const stampLogFixture = join(temporaryDirectory, "vtrapp-stamp-log.json");
   await writeFile(electionFixture, JSON.stringify(electionData));
   await writeFile(locationFixture, JSON.stringify(locationData));
   await writeFile(officeFixture, JSON.stringify(officeData));
   await writeFile(countyBoardFixture, JSON.stringify(countyBoardData));
   await writeFile(coverageFixture, JSON.stringify(coverageData));
+  await writeFile(stampLogFixture, JSON.stringify(stampLogData));
 
   return spawnSync(
     process.execPath,
-    [validator, electionFixture, locationFixture, officeFixture, countyBoardFixture, coverageFixture],
+    [validator, electionFixture, locationFixture, officeFixture, countyBoardFixture, coverageFixture, stampLogFixture],
     { encoding: "utf8" },
   );
 }
@@ -497,6 +508,95 @@ test("validator rejects a county marked enumerable that parsed fewer rows than l
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /parsed fewer rows than the vendor listed/);
+});
+
+// The stamp log is the one file under data/ that cannot be rebuilt, and the
+// gate reads "the stamp did not move" straight out of it. Until these tests
+// existed the validator read the real log on every run, which is always valid,
+// so none of its stamp-log checks were exercised by anything.
+test("validator rejects a stamp log whose timeline is out of order", async (t) => {
+  const result = await validateFixture(t, {
+    stampLog: (data) => data.observations.reverse(),
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /is not after the one before it; the log is read as a timeline/);
+});
+
+test("validator rejects a stamp log that observes two elections", async (t) => {
+  const result = await validateFixture(t, {
+    stampLog: (data) => {
+      data.observations.at(-1).election = "20270504P";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /observes a different election than the log claims/);
+});
+
+test("validator rejects a stamp log whose observation count was edited", async (t) => {
+  const result = await validateFixture(t, {
+    stampLog: (data) => {
+      data.meta.observations += 1;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /meta.observations must match the number of observations recorded/);
+});
+
+test("validator rejects a stamp log observation that surveyed a county Ohio does not have", async (t) => {
+  const result = await validateFixture(t, {
+    stampLog: (data) => data.observations.at(-1).surveyed.push("marion-indiana"),
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /surveyed marion-indiana, which is not an Ohio county/);
+});
+
+test("validator rejects a stamp for a county the observation did not look at", async (t) => {
+  const result = await validateFixture(t, {
+    stampLog: (data) => {
+      const observation = data.observations.at(-1);
+      observation.surveyed = observation.surveyed.filter((countyId) => countyId !== "adams");
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /records a stamp for adams without listing it as surveyed/);
+});
+
+test("validator rejects a stamp that is not a timestamp", async (t) => {
+  const result = await validateFixture(t, {
+    stampLog: (data) => {
+      data.observations.at(-1).stamps.adams = "sometime last week";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /has an unparseable stamp for adams/);
+});
+
+test("validator rejects a stamp log that is not a list of observations", async (t) => {
+  const result = await validateFixture(t, {
+    stampLog: (data) => {
+      data.observations = { "2026-10-18": {} };
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /needs an observations array/);
+});
+
+test("validator rejects a stamp log that does not name the election it observes", async (t) => {
+  const result = await validateFixture(t, {
+    stampLog: (data) => {
+      delete data.meta.election;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /must name the election it observes/);
 });
 
 test("validator rejects a blocked county that does not say why", async (t) => {

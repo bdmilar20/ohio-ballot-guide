@@ -10,6 +10,7 @@ import { gateRefresh } from "../scripts/gate-vtrapp.mjs";
 import {
   appendObservation,
   assertSettled,
+  assertStampLog,
   emptyLog,
   observationFromCoverage,
   settleCounty,
@@ -34,6 +35,13 @@ function logOf(...entries) {
   }
   return log;
 }
+
+/**
+ * A refresh job as refreshVtrapp writes one. The election key is part of the
+ * real shape, so fixtures carry it rather than omitting the field the gate
+ * compares against the log.
+ */
+const job = (fields) => ({ vendor_election_key: ELECTION.vendor_key, ...fields });
 
 test("a single observation never settles a county, and does not accuse it of moving", () => {
   const log = logOf(["2026-10-18T12:00:00Z", { adams: "2026-10-12T14:32:40-04:00" }]);
@@ -164,8 +172,8 @@ test("a coverage survey reduces to one observation carrying only observed stamps
     {
       meta: { generated_by: "scripts/survey-vtrapp.mjs", election: ELECTION },
       counties: {
-        adams: { source_updated_at: "2026-10-12T14:32:40-04:00", ingestable: true },
-        lake: { source_updated_at: "2026-10-05T09:00:00-04:00", ingestable: false },
+        adams: { source_updated_at: "2026-10-12T14:32:40-04:00", enumerable: true },
+        lake: { source_updated_at: "2026-10-05T09:00:00-04:00", enumerable: false },
         butler: { response: "not-a-customer" },
       },
     },
@@ -227,8 +235,8 @@ test("gateRefresh blocks the unsettled jobs in a bundle and names them", () => {
   );
   const results = gateRefresh(log, {
     jobs: [
-      { county_id: "adams", source_updated_at: adamsStamp, fetched_at: "2026-10-21T13:00:00Z" },
-      { county_id: "huron", source_updated_at: "2026-10-20T15:00:00-04:00", fetched_at: "2026-10-21T13:00:00Z" },
+      job({ county_id: "adams", source_updated_at: adamsStamp, fetched_at: "2026-10-21T13:00:00Z" }),
+      job({ county_id: "huron", source_updated_at: "2026-10-20T15:00:00-04:00", fetched_at: "2026-10-21T13:00:00Z" }),
     ],
   });
   assert.deepEqual(
@@ -292,14 +300,14 @@ test("the CLI exits nonzero on an unsettled bundle and zero on a settled one", a
       encoding: "utf8",
     });
 
-  const settled = await bundle([{ county_id: "adams", source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" }]);
+  const settled = await bundle([job({ county_id: "adams", source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" })]);
   const pass = gate(["--refresh", settled]);
   assert.equal(pass.status, 0, pass.stderr);
   assert.match(pass.stdout, /All 1 counties .* are settled at the stamp they were walked at/);
 
   // Huron's board edited after the only survey, so the walk disagrees with it.
   const moved = await bundle([
-    { county_id: "huron", source_updated_at: "2026-10-19T08:00:00-04:00", fetched_at: "2026-10-20T13:00:00Z" },
+    job({ county_id: "huron", source_updated_at: "2026-10-19T08:00:00-04:00", fetched_at: "2026-10-20T13:00:00Z" }),
   ]);
   const fail = gate(["--refresh", moved]);
   assert.equal(fail.status, 1);
@@ -318,18 +326,143 @@ test("the CLI exits nonzero on an unsettled bundle and zero on a settled one", a
   assert.match(bad.stderr, /--quiet-hours must be a nonnegative number/);
 });
 
+test("the gate CLI refuses a log that would not survive npm run check", async (t) => {
+  // --log takes any file, and this command decides whether to publish from it.
+  // A hand-edited log must stop the gate rather than be read as a timeline.
+  const directory = await mkdtemp(join(tmpdir(), "vtrapp-gate-badlog-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+
+  const stamp = "2026-10-12T14:32:40-04:00";
+  const ordered = logOf(["2026-10-14T12:00:00Z", { adams: stamp }], ["2026-10-18T12:00:00Z", { adams: stamp }]);
+  const write = async (name, log) => {
+    const path = join(directory, name);
+    await writeFile(path, JSON.stringify(log));
+    return path;
+  };
+  const gate = (logPath, args = []) =>
+    spawnSync(process.execPath, [join(projectRoot, "scripts", "gate-vtrapp.mjs"), "--log", logPath, ...args], {
+      encoding: "utf8",
+    });
+
+  const good = gate(await write("ordered.json", ordered));
+  assert.equal(good.status, 0, good.stderr);
+  assert.match(good.stdout, /settled \(1\): adams/);
+
+  const scrambled = { ...ordered, observations: [ordered.observations[1], ordered.observations[0]] };
+  const bad = gate(await write("scrambled.json", scrambled));
+  assert.equal(bad.status, 1);
+  assert.match(bad.stderr, /observation 2 is not after the one before it/);
+
+  // The report form and the bundle form read the same log, so both must refuse it.
+  const bundle = join(directory, "refresh");
+  await mkdir(bundle);
+  await writeFile(
+    join(bundle, "summary.json"),
+    JSON.stringify({ jobs: [job({ county_id: "adams", source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" })] }),
+  );
+  const badBundle = gate(await write("scrambled2.json", scrambled), ["--refresh", bundle]);
+  assert.equal(badBundle.status, 1);
+  assert.match(badBundle.stderr, /observation 2 is not after the one before it/);
+});
+
 test("gateRefresh rejects a malformed bundle instead of blaming the county", () => {
   // A job missing a field this gate reads would otherwise come back as the
   // county being unsettled, which reads as a finding about a board.
   const stamp = "2026-10-12T14:32:40-04:00";
   const log = logOf(["2026-10-18T12:00:00Z", { adams: stamp }]);
-  assert.throws(() => gateRefresh(log, { jobs: [{ source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" }] }), /refresh job 1 does not name a county/);
   assert.throws(
-    () => gateRefresh(log, { jobs: [{ county_id: "adams", fetched_at: "2026-10-20T13:00:00Z" }] }),
+    () => gateRefresh(log, { jobs: [job({ source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" })] }),
+    /refresh job 1 does not name a county/,
+  );
+  assert.throws(
+    () => gateRefresh(log, { jobs: [job({ county_id: "adams", fetched_at: "2026-10-20T13:00:00Z" })] }),
     /refresh job 1 \(adams\) has no source_updated_at/,
   );
   assert.throws(
-    () => gateRefresh(log, { jobs: [{ county_id: "adams", source_updated_at: stamp }] }),
+    () => gateRefresh(log, { jobs: [job({ county_id: "adams", source_updated_at: stamp })] }),
     /refresh job 1 \(adams\) has no fetched_at/,
   );
+  assert.throws(
+    () => gateRefresh(log, { jobs: [{ county_id: "adams", source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" }] }),
+    /refresh job 1 \(adams\) does not name the vendor election it walked/,
+  );
+  // A log with no election names nothing for the job to match, so there is no
+  // comparison to make. Reading it as "no mismatch found" would pass the bundle.
+  assert.throws(
+    () => gateRefresh(
+      { ...log, meta: { ...log.meta, election: undefined } },
+      { jobs: [job({ county_id: "adams", source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" })] },
+    ),
+    /the stamp log does not name the election it observes/,
+  );
+});
+
+test("a settled stamp for the wrong election is a malformed bundle, not a settled county", () => {
+  // The bypass this is here for: settlement compares stamp strings, so a log of
+  // November observations would settle a May bundle whose stamp happens to
+  // match and report it as watched evidence. Two elections' stamps are not
+  // comparable at all, so the bundle fails before any county is evaluated.
+  const stamp = "2026-10-12T14:32:40-04:00";
+  const log = logOf(
+    ["2026-10-14T12:00:00Z", { adams: stamp }],
+    ["2026-10-18T12:00:00Z", { adams: stamp }],
+  );
+  const wrongElection = {
+    jobs: [
+      {
+        county_id: "adams",
+        vendor_election_key: "20270504P",
+        source_updated_at: stamp,
+        fetched_at: "2026-10-20T13:00:00Z",
+      },
+    ],
+  };
+
+  // Settled on every other axis: same county, same stamp, a long quiet span.
+  assert.equal(assertSettled(log, { countyId: "adams", stamp, observedAt: "2026-10-20T13:00:00Z" }).status, "settled");
+  assert.throws(
+    () => gateRefresh(log, wrongElection),
+    /refresh job 1 \(adams\) walked election 20270504P, but this stamp log observes 20261103G/,
+  );
+});
+
+test("the gate validates the log it was handed, not just the one check reads", () => {
+  // `--log <path>` takes any file. A log that never went through npm run check
+  // could be out of order or observing another election, and the settlement
+  // rule would answer from it confidently. Both callers use this function, so
+  // the gate's rules cannot drift weaker than the validator's.
+  const ohio = ["adams", "huron"];
+  assert.throws(
+    () => assertStampLog({ meta: { schema_version: 2 }, observations: [] }, { countyIds: ohio }),
+    /must be schema 1, not 2/,
+  );
+  assert.throws(
+    () => assertStampLog({ ...logOf(), meta: { ...emptyLog({ election: ELECTION }).meta, observations: 4 } }, { countyIds: ohio }),
+    /meta.observations must match/,
+  );
+
+  const stamp = "2026-10-12T14:32:40-04:00";
+  const ordered = logOf(["2026-10-14T12:00:00Z", { adams: stamp }], ["2026-10-18T12:00:00Z", { adams: stamp }]);
+  assert.equal(assertStampLog(ordered, { countyIds: ohio }), ordered);
+
+  // appendObservation refuses to build these, so a log carrying them was
+  // hand-edited -- exactly the file the gate must not trust.
+  const scrambled = { ...ordered, observations: [ordered.observations[1], ordered.observations[0]] };
+  assert.throws(() => assertStampLog(scrambled, { countyIds: ohio }), /observation 2 is not after the one before it/);
+
+  const crossElection = {
+    ...ordered,
+    observations: [ordered.observations[0], { ...ordered.observations[1], election: "20270504P" }],
+  };
+  assert.throws(() => assertStampLog(crossElection, { countyIds: ohio }), /observation 2 observes a different election/);
+
+  const foreignCounty = {
+    ...ordered,
+    observations: [ordered.observations[0], { ...ordered.observations[1], surveyed: ["marion-indiana"] }],
+  };
+  assert.throws(() => assertStampLog(foreignCounty, { countyIds: ohio }), /surveyed marion-indiana, which is not an Ohio county/);
+
+  // A county list is required: an optional one is how the gate ends up with a
+  // weaker version of the validator's rules.
+  assert.throws(() => assertStampLog(ordered, { countyIds: [] }), /needs the set of counties/);
 });

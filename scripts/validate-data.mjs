@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { normalizeQuery, ZIP_PATTERN } from "../src/lookup.mjs";
 import { OHIO_SCHEDULE_RULES, scheduleFields } from "./build-election-schedule.mjs";
 import { SURVEY_SCHEMA_VERSION, summarize } from "./survey-vtrapp.mjs";
-import { STAMP_LOG_SCHEMA_VERSION } from "./vtrapp-stamp-log.mjs";
+import { assertStampLog } from "./vtrapp-stamp-log.mjs";
 
 const dataSource = process.argv[2] ?? new URL("../data/elections.json", import.meta.url);
 const locationSource = process.argv[3] ?? new URL("../data/locations.json", import.meta.url);
@@ -147,50 +147,12 @@ for (const [countyId, record] of Object.entries(coverage.counties)) {
 
 // data/vtrapp-stamp-log.json is the one generated file under data/ that cannot
 // be rebuilt from a single run: it is a timeline, and last week's observation
-// is unrepeatable. So the checks here are the ones that protect a timeline --
-// order, no rewriting, one election throughout -- because scripts/gate-vtrapp.mjs
+// is unrepeatable. So the checks are the ones that protect a timeline -- order,
+// no rewriting, one election throughout -- because scripts/gate-vtrapp.mjs
 // reads "the stamp did not move" straight out of it and a scrambled log would
-// answer that question confidently and wrongly.
-assert.equal(
-  stampLog.meta.schema_version,
-  STAMP_LOG_SCHEMA_VERSION,
-  `vtrapp stamp log must be schema ${STAMP_LOG_SCHEMA_VERSION}`,
-);
-assert.ok(Array.isArray(stampLog.observations), "vtrapp stamp log needs an observations array");
-assert.equal(
-  stampLog.meta.observations,
-  stampLog.observations.length,
-  "vtrapp stamp log meta.observations must match the number of observations recorded",
-);
-assert.ok(stampLog.meta.election?.vendor_key, "vtrapp stamp log must name the election it observes");
-const ohioCountyIds = new Set(countyIds);
-let previousObservedAt = null;
-for (const [index, observation] of stampLog.observations.entries()) {
-  const label = `vtrapp stamp log observation ${index + 1}`;
-  const observedAt = Date.parse(observation.observed_at);
-  assert.ok(Number.isFinite(observedAt), `${label} needs a parseable observed_at`);
-  assert.ok(
-    previousObservedAt === null || observedAt > previousObservedAt,
-    `${label} is not after the one before it; the log is read as a timeline`,
-  );
-  previousObservedAt = observedAt;
-  assert.equal(
-    observation.election,
-    stampLog.meta.election.vendor_key,
-    `${label} observes a different election than the log claims`,
-  );
-  assert.ok(Array.isArray(observation.surveyed) && observation.surveyed.length > 0, `${label} must say which counties it looked at`);
-  for (const countyId of observation.surveyed) {
-    assert.ok(ohioCountyIds.has(countyId), `${label} surveyed ${countyId}, which is not an Ohio county`);
-  }
-  for (const [countyId, stamp] of Object.entries(observation.stamps)) {
-    assert.ok(
-      observation.surveyed.includes(countyId),
-      `${label} records a stamp for ${countyId} without listing it as surveyed`,
-    );
-    assert.ok(Number.isFinite(Date.parse(stamp)), `${label} has an unparseable stamp for ${countyId}`);
-  }
-}
+// answer that question confidently and wrongly. They live in the stamp module
+// so the gate applies the same ones to whatever log it is handed.
+assertStampLog(stampLog, { countyIds });
 
 const seenFips = new Set();
 for (const [countyId, county] of Object.entries(counties)) {

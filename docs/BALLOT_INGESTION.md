@@ -279,7 +279,7 @@ dataset's review date or replace its coverage description.
 
 Every listing carries the board's own "Election data last updated" stamp, and
 the obvious gate is an age limit. It does not work. On 2026-10-18 the 70
-ingestable counties' stamps spanned 09/01/26 to 10/13/26, and 38 of them had
+enumerable counties' stamps spanned 09/01/26 to 10/13/26, and 38 of them had
 not moved in over a month — Huron's was 46 days old. Ohio closes candidate
 filing long before November, so a board that stopped editing in September is as
 likely to be **finished** as behind. The stamp's age cannot tell those apart,
@@ -296,8 +296,8 @@ That makes the decision evidential rather than a judgment call:
 > walked at that same stamp.
 
 Each `npm run survey:vtrapp` run appends one observation to
-`data/vtrapp-stamp-log.json` — 88 counties for 264 requests, about the cost of
-one county's ingest. `scripts/vtrapp-stamp-log.mjs` holds the rule and
+`data/vtrapp-stamp-log.json` — 88 counties for up to three requests each, which
+came to 232 on the observed run, about the cost of one county's ingest. `scripts/vtrapp-stamp-log.mjs` holds the rule and
 `npm run gate:vtrapp` applies it:
 
 ```bash
@@ -305,7 +305,7 @@ npm run gate:vtrapp                                            # what the log su
 npm run gate:vtrapp -- --refresh .cache/vtrapp-refresh-2026-10-20   # gate a bundle
 ```
 
-Four properties are deliberate:
+Five properties are deliberate:
 
 - **The span is measured between sightings, not from the stamp.** A stamp six
   weeks old seen twice two days apart is settled. A stamp edited this morning
@@ -325,6 +325,14 @@ Four properties are deliberate:
   appends and another election's stamps, and `npm run check` re-verifies the
   timeline, because `gate:vtrapp` reads "the stamp did not move" straight out
   of this file and a scrambled log would answer that confidently and wrongly.
+  The gate validates the log too, with the same function `npm run check` uses,
+  because `--log <path>` accepts a file that never went through check.
+- **A stamp is only evidence about its own election.** Settlement compares
+  stamp strings, which two elections can coincidentally share, so every job in
+  a bundle must name the vendor election it walked and it must be the one the
+  log observes. A mismatch is a malformed bundle and fails before any county's
+  settlement is considered — otherwise a log of November observations would
+  settle a May bundle and report it as watched evidence.
 
 Three limits worth stating.
 

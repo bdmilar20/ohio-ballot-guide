@@ -17,7 +17,7 @@ import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { parseArgs } from "./ingest/vtrapp.mjs";
-import { assertSettled, DEFAULT_QUIET_HOURS, settlement } from "./vtrapp-stamp-log.mjs";
+import { assertSettled, assertStampLog, DEFAULT_QUIET_HOURS, settlement } from "./vtrapp-stamp-log.mjs";
 
 const STATUS_ORDER = ["settled", "unsettled", "moving", "seen-once", "unobserved", "inconsistent"];
 
@@ -49,12 +49,31 @@ export function gateRefresh(log, summary, { quietHours = DEFAULT_QUIET_HOURS } =
   }
   // refreshVtrapp writes summary.json only after every job succeeded, so a
   // readable summary is already evidence of a complete bundle. What is worth
-  // checking is that each job carries the three fields this gate reads: a
+  // checking is that each job carries the four fields this gate reads: a
   // missing one would otherwise surface as the county being "unsettled",
   // which reads as a finding about a board rather than a malformed bundle.
+  //
+  // The election key is the one whose absence is not merely confusing. A stamp
+  // is only comparable to another stamp for the same election, and nothing
+  // downstream notices the mismatch: the settlement rule compares the strings
+  // it is given, so a log of November stamps will happily settle a May bundle
+  // whose stamp happens to match, and report it as watched evidence. That is a
+  // malformed bundle, not an unsettled county, so it fails here -- before any
+  // county's settlement is evaluated.
+  const logElection = log?.meta?.election?.vendor_key;
+  if (!logElection) throw new Error("the stamp log does not name the election it observes");
   for (const [index, job] of summary.jobs.entries()) {
     const label = `refresh job ${index + 1}`;
     if (!job?.county_id) throw new Error(`${label} does not name a county`);
+    if (!job.vendor_election_key) {
+      throw new Error(`${label} (${job.county_id}) does not name the vendor election it walked`);
+    }
+    if (job.vendor_election_key !== logElection) {
+      throw new Error(
+        `${label} (${job.county_id}) walked election ${job.vendor_election_key},` +
+          ` but this stamp log observes ${logElection}; a stamp is only evidence about its own election`,
+      );
+    }
     if (!job.source_updated_at) throw new Error(`${label} (${job.county_id}) has no source_updated_at to gate on`);
     if (!job.fetched_at) throw new Error(`${label} (${job.county_id}) has no fetched_at, so its walk cannot be placed in time`);
   }
@@ -82,6 +101,14 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
     }
     const logPath = args.log ? resolve(args.log) : new URL("../data/vtrapp-stamp-log.json", import.meta.url);
     const log = JSON.parse(await readFile(logPath, "utf8"));
+
+    // `npm run check` validates the committed log, but --log takes any file and
+    // this command makes a publication decision from it. Validating here means
+    // the gate cannot read a log that never went through check: the same rules,
+    // from the same function, so the two cannot drift apart.
+    const boardsUrl = new URL("../data/county-boards.json", import.meta.url);
+    const { counties: boards } = JSON.parse(await readFile(boardsUrl, "utf8"));
+    assertStampLog(log, { countyIds: Object.keys(boards) });
 
     if (!args.refresh) {
       const counties = settlement(log, { quietHours });

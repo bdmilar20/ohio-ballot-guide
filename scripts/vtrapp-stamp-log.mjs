@@ -4,7 +4,7 @@
 // The vendor prints an "Election data last updated" stamp per county. Its age
 // cannot distinguish a board that is behind from a board that is finished:
 // Ohio closes candidate filing long before November, so a September stamp is
-// as likely to mean "done" as "stale". Across the 70 ingestable counties on
+// as likely to mean "done" as "stale". Across the 70 enumerable counties on
 // 2026-10-18 the stamps spanned September 1 to October 13, so any age limit
 // tight enough to catch a real staleness problem rejects most of the state.
 //
@@ -123,6 +123,74 @@ export function appendObservation(log, observation) {
     meta: { ...log.meta, observations: log.observations.length + 1 },
     observations: [...log.observations, observation],
   };
+}
+
+/**
+ * Validates a whole log as a timeline, which is the only way it can be wrong
+ * and still be valid JSON.
+ *
+ * This lives here rather than in validate-data.mjs because two callers need
+ * it and they need the same answer. `npm run check` reads the committed log;
+ * `gate:vtrapp --log <path>` reads whatever file it is handed, and that one is
+ * making a publication decision. A gate that trusted a log it had not checked
+ * would accept an out-of-order timeline, or one observing a different
+ * election, and answer "the stamp did not move" confidently from evidence
+ * about another ballot.
+ *
+ * `countyIds` is required, not optional. An optional county check is how the
+ * gate ends up with a weaker version of the validator's rules, and a weaker
+ * gate is the direction that silently publishes.
+ */
+export function assertStampLog(log, { countyIds }) {
+  invariant(isRecord(log), "a stamp log must be an object");
+  invariant(
+    log.meta?.schema_version === STAMP_LOG_SCHEMA_VERSION,
+    `vtrapp stamp log must be schema ${STAMP_LOG_SCHEMA_VERSION}, not ${JSON.stringify(log.meta?.schema_version)}`,
+  );
+  invariant(Array.isArray(log.observations), "vtrapp stamp log needs an observations array");
+  invariant(
+    log.meta.observations === log.observations.length,
+    "vtrapp stamp log meta.observations must match the number of observations recorded",
+  );
+  invariant(
+    typeof log.meta.election?.vendor_key === "string" && log.meta.election.vendor_key,
+    "vtrapp stamp log must name the election it observes",
+  );
+
+  const known = countyIds instanceof Set ? countyIds : new Set(countyIds);
+  invariant(known.size > 0, "validating a stamp log needs the set of counties that may appear in it");
+
+  let previousObservedAt = null;
+  for (const [index, observation] of log.observations.entries()) {
+    const label = `vtrapp stamp log observation ${index + 1}`;
+    invariant(isRecord(observation), `${label} must be an object`);
+    const observedAt = instant(observation.observed_at, `${label} observed_at`);
+    invariant(
+      previousObservedAt === null || observedAt > previousObservedAt,
+      `${label} is not after the one before it; the log is read as a timeline`,
+    );
+    previousObservedAt = observedAt;
+    invariant(
+      observation.election === log.meta.election.vendor_key,
+      `${label} observes a different election than the log claims`,
+    );
+    invariant(
+      Array.isArray(observation.surveyed) && observation.surveyed.length > 0,
+      `${label} must say which counties it looked at`,
+    );
+    for (const countyId of observation.surveyed) {
+      invariant(known.has(countyId), `${label} surveyed ${countyId}, which is not an Ohio county`);
+    }
+    invariant(isRecord(observation.stamps), `${label} needs a stamps object`);
+    for (const [countyId, stamp] of Object.entries(observation.stamps)) {
+      invariant(
+        observation.surveyed.includes(countyId),
+        `${label} records a stamp for ${countyId} without listing it as surveyed`,
+      );
+      invariant(Number.isFinite(Date.parse(stamp)), `${label} has an unparseable stamp for ${countyId}`);
+    }
+  }
+  return log;
 }
 
 /** Every recorded sighting of one county's stamp, oldest first. */
