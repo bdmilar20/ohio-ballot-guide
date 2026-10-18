@@ -473,6 +473,26 @@ export function hiddenFields(html) {
 const USER_AGENT = "Mozilla/5.0 (compatible; ohio-ballot-guide/0.1; manual ingest)";
 
 /**
+ * A request that never produced an answer: a timeout, a refused or dropped
+ * connection, a DNS failure, a body that died mid-stream.
+ *
+ * Typed so a caller can tell it apart from everything else that can throw on
+ * the way through a county. The distinction is not cosmetic: a transport
+ * failure says nothing about the county and is answered by running again,
+ * while a parse failure or a bug here is a fact about this code that re-running
+ * will reproduce. A caller that cannot tell them apart has to treat one like
+ * the other, and the safe-looking choice -- record it, continue -- turns a
+ * parser regression into 88 counties labelled "try again."
+ */
+export class VendorTransportError extends Error {
+  constructor(url, cause) {
+    super(`the request to ${url} failed before answering: ${cause.message}`);
+    this.name = "VendorTransportError";
+    this.cause = cause;
+  }
+}
+
+/**
  * Minimal WebForms client. The vendor's listing needs an autopostback to select
  * the election and a submit to list precincts, and the accessible ballot pages
  * one contest at a time, so the session's __VIEWSTATE has to be carried along.
@@ -480,19 +500,32 @@ const USER_AGENT = "Mozilla/5.0 (compatible; ohio-ballot-guide/0.1; manual inges
 export function createVendorClient({ fetchImpl = fetch, base = VENDOR_BASE, delayMs = 350, timeoutMs = 30_000 } = {}) {
   let cookie = "";
   async function request(url, init) {
-    const response = await fetchImpl(url, {
-      ...init,
-      headers: {
-        "user-agent": USER_AGENT,
-        ...(cookie ? { cookie } : {}),
-        ...(init?.body ? { "content-type": "application/x-www-form-urlencoded" } : {}),
-        ...(init?.headers ?? {}),
-      },
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    let response;
+    try {
+      response = await fetchImpl(url, {
+        ...init,
+        headers: {
+          "user-agent": USER_AGENT,
+          ...(cookie ? { cookie } : {}),
+          ...(init?.body ? { "content-type": "application/x-www-form-urlencoded" } : {}),
+          ...(init?.headers ?? {}),
+        },
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (error) {
+      throw new VendorTransportError(url, error);
+    }
     const jar = response.headers?.getSetCookie?.() ?? [];
     if (jar.length) cookie = jar.map((entry) => entry.split(";")[0]).join("; ");
-    return { status: response.status, body: await response.text() };
+    // Reading the body is a second chance to lose the connection, and a
+    // half-read page is a transport failure rather than a vendor answer.
+    let body;
+    try {
+      body = await response.text();
+    } catch (error) {
+      throw new VendorTransportError(url, error);
+    }
+    return { status: response.status, body };
   }
   const post = (url, fields) => request(url, { method: "POST", body: new URLSearchParams(fields).toString() });
   const pause = () => (delayMs > 0 ? new Promise((resolve) => setTimeout(resolve, delayMs)) : Promise.resolve());

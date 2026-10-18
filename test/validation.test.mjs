@@ -499,6 +499,51 @@ test("validator rejects a county marked enumerable that parsed fewer rows than l
   assert.match(result.stderr, /parsed fewer rows than the vendor listed/);
 });
 
+test("validator rejects a county marked enumerable that declined some rows", async (t) => {
+  // summarize() does not read skipped_row_reasons, so the stored summary stays
+  // recomputable and this reaches the gate it is named for.
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      const [countyId] = Object.entries(data.counties).find(([, record]) => record.enumerable);
+      data.counties[countyId].skipped_row_reasons = { "no ballot links in the Link cell": 3 };
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /is marked enumerable but declined some of the vendor's rows/);
+});
+
+test("validator rejects a county marked enumerable with no precinct rows", async (t) => {
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      const [countyId, record] = Object.entries(data.counties).find(([, candidate]) => candidate.enumerable);
+      // Zero both counts so the parsed-equals-listed gate stays satisfied, and
+      // follow precinct_splits so recomputability does, leaving only the
+      // rows-above-zero gate to fire.
+      data.meta.summary.precinct_splits -= record.precinct_rows_parsed;
+      data.counties[countyId].precinct_rows_parsed = 0;
+      data.counties[countyId].precinct_rows_listed = 0;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /is marked enumerable with no precinct rows/);
+});
+
+test("validator rejects a county that is both enumerable and blocked", async (t) => {
+  // The summary's `blocked` count is derived from `enumerable`, not from this
+  // field, so adding a reason leaves the summary recomputable.
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      const [countyId] = Object.entries(data.counties).find(([, record]) => record.enumerable);
+      data.counties[countyId].blocked = "precinct enumeration yielded no ballots";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /cannot be both enumerable and blocked/);
+});
+
 test("validator rejects a blocked county that does not say why", async (t) => {
   const result = await validateFixture(t, {
     coverage: (data) => {
