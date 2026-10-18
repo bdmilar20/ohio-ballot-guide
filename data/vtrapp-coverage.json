@@ -1,6 +1,6 @@
 {
   "meta": {
-    "schema_version": 1,
+    "schema_version": 2,
     "generated_by": "scripts/survey-vtrapp.mjs",
     "generated_on": "2026-10-18",
     "note": "Generated file. Do not hand-edit; re-run npm run survey:vtrapp.",
@@ -12,9 +12,10 @@
     "summary": {
       "counties": 88,
       "served": 72,
-      "not_a_customer": 16,
+      "not_a_customer": 15,
       "unknown_slug": 0,
-      "ingestable": 70,
+      "transport_errors": 1,
+      "enumerable": 70,
       "blocked": 18,
       "precinct_splits": 7064
     }
@@ -23,7 +24,7 @@
     "adams": {
       "vendor_slug": "adams",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 24,
       "election_offered": true,
@@ -36,7 +37,7 @@
     "allen": {
       "vendor_slug": "allen",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/allen/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 31,
       "election_offered": true,
@@ -49,7 +50,7 @@
     "ashland": {
       "vendor_slug": "ashland",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/ashland/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 16,
       "election_offered": true,
@@ -62,7 +63,7 @@
     "ashtabula": {
       "vendor_slug": "ashtabula",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/ashtabula/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 37,
       "election_offered": true,
@@ -75,7 +76,7 @@
     "athens": {
       "vendor_slug": "athens",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/athens/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 31,
       "election_offered": true,
@@ -88,7 +89,7 @@
     "auglaize": {
       "vendor_slug": "auglaize",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/auglaize/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 31,
       "election_offered": true,
@@ -101,7 +102,7 @@
     "belmont": {
       "vendor_slug": "belmont",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/belmont/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 33,
       "election_offered": true,
@@ -114,7 +115,7 @@
     "brown": {
       "vendor_slug": "brown",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/brown/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 31,
       "election_offered": true,
@@ -127,14 +128,14 @@
     "butler": {
       "vendor_slug": "butler",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/butler/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "carroll": {
       "vendor_slug": "carroll",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/carroll/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 28,
       "election_offered": true,
@@ -147,7 +148,7 @@
     "champaign": {
       "vendor_slug": "champaign",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/champaign/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 27,
       "election_offered": true,
@@ -160,7 +161,7 @@
     "clark": {
       "vendor_slug": "clark",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/clark/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 39,
       "election_offered": true,
@@ -173,14 +174,14 @@
     "clermont": {
       "vendor_slug": "clermont",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/clermont/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "clinton": {
       "vendor_slug": "clinton",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/clinton/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 31,
       "election_offered": true,
@@ -193,7 +194,7 @@
     "columbiana": {
       "vendor_slug": "columbiana",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/columbiana/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 38,
       "election_offered": true,
@@ -206,7 +207,7 @@
     "coshocton": {
       "vendor_slug": "coshocton",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/coshocton/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 32,
       "election_offered": true,
@@ -219,21 +220,21 @@
     "crawford": {
       "vendor_slug": "crawford",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/crawford/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "cuyahoga": {
       "vendor_slug": "cuyahoga",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/cuyahoga/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "darke": {
       "vendor_slug": "darke",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/darke/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 37,
       "election_offered": true,
@@ -246,7 +247,7 @@
     "defiance": {
       "vendor_slug": "defiance",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/defiance/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 29,
       "election_offered": true,
@@ -259,7 +260,7 @@
     "delaware": {
       "vendor_slug": "delaware",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/delaware/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 36,
       "election_offered": true,
@@ -272,7 +273,7 @@
     "erie": {
       "vendor_slug": "erie",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/erie/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 40,
       "election_offered": true,
@@ -285,7 +286,7 @@
     "fairfield": {
       "vendor_slug": "fairfield",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/fairfield/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 12,
       "election_offered": true,
@@ -298,7 +299,7 @@
     "fayette": {
       "vendor_slug": "fayette",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/fayette/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 36,
       "election_offered": true,
@@ -311,14 +312,14 @@
     "franklin": {
       "vendor_slug": "franklin",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/franklin/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "fulton": {
       "vendor_slug": "fulton",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/fulton/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 33,
       "election_offered": true,
@@ -331,7 +332,7 @@
     "gallia": {
       "vendor_slug": "gallia",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/gallia/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 21,
       "election_offered": true,
@@ -344,7 +345,7 @@
     "geauga": {
       "vendor_slug": "geauga",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/geauga/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 27,
       "election_offered": true,
@@ -357,7 +358,7 @@
     "greene": {
       "vendor_slug": "greene",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/greene/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 37,
       "election_offered": true,
@@ -370,7 +371,7 @@
     "guernsey": {
       "vendor_slug": "guernsey",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/guernsey/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 23,
       "election_offered": true,
@@ -383,21 +384,21 @@
     "hamilton": {
       "vendor_slug": "hamilton",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/hamilton/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "hancock": {
       "vendor_slug": "hancock",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/hancock/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "hardin": {
       "vendor_slug": "hardin",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/hardin/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 28,
       "election_offered": true,
@@ -410,7 +411,7 @@
     "harrison": {
       "vendor_slug": "harrison",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/harrison/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 28,
       "election_offered": true,
@@ -423,14 +424,14 @@
     "henry": {
       "vendor_slug": "henry",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/henry/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "highland": {
       "vendor_slug": "highland",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/highland/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 33,
       "election_offered": true,
@@ -443,7 +444,7 @@
     "hocking": {
       "vendor_slug": "hocking",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/hocking/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 26,
       "election_offered": true,
@@ -456,7 +457,7 @@
     "holmes": {
       "vendor_slug": "holmes",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/holmes/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 26,
       "election_offered": true,
@@ -469,7 +470,7 @@
     "huron": {
       "vendor_slug": "huron",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/huron/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 3,
       "election_offered": true,
@@ -482,7 +483,7 @@
     "jackson": {
       "vendor_slug": "jackson",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/jackson/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 30,
       "election_offered": true,
@@ -495,7 +496,7 @@
     "jefferson": {
       "vendor_slug": "jefferson",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/jefferson/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 32,
       "election_offered": true,
@@ -508,7 +509,7 @@
     "knox": {
       "vendor_slug": "knox",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/knox/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 38,
       "election_offered": true,
@@ -521,7 +522,7 @@
     "lake": {
       "vendor_slug": "lake",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/lake/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "served",
       "elections_offered": 38,
       "election_offered": true,
@@ -537,7 +538,7 @@
     "lawrence": {
       "vendor_slug": "lawrence",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/lawrence/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 26,
       "election_offered": true,
@@ -550,7 +551,7 @@
     "licking": {
       "vendor_slug": "licking",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/licking/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 44,
       "election_offered": true,
@@ -563,7 +564,7 @@
     "logan": {
       "vendor_slug": "logan",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/logan/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 35,
       "election_offered": true,
@@ -576,7 +577,7 @@
     "lorain": {
       "vendor_slug": "lorain",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/lorain/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 27,
       "election_offered": true,
@@ -589,7 +590,7 @@
     "lucas": {
       "vendor_slug": "lucas",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/lucas/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 20,
       "election_offered": true,
@@ -602,7 +603,7 @@
     "madison": {
       "vendor_slug": "madison",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/madison/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 38,
       "election_offered": true,
@@ -615,7 +616,7 @@
     "mahoning": {
       "vendor_slug": "mahoning",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/mahoning/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 35,
       "election_offered": true,
@@ -628,7 +629,7 @@
     "marion": {
       "vendor_slug": "marion",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/marion/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 28,
       "election_offered": true,
@@ -641,7 +642,7 @@
     "medina": {
       "vendor_slug": "medina",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/medina/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 18,
       "election_offered": true,
@@ -654,7 +655,7 @@
     "meigs": {
       "vendor_slug": "meigs",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/meigs/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 29,
       "election_offered": true,
@@ -667,14 +668,14 @@
     "mercer": {
       "vendor_slug": "mercer",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/mercer/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "miami": {
       "vendor_slug": "miami",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/miami/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 32,
       "election_offered": true,
@@ -687,7 +688,7 @@
     "monroe": {
       "vendor_slug": "monroe",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/monroe/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 27,
       "election_offered": true,
@@ -700,7 +701,7 @@
     "montgomery": {
       "vendor_slug": "montgomery",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/montgomery/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 32,
       "election_offered": true,
@@ -713,7 +714,7 @@
     "morgan": {
       "vendor_slug": "morgan",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/morgan/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 23,
       "election_offered": true,
@@ -726,14 +727,14 @@
     "morrow": {
       "vendor_slug": "morrow",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/morrow/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "muskingum": {
       "vendor_slug": "muskingum",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/muskingum/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 31,
       "election_offered": true,
@@ -746,7 +747,7 @@
     "noble": {
       "vendor_slug": "noble",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/noble/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 29,
       "election_offered": true,
@@ -759,14 +760,14 @@
     "ottawa": {
       "vendor_slug": "ottawa",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/ottawa/ballotlist.aspx",
-      "ingestable": false,
-      "response": "not-a-customer",
-      "blocked": "the vendor response is \"not-a-customer\", not a served county"
+      "enumerable": false,
+      "transport_error": true,
+      "blocked": "the request failed rather than answering: The operation was aborted due to timeout"
     },
     "paulding": {
       "vendor_slug": "paulding",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/paulding/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 25,
       "election_offered": true,
@@ -779,7 +780,7 @@
     "perry": {
       "vendor_slug": "perry",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/perry/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 26,
       "election_offered": true,
@@ -792,7 +793,7 @@
     "pickaway": {
       "vendor_slug": "pickaway",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/pickaway/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 38,
       "election_offered": true,
@@ -805,7 +806,7 @@
     "pike": {
       "vendor_slug": "pike",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/pike/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 27,
       "election_offered": true,
@@ -818,7 +819,7 @@
     "portage": {
       "vendor_slug": "portage",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/portage/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 45,
       "election_offered": true,
@@ -831,7 +832,7 @@
     "preble": {
       "vendor_slug": "preble",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/preble/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 32,
       "election_offered": true,
@@ -844,7 +845,7 @@
     "putnam": {
       "vendor_slug": "putnam",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/putnam/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 24,
       "election_offered": true,
@@ -857,7 +858,7 @@
     "richland": {
       "vendor_slug": "richland",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/richland/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 12,
       "election_offered": true,
@@ -870,7 +871,7 @@
     "ross": {
       "vendor_slug": "ross",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/ross/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 34,
       "election_offered": true,
@@ -883,14 +884,14 @@
     "sandusky": {
       "vendor_slug": "sandusky",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/sandusky/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "scioto": {
       "vendor_slug": "scioto",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/scioto/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 32,
       "election_offered": true,
@@ -903,7 +904,7 @@
     "seneca": {
       "vendor_slug": "seneca",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/seneca/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 32,
       "election_offered": true,
@@ -916,7 +917,7 @@
     "shelby": {
       "vendor_slug": "shelby",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/shelby/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 17,
       "election_offered": true,
@@ -929,14 +930,14 @@
     "stark": {
       "vendor_slug": "stark",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/stark/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "summit": {
       "vendor_slug": "summit",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/summit/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 61,
       "election_offered": true,
@@ -949,14 +950,14 @@
     "trumbull": {
       "vendor_slug": "trumbull",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/trumbull/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "tuscarawas": {
       "vendor_slug": "tuscarawas",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/tuscarawas/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 34,
       "election_offered": true,
@@ -969,7 +970,7 @@
     "union": {
       "vendor_slug": "union",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/union/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 32,
       "election_offered": true,
@@ -982,7 +983,7 @@
     "van-wert": {
       "vendor_slug": "vanwert",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/vanwert/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 30,
       "election_offered": true,
@@ -995,7 +996,7 @@
     "vinton": {
       "vendor_slug": "vinton",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 24,
       "election_offered": true,
@@ -1008,7 +1009,7 @@
     "warren": {
       "vendor_slug": "warren",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/warren/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 44,
       "election_offered": true,
@@ -1021,7 +1022,7 @@
     "washington": {
       "vendor_slug": "washington",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/washington/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 35,
       "election_offered": true,
@@ -1034,7 +1035,7 @@
     "wayne": {
       "vendor_slug": "wayne",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/wayne/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "served",
       "elections_offered": 14,
       "election_offered": true,
@@ -1050,7 +1051,7 @@
     "williams": {
       "vendor_slug": "williams",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/williams/ballotlist.aspx",
-      "ingestable": true,
+      "enumerable": true,
       "response": "served",
       "elections_offered": 31,
       "election_offered": true,
@@ -1063,14 +1064,14 @@
     "wood": {
       "vendor_slug": "wood",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/wood/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "wyandot": {
       "vendor_slug": "wyandot",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/wyandot/ballotlist.aspx",
-      "ingestable": false,
+      "enumerable": false,
       "response": "not-a-customer",
       "blocked": "the vendor response is \"not-a-customer\", not a served county"
     }

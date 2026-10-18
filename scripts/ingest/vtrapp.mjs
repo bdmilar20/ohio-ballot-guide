@@ -503,13 +503,13 @@ export function createVendorClient({ fetchImpl = fetch, base = VENDOR_BASE, dela
  * Applies every gate that decides whether a parsed precinct listing is the
  * whole county, and throws naming the county when one fails.
  *
- * This is separate from ingestCounty so that anything else asking "can this
- * county be ingested?" — the coverage survey, in particular — gets the answer
- * from these rules rather than from a second copy of them. A second copy would
- * drift, and it would drift in the direction that reads as coverage: a survey
- * that is more permissive than the adapter reports counties as ingestable that
- * the adapter then refuses, and one that is stricter hides counties we could
- * publish. Both are silent.
+ * This is separate from ingestCounty so that anything else asking "is this
+ * county's precinct listing complete?" — the coverage survey, in particular —
+ * gets the answer from these rules rather than from a second copy of them. A
+ * second copy would drift, and it would drift in the direction that reads as
+ * coverage: a survey more permissive than the adapter reports counties as
+ * enumerable that the adapter then refuses, and one that is stricter hides
+ * counties we could publish. Both are silent.
  */
 export function assertEnumeration({ countyId, electionKey, tableFound, listed, precincts, skipped, unexplained }) {
   if (!tableFound) {
@@ -665,8 +665,13 @@ export async function ingestCounty({
  * The vendor prints its own update stamp on every page of the flow, which makes
  * it the source's version marker for the run. A missing stamp is missing
  * identity evidence, not agreement, so absence fails here rather than passing.
+ *
+ * Exported for the same reason assertEnumeration is: the coverage survey walks
+ * the same first two requests and has to apply the same version gate, or it
+ * reports a county the adapter would then reject when the board edits between
+ * the opening GET and the precinct-list POST.
  */
-function requireSameStamp(countyId, expected, body, where) {
+export function requireSameStamp(countyId, expected, body, where) {
   const actual = parseListing(body).sourceUpdatedRaw;
   if (!actual) {
     throw new Error(`${countyId}: ${where} carries no "Election data last updated" stamp`);

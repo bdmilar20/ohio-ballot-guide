@@ -12,13 +12,21 @@ fails closed rather than returning a partial snapshot.
 
 `https://lookup.boe.ohio.gov/vtrapp/<slug>/` is a single state-hosted ASP.NET
 application (vendor fingerprint `tgsistyles.css`, TGSI). It answers for 72 of
-Ohio's 88 counties, 70 of which this adapter can ingest.
+Ohio's 88 counties, 70 of which it enumerates a complete, adapter-compatible
+precinct list for.
 
 **Those counts are generated, not asserted here.** `npm run survey:vtrapp`
 rebuilds `data/vtrapp-coverage.json`, which records per county what the vendor
 answered, whether the election is offered, the board's own update stamp, and
 the precinct-row counts. Quote the artifact rather than a number in this
 document; a board can join or leave the application between elections.
+
+**The artifact's field is `enumerable`, and it is weaker than "ingestable."**
+The survey stops at the precinct listing. A real ingest then walks every
+accessible ballot in the county and parses every contest on it, so `enumerable`
+establishes the precondition for an ingest and not that the walk would finish —
+proving that would cost the walk the survey exists to avoid. The adapter has
+been run to completion on Adams; the other 69 are enumerated, not ingested.
 
 Each precinct split has two endpoints:
 

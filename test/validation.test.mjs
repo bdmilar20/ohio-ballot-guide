@@ -387,13 +387,18 @@ test("validator rejects an office source that is not HTTPS", async (t) => {
 });
 
 // The generated coverage artifact is the project's answer to "which counties
-// can we ingest?". Every check below is aimed at the same failure: the file
-// claiming more coverage than the survey actually found.
+// does the vendor enumerate a complete precinct list for?". Every check below
+// is aimed at the same failure: the file claiming more coverage than the survey
+// actually found.
+//
+// Each mutation changes exactly one thing and asserts exactly one message. A
+// mutation that breaks two gates at once passes on whichever fires first, which
+// leaves the gate under test free to be deleted with the test still green.
 
 test("validator rejects a coverage summary that disagrees with its own records", async (t) => {
   const result = await validateFixture(t, {
     coverage: (data) => {
-      data.meta.summary.ingestable += 1;
+      data.meta.summary.enumerable += 1;
     },
   });
 
@@ -410,24 +415,82 @@ test("validator rejects a coverage run that skipped part of Ohio", async (t) => 
   assert.match(result.stderr, /coverage must cover the same counties/);
 });
 
-test("validator rejects a county marked ingestable without a freshness stamp", async (t) => {
+test("validator rejects a county marked enumerable without a freshness stamp", async (t) => {
+  // The summary counts enumerable counties and precinct rows, not stamps, so
+  // removing the stamp leaves it recomputable and this reaches the stamp gate.
   const result = await validateFixture(t, {
     coverage: (data) => {
-      const [countyId] = Object.entries(data.counties).find(([, record]) => record.ingestable);
+      const [countyId] = Object.entries(data.counties).find(([, record]) => record.enumerable);
       delete data.counties[countyId].source_updated_at;
-      data.meta.summary = undefined;
     },
   });
 
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /ingestable without a source update stamp|summary must be recomputable/);
+  assert.match(result.stderr, /is marked enumerable without a source update stamp/);
 });
 
-test("validator rejects a county marked ingestable that parsed fewer rows than listed", async (t) => {
+test("validator rejects a county marked enumerable the vendor did not serve", async (t) => {
   const result = await validateFixture(t, {
     coverage: (data) => {
-      const [countyId] = Object.entries(data.counties).find(([, record]) => record.ingestable);
+      const [countyId] = Object.entries(data.counties).find(([, record]) => record.enumerable);
+      data.counties[countyId].response = "not-a-customer";
+      // Keep the summary recomputable: served is counted from this field.
+      data.meta.summary.served -= 1;
+      data.meta.summary.not_a_customer += 1;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /is marked enumerable but the vendor did not serve it/);
+});
+
+test("validator rejects a county marked enumerable that was never offered this election", async (t) => {
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      const [countyId] = Object.entries(data.counties).find(([, record]) => record.enumerable);
+      data.counties[countyId].election_offered = false;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /is marked enumerable but does not offer this election/);
+});
+
+test("validator rejects a county marked enumerable that left rows unparsed", async (t) => {
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      const [countyId] = Object.entries(data.counties).find(([, record]) => record.enumerable);
+      data.counties[countyId].unexplained_row_reasons = { "a row shape this adapter does not parse": 2 };
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /is marked enumerable but left rows unparsed/);
+});
+
+test("validator rejects a county marked enumerable on a request that failed", async (t) => {
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      const [countyId] = Object.entries(data.counties).find(([, record]) => record.enumerable);
+      data.counties[countyId].transport_error = true;
+      // transport_errors is a summarized field, so the stored summary has to
+      // follow or the recomputability gate fires first and this stops testing
+      // the per-county gate it is named for.
+      data.meta.summary.transport_errors += 1;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /cannot be enumerable on a request that failed/);
+});
+
+test("validator rejects a county marked enumerable that parsed fewer rows than listed", async (t) => {
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      const [countyId] = Object.entries(data.counties).find(([, record]) => record.enumerable);
       data.counties[countyId].precinct_rows_parsed -= 1;
+      // precinct_splits sums parsed rows, so it has to follow or the summary
+      // gate fires first and this stops testing the row-count gate.
       data.meta.summary.precinct_splits -= 1;
     },
   });
@@ -439,13 +502,13 @@ test("validator rejects a county marked ingestable that parsed fewer rows than l
 test("validator rejects a blocked county that does not say why", async (t) => {
   const result = await validateFixture(t, {
     coverage: (data) => {
-      const [countyId] = Object.entries(data.counties).find(([, record]) => !record.ingestable);
+      const [countyId] = Object.entries(data.counties).find(([, record]) => !record.enumerable);
       delete data.counties[countyId].blocked;
     },
   });
 
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /is not ingestable and must say why/);
+  assert.match(result.stderr, /is not enumerable and must say why/);
 });
 
 test("validator rejects a coverage artifact from an older survey schema", async (t) => {

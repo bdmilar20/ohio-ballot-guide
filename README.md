@@ -37,12 +37,12 @@ Secretary of State's annual calendar:
 npm run generate:schedule -- --year=2028
 ```
 
-`npm run survey:vtrapp` answers the prior question — *which* counties this
-adapter can ingest — and writes the answer to `data/vtrapp-coverage.json` as a
-generated artifact rather than a list anyone typed. It asks three listing
-requests per county and never walks a ballot, so it costs roughly one county's
-ingest to survey all 88. Like the other live-source scripts it is **run by
-hand, never from CI**:
+`npm run survey:vtrapp` answers the prior question — *which* counties the
+vendor enumerates a complete precinct list for — and writes the answer to
+`data/vtrapp-coverage.json` as a generated artifact rather than a list anyone
+typed. It asks up to three listing requests per county and never walks a
+ballot, so all 88 counties came to 232 requests, roughly one county's ingest.
+Like the other live-source scripts it is **run by hand, never from CI**:
 
 ```bash
 npm run survey:vtrapp -- --election 20261103G
@@ -50,9 +50,13 @@ npm run survey:vtrapp -- --election 20261103G
 
 The artifact records, per county, the vendor response, whether the election is
 offered, the board's own "last updated" stamp, and the precinct-row counts —
-and, for a county that cannot be ingested, the adapter's own reason. `npm run
-check` recomputes its summary from its records, so the headline count cannot
-drift from the evidence under it.
+and, for a county that cannot be enumerated, the adapter's own reason. The
+field is `enumerable` rather than `ingestable` on purpose: the survey proves a
+county has a complete, adapter-compatible precinct list, which is the
+precondition for an ingest, not that a full ballot walk would finish. `npm run
+check` recomputes its summary from its records and pins the evidence behind
+every `enumerable: true`, so the headline count cannot drift from what the run
+found.
 
 `npm run ingest:vtrapp` pulls one county's real per-precinct ballots from the
 application the state hosts for 72 of the 88 county boards, and writes a source

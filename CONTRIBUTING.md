@@ -199,7 +199,7 @@ Set `CHROME_PATH` if the script cannot find Chrome or Chromium. It checks each
 known install path for an executable file and reports every path it tried, so a
 Chromium-only machine or a Linux box does not need any configuration.
 
-## Surveying which counties can be ingested
+## Surveying which counties can be enumerated
 
 `data/vtrapp-coverage.json` is generated. Do not hand-edit it; re-run the
 script and commit the result with the command you ran.
@@ -208,29 +208,48 @@ script and commit the result with the command you ran.
 npm run survey:vtrapp -- --election 20261103G
 ```
 
-The survey asks each of Ohio's 88 counties the same three listing requests the
-adapter opens with — fetch the listing, select the election, ask for the
-precinct table — and stops there. It never walks a ballot, so surveying the
-whole state costs about what ingesting one county costs. It is still a live
-government source: **run it by hand, never from CI.**
+The survey asks each of Ohio's 88 counties up to the same three listing
+requests the adapter opens with — fetch the listing, select the election, ask
+for the precinct table — and stops there. A county not on the vendor answers
+the first GET with a placeholder and costs nothing further, so the whole state
+came to **232 requests** (16 placeholders plus 72 served × 3), not 88 × 3. It
+never walks a ballot, so surveying the whole state costs about what ingesting
+one county costs. It is still a live government source: **run it by hand, never
+from CI.**
+
+The artifact's per-county field is `enumerable`, not `ingestable`, and the
+difference is load-bearing: it means the vendor served a complete precinct list
+this adapter parsed in full, which is the *precondition* for an ingest. It does
+not mean a full ballot walk would succeed, because the survey never attempts
+one. Do not restate it as "counties we can ingest.
 
 Useful flags: `--counties adams,van-wert` to survey a subset, `--out <path>` to
 write somewhere other than `data/`, and `--delay <ms>` to change the pacing
 (default 600).
 
-A county that cannot be ingested is a finding, not a failure — the survey
+A county that cannot be enumerated is a finding, not a failure — the survey
 records the reason and moves on, so one unservable county cannot truncate the
-run into a short list that reads like a complete one. The reason itself comes
-from `assertEnumeration` in the adapter rather than from rules restated here.
-That matters: a second copy of those rules would drift, and either direction of
-drift is silent. A looser survey advertises counties the adapter then refuses;
-a stricter one hides counties we could publish.
+run into a short list that reads like a complete one. A county the survey could
+not reach at all is recorded with `transport_error: true`, which is flagged
+separately because it is not evidence about the county: the vendor declining to
+serve a ballot stays true until a board changes something, while a timeout is
+answered by running the survey again.
+
+The reasons come from `assertEnumeration` and `requireSameStamp` in the adapter
+rather than from rules restated here. That matters: a second copy of those
+rules would drift, and either direction of drift is silent. A looser survey
+advertises counties the adapter then refuses; a stricter one hides counties we
+could publish. The stamp gate is applied at the same boundary `ingestCounty`
+applies it, so a board that edits between the opening GET and the precinct-list
+POST blocks the county in both places.
 
 `npm run check` recomputes `meta.summary` from the per-county records and
 refuses a file where they disagree, so the headline coverage number cannot be
-edited away from the evidence beneath it. It also refuses a county marked
-ingestable that is missing a freshness stamp or parsed fewer precinct rows than
-the vendor listed.
+edited away from the evidence beneath it. It also pins the full evidence tuple
+behind every `enumerable: true`: a served response, the election offered, a
+freshness stamp, parsed rows above zero and equal to the rows the vendor
+listed, no skipped or unparsed rows, no blocker, and no transport error.
+Checking only some of those leaves a hand-edited `true` that still validates.
 
 ## Ingesting county ballots
 

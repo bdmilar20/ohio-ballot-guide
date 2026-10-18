@@ -1,18 +1,26 @@
-// Re-derives which Ohio counties the shared vendor application can actually
-// serve a machine-readable ballot for, and writes it as a generated artifact.
+// Re-derives which Ohio counties the shared vendor application enumerates a
+// complete precinct list for, and writes it as a generated artifact.
 //
-// The point is that "which counties can we ingest?" is a question about the
+// The point is that "which counties can we read?" is a question about the
 // source, not a list either of us typed. It changes whenever a board loads a
 // new election or the vendor changes a row, so it has to be rebuildable:
 //
 //   npm run survey:vtrapp -- --election 20261103G
 //
-// Three requests per county, so it is cheap next to an ingest, but it still
-// talks to a live government server and so is run by hand, never from CI.
+// Up to three requests per county -- a county not on the vendor answers the
+// first GET with a placeholder and costs nothing further, so the whole state
+// came to 232 requests, not 264. Cheap next to an ingest, but it still talks to
+// a live government server and so is run by hand, never from CI.
 //
-// A county is reported ingestable when the adapter's own enumeration gates
-// pass. This calls assertEnumeration rather than restating the rules, because
-// a second copy of them would drift and the drift would read as coverage.
+// **The field is `enumerable`, and it is deliberately weaker than
+// "ingestable."** The survey stops after the precinct listing; a real ingest
+// then walks every accessible ballot and parses every contest in it. So this
+// artifact proves a county has a complete, adapter-compatible precinct list --
+// the precondition for an ingest -- and says nothing about whether the walk
+// would finish. Proving that would cost the walk, which would defeat the
+// survey. The gates it does apply come from assertEnumeration and
+// requireSameStamp in the adapter rather than from copies here, because a
+// second copy would drift and the drift would read as coverage.
 
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -28,23 +36,24 @@ import {
   parseArgs,
   parseListing,
   parsePrecincts,
+  requireSameStamp,
   vendorSlug,
 } from "./ingest/vtrapp.mjs";
 
-export const SURVEY_SCHEMA_VERSION = 1;
+export const SURVEY_SCHEMA_VERSION = 2;
 
 /**
- * Surveys one county with the same three requests the adapter opens with.
+ * Surveys one county with the same requests the adapter opens with.
  *
- * Nothing here throws on an unservable county: a county that cannot be ingested
- * is a finding to record, not a failure of the survey. The *reason* comes from
- * the adapter's gate, so a county blocked by something nobody has seen yet is
- * described rather than silently dropped.
+ * Nothing here throws on an unservable county: a county that cannot be
+ * enumerated is a finding to record, not a failure of the survey. The *reason*
+ * comes from the adapter's gates, so a county blocked by something nobody has
+ * seen yet is described rather than silently dropped.
  */
 export async function surveyCounty({ client, countyId, electionKey }) {
   const slug = vendorSlug(countyId);
   const listing = listingUrl(slug, client.base);
-  const record = { vendor_slug: slug, listing_url: listing, ingestable: false };
+  const record = { vendor_slug: slug, listing_url: listing, enumerable: false };
 
   const first = await client.request(listing);
   record.response = classifyCountyResponse(first);
@@ -94,8 +103,13 @@ export async function surveyCounty({ client, countyId, electionKey }) {
   record.precinct_rows_listed = enumeration.listed;
   record.precinct_rows_parsed = enumeration.precincts.length;
   try {
+    // The adapter's source-version gate, applied at the same boundary it
+    // applies it. Without this a board that edits between the opening GET and
+    // this POST is surveyed as fine and then rejected by ingestCounty, and the
+    // survey would be advertising a county the adapter refuses.
+    requireSameStamp(countyId, parsedListing.sourceUpdatedRaw, listedResponse.body, "the precinct list");
     assertEnumeration({ countyId, electionKey, ...enumeration });
-    record.ingestable = true;
+    record.enumerable = true;
   } catch (error) {
     // The adapter names the county in its messages; the record is already keyed
     // by it, so strip the prefix rather than repeating it.
@@ -103,7 +117,7 @@ export async function surveyCounty({ client, countyId, electionKey }) {
     record.blocked = error.message.startsWith(prefix) ? error.message.slice(prefix.length) : error.message;
   }
   // Keep the row-level evidence either way. On a blocked county it is the
-  // diagnosis; on an ingestable one it is proof there was nothing to diagnose.
+  // diagnosis; on an enumerable one it is proof there was nothing to diagnose.
   record.skipped_row_reasons = tally(enumeration.skipped);
   record.unexplained_row_reasons = tally(enumeration.unexplained);
   return record;
@@ -117,15 +131,21 @@ function tally(entries) {
 
 export function summarize(counties) {
   const records = Object.values(counties);
-  const ingestable = records.filter((record) => record.ingestable);
+  const enumerable = records.filter((record) => record.enumerable);
   return {
     counties: records.length,
     served: records.filter((record) => record.response === "served").length,
     not_a_customer: records.filter((record) => record.response === "not-a-customer").length,
     unknown_slug: records.filter((record) => record.response === "unknown-slug").length,
-    ingestable: ingestable.length,
-    blocked: records.length - ingestable.length,
-    precinct_splits: ingestable.reduce((total, record) => total + record.precinct_rows_parsed, 0),
+    // A county the survey could not reach has no vendor response to classify.
+    // Counting it keeps the response categories summing to `counties`, so a
+    // reader cannot lose a county between the lines of the summary -- which is
+    // exactly what happened on the run that produced this file: Ottawa timed
+    // out, and served + not_a_customer + unknown_slug came to 87 of 88.
+    transport_errors: records.filter((record) => record.transport_error).length,
+    enumerable: enumerable.length,
+    blocked: records.length - enumerable.length,
+    precinct_splits: enumerable.reduce((total, record) => total + record.precinct_rows_parsed, 0),
   };
 }
 
@@ -144,7 +164,27 @@ export async function surveyVtrapp({
   const electionId = electionIdFromKey(electionKey);
   const counties = {};
   for (const countyId of countyIds) {
-    const record = await survey({ client, countyId, electionKey });
+    // A survey of the whole state is ~232 requests over several minutes, so one
+    // slow response is expected rather than exceptional. Letting it propagate
+    // cost a 30-county run in testing: the vendor timed out on one county and
+    // every county already surveyed went with it. A transport failure is
+    // recorded like any other reason a county is not enumerable.
+    let record;
+    try {
+      record = await survey({ client, countyId, electionKey });
+    } catch (error) {
+      // Flagged separately because it is not evidence about the county. The
+      // vendor declining to serve a ballot is a finding that stays true until
+      // the board changes something; failing to reach it is answered by running
+      // the survey again.
+      record = {
+        vendor_slug: vendorSlug(countyId),
+        listing_url: listingUrl(vendorSlug(countyId), client.base),
+        enumerable: false,
+        transport_error: true,
+        blocked: `the request failed rather than answering: ${error.message}`,
+      };
+    }
     counties[countyId] = record;
     await onCounty({ countyId, record });
     await client.pause();
@@ -206,13 +246,13 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
       electionKey: args.election,
       client,
       onCounty: ({ countyId, record }) => {
-        const scale = record.ingestable ? `${record.precinct_rows_parsed} splits` : (record.blocked ?? "blocked");
-        console.error(`${countyId.padEnd(12)} ${record.ingestable ? "ok     " : "BLOCKED"} ${scale}`);
+        const scale = record.enumerable ? `${record.precinct_rows_parsed} splits` : (record.blocked ?? "blocked");
+        console.error(`${countyId.padEnd(12)} ${record.enumerable ? "ok     " : "BLOCKED"} ${scale}`);
       },
     });
     await writeFile(out, `${JSON.stringify(survey, null, 2)}\n`);
-    const { ingestable, counties, precinct_splits: splits } = survey.meta.summary;
-    console.log(`Wrote ${out}: ${ingestable} of ${counties} counties ingestable, ${splits} precinct splits`);
+    const { enumerable, counties, precinct_splits: splits } = survey.meta.summary;
+    console.log(`Wrote ${out}: ${enumerable} of ${counties} counties enumerable, ${splits} precinct splits`);
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;

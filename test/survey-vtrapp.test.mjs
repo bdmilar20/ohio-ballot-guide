@@ -22,9 +22,18 @@ const precinctRow = (id) => `<tr><td headers="Precinct_Split">${id}</td><td head
     <a href='xmlview.aspx?bpty=x&elec=20261103g&prsid=${id}&lang=en'>View Accessible Ballot</a>
   </td></tr>`;
 
-const table = (rows) => `<table id="tblvtrlist">
+const STAMP = "10/12/26 02:32:40 PM";
+
+/**
+ * The precinct-list response as the vendor actually returns it: carrying its
+ * own copy of the update stamp. The fixture used to omit it, which is why the
+ * survey could skip the adapter's source-version gate and nothing noticed.
+ */
+const table = (rows, stamp = STAMP) => `<html>
+  ${stamp === null ? "" : `Election data last updated: ${stamp}<br/>`}
+  <table id="tblvtrlist">
   <tr><th id="Precinct_Split">s</th><th id="Precinct_Name">n</th><th id="Style">y</th><th id="Link">l</th></tr>
-  ${rows}</table>`;
+  ${rows}</table></html>`;
 
 /**
  * A vendor that answers only the three requests a survey makes, so a survey
@@ -48,11 +57,11 @@ const respond = (status, body) => ({ status, ok: status < 400, text: async () =>
 
 const clientFor = (vendor) => createVendorClient({ fetchImpl: vendor.fetchImpl, delayMs: 0 });
 
-test("records an ingestable county with the evidence that it was ingestable", async () => {
+test("records an enumerable county with the evidence that it was enumerable", async () => {
   const vendor = fakeVendor({ precinctBody: table(precinctRow("01____1") + precinctRow("01____2")) });
   const record = await surveyCounty({ client: clientFor(vendor), countyId: "adams", electionKey: "20261103G" });
 
-  assert.equal(record.ingestable, true);
+  assert.equal(record.enumerable, true);
   assert.equal(record.blocked, undefined);
   assert.equal(record.response, "served");
   assert.equal(record.precinct_rows_listed, 2);
@@ -76,7 +85,7 @@ test("records an unservable county as a finding rather than throwing", async () 
   const vendor = fakeVendor({ listingBody: await fixture("not-a-customer") });
   const record = await surveyCounty({ client: clientFor(vendor), countyId: "wyandot", electionKey: "20261103G" });
 
-  assert.equal(record.ingestable, false);
+  assert.equal(record.enumerable, false);
   assert.equal(record.response, "not-a-customer");
   assert.match(record.blocked, /not a served county/);
   assert.equal(record.precinct_rows_listed, undefined);
@@ -88,7 +97,7 @@ test("separates a county that is served from one that carries this election", as
 
   assert.equal(record.response, "served");
   assert.equal(record.election_offered, false);
-  assert.equal(record.ingestable, false);
+  assert.equal(record.enumerable, false);
   assert.match(record.blocked, /election 20261103G is absent/);
 });
 
@@ -101,7 +110,7 @@ test("blocks a county on the adapter's own enumeration gate, not a second copy o
   });
   const record = await surveyCounty({ client: clientFor(vendor), countyId: "adams", electionKey: "20261103G" });
 
-  assert.equal(record.ingestable, false);
+  assert.equal(record.enumerable, false);
   assert.match(record.blocked, /row\(s\) this adapter does not parse/);
   // The adapter names the county; the record is already keyed by it.
   assert.doesNotMatch(record.blocked, /^adams: /);
@@ -115,10 +124,35 @@ test("keeps the row evidence on a blocked county so the reason can be diagnosed"
   });
   const record = await surveyCounty({ client: clientFor(vendor), countyId: "adams", electionKey: "20261103G" });
 
-  assert.equal(record.ingestable, false);
+  assert.equal(record.enumerable, false);
   assert.equal(record.precinct_rows_listed, 2);
   assert.equal(record.precinct_rows_parsed, 1);
   assert.deepEqual(record.skipped_row_reasons, { "no ballot links in the Link cell": 1 });
+});
+
+// The survey applies requireSameStamp at the same boundary ingestCounty does.
+// Without it a board editing between the opening GET and the precinct-list POST
+// is surveyed as fine and then refused by the adapter, which is the drift
+// direction that reads as coverage.
+test("blocks a county whose source stamp changed mid-flow", async () => {
+  const vendor = fakeVendor({
+    precinctBody: table(precinctRow("01____1"), "10/17/26 09:15:00 AM"),
+  });
+  const record = await surveyCounty({ client: clientFor(vendor), countyId: "adams", electionKey: "20261103G" });
+
+  assert.equal(record.enumerable, false);
+  assert.match(record.blocked, /source changed during the run \("10\/12\/26 02:32:40 PM" -> "10\/17\/26 09:15:00 AM"\) at the precinct list/);
+  // Still a finding, not a throw, and the row evidence survives for diagnosis.
+  assert.equal(record.precinct_rows_parsed, 1);
+});
+
+test("blocks a county whose precinct list carries no stamp at all", async () => {
+  // Absence is missing identity evidence, not agreement, so it fails closed.
+  const vendor = fakeVendor({ precinctBody: table(precinctRow("01____1"), null) });
+  const record = await surveyCounty({ client: clientFor(vendor), countyId: "adams", electionKey: "20261103G" });
+
+  assert.equal(record.enumerable, false);
+  assert.match(record.blocked, /the precinct list carries no "Election data last updated" stamp/);
 });
 
 test("surveys three listing requests per county and never walks a ballot", async () => {
@@ -130,10 +164,10 @@ test("surveys three listing requests per county and never walks a ballot", async
 
 test("summarizes a mixed run by outcome and by scale", () => {
   const summary = summarize({
-    adams: { response: "served", ingestable: true, precinct_rows_parsed: 27 },
-    "van-wert": { response: "served", ingestable: true, precinct_rows_parsed: 47 },
-    wyandot: { response: "not-a-customer", ingestable: false },
-    nowhere: { response: "unknown-slug", ingestable: false },
+    adams: { response: "served", enumerable: true, precinct_rows_parsed: 27 },
+    "van-wert": { response: "served", enumerable: true, precinct_rows_parsed: 47 },
+    wyandot: { response: "not-a-customer", enumerable: false },
+    nowhere: { response: "unknown-slug", enumerable: false },
   });
 
   assert.deepEqual(summary, {
@@ -141,7 +175,8 @@ test("summarizes a mixed run by outcome and by scale", () => {
     served: 2,
     not_a_customer: 1,
     unknown_slug: 1,
-    ingestable: 2,
+    transport_errors: 0,
+    enumerable: 2,
     blocked: 2,
     precinct_splits: 74,
   });
@@ -152,7 +187,7 @@ test("writes a dated, versioned artifact that names how to rebuild it", async ()
     countyIds: ["adams", "wyandot"],
     electionKey: "20261103G",
     client: createVendorClient({ fetchImpl: fakeVendor().fetchImpl, delayMs: 0 }),
-    survey: async ({ countyId }) => ({ ingestable: countyId === "adams", response: "served", precinct_rows_parsed: 3 }),
+    survey: async ({ countyId }) => ({ enumerable: countyId === "adams", response: "served", precinct_rows_parsed: 3 }),
     now: () => new Date("2026-10-18T22:10:00Z"),
   });
 
@@ -162,7 +197,7 @@ test("writes a dated, versioned artifact that names how to rebuild it", async ()
   assert.match(survey.meta.note, /Do not hand-edit/);
   assert.deepEqual(survey.meta.election, { id: "2026-11-03-general", vendor_key: "20261103G" });
   assert.deepEqual(Object.keys(survey.counties), ["adams", "wyandot"]);
-  assert.equal(survey.meta.summary.ingestable, 1);
+  assert.equal(survey.meta.summary.enumerable, 1);
 });
 
 // The stamp is read in Ohio's time zone, not the surveying host's. Run from a
@@ -172,7 +207,7 @@ test("dates the artifact by Ohio's day, not the host's", async () => {
     countyIds: ["adams"],
     electionKey: "20261103G",
     client: createVendorClient({ fetchImpl: fakeVendor().fetchImpl, delayMs: 0 }),
-    survey: async () => ({ ingestable: true, response: "served", precinct_rows_parsed: 1 }),
+    survey: async () => ({ enumerable: true, response: "served", precinct_rows_parsed: 1 }),
     now: () => new Date("2026-10-19T03:10:00Z"),
   });
   assert.equal(survey.meta.generated_on, "2026-10-18");
@@ -182,5 +217,24 @@ test("refuses a survey with no counties rather than writing an empty artifact", 
   await assert.rejects(
     surveyVtrapp({ countyIds: [], electionKey: "20261103G" }),
     /at least one county/,
+  );
+});
+
+test("every surveyed county lands in exactly one response category", () => {
+  // Without transport_errors a county goes missing between the summary's
+  // lines. A real run hit this: Ottawa timed out, and served plus
+  // not-a-customer plus unknown-slug came to 87 of 88 with nothing objecting.
+  const summary = summarize({
+    adams: { response: "served", enumerable: true, precinct_rows_parsed: 27 },
+    wyandot: { response: "not-a-customer", enumerable: false },
+    nowhere: { response: "unknown-slug", enumerable: false },
+    ottawa: { enumerable: false, transport_error: true },
+  });
+
+  assert.equal(summary.transport_errors, 1);
+  assert.equal(
+    summary.served + summary.not_a_customer + summary.unknown_slug + summary.transport_errors,
+    summary.counties,
+    "the response categories must account for every record",
   );
 });
