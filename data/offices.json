@@ -1,6 +1,6 @@
 {
   "meta": {
-    "last_reviewed": "2026-10-15",
+    "last_reviewed": "2026-10-18",
     "note": "What each office on the ballot does. Every sentence is supported by the sources listed with it; nothing here describes a candidate, a party, or a policy position."
   },
   "offices": {
@@ -20,6 +20,14 @@
         { "label": "U.S. Constitution, Article I, Section 3 (National Archives)", "url": "https://www.archives.gov/founding-docs/constitution-transcript" }
       ],
       "last_verified": "2026-10-15"
+    },
+    "us-representative": {
+      "title": "United States Representative",
+      "summary": "Members of the U.S. House of Representatives serve in Congress, where the Constitution vests federal legislative power in the House and Senate. Representatives are chosen every two years, and the House has the sole power of impeachment.",
+      "sources": [
+        { "label": "U.S. Constitution, Article I, Sections 1–2 (National Archives)", "url": "https://www.archives.gov/founding-docs/constitution-transcript" }
+      ],
+      "last_verified": "2026-10-18"
     },
     "attorney-general": {
       "title": "Attorney General",
@@ -57,6 +65,15 @@
       ],
       "last_verified": "2026-10-15"
     },
+    "state-representative": {
+      "title": "State Representative",
+      "summary": "Ohio's legislative power is vested in the General Assembly, which consists of the Senate and House of Representatives. State representatives are elected by their districts for two-year terms and may not hold more than four successive terms.",
+      "sources": [
+        { "label": "Ohio Constitution, Article II, Section 1", "url": "https://codes.ohio.gov/ohio-constitution/section-2.1" },
+        { "label": "Ohio Constitution, Article II, Section 2", "url": "https://codes.ohio.gov/ohio-constitution/section-2.2" }
+      ],
+      "last_verified": "2026-10-18"
+    },
     "supreme-court": {
       "title": "Justice of the Ohio Supreme Court",
       "summary": "The Supreme Court of Ohio consists of a chief justice and six justices, elected by the electors of the state at large for terms of not less than six years. It hears appeals from Ohio's courts of appeals and has original jurisdiction over matters including habeas corpus and the practice of law.",
@@ -66,6 +83,15 @@
       ],
       "last_verified": "2026-10-15"
     },
+    "court-of-appeals-judge": {
+      "title": "Judge of the Court of Appeals",
+      "summary": "Ohio's courts of appeals review judgments and final orders from lower courts and certain administrative officers or agencies within their districts. Court of appeals judges are elected by the voters of their appellate districts for terms of at least six years.",
+      "sources": [
+        { "label": "Ohio Constitution, Article IV, Section 3", "url": "https://codes.ohio.gov/ohio-constitution/section-4.3" },
+        { "label": "Ohio Constitution, Article IV, Section 6", "url": "https://codes.ohio.gov/ohio-constitution/section-4.6" }
+      ],
+      "last_verified": "2026-10-18"
+    },
     "county-auditor": {
       "title": "County Auditor",
       "summary": "Each county is the unit for assessing real estate for taxation, and the county auditor is the assessor of all the real estate in the county for tax purposes.",
@@ -73,6 +99,16 @@
         { "label": "Ohio Revised Code 5713.01", "url": "https://codes.ohio.gov/ohio-revised-code/section-5713.01" }
       ],
       "last_verified": "2026-10-15"
+    },
+    "county-prosecutor": {
+      "title": "County Prosecuting Attorney",
+      "summary": "The county prosecuting attorney prosecutes state cases arising in the county and serves as legal adviser to county commissioners, the board of elections, and other county officers and boards. The office is elected countywide to a four-year term.",
+      "sources": [
+        { "label": "Ohio Revised Code 309.01", "url": "https://codes.ohio.gov/ohio-revised-code/section-309.01" },
+        { "label": "Ohio Revised Code 309.08", "url": "https://codes.ohio.gov/ohio-revised-code/section-309.08" },
+        { "label": "Ohio Revised Code 309.09", "url": "https://codes.ohio.gov/ohio-revised-code/section-309.09" }
+      ],
+      "last_verified": "2026-10-18"
     },
     "common-pleas-judge": {
       "title": "Judge of the Court of Common Pleas",

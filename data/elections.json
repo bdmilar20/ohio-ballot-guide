@@ -2,7 +2,7 @@
   "meta": {
     "jurisdiction": "Ohio",
     "last_reviewed": "2026-10-15",
-    "coverage_note": "Statewide contests plus selected, explicitly partial countywide contests for Franklin, Cuyahoga, Hamilton, Montgomery, and Summit counties. County, ZIP, and place-name geography is generated into data/locations.json."
+    "coverage_note": "Statewide contests plus Adams County content common to every enumerated precinct ballot and selected, explicitly partial countywide contests for Franklin, Cuyahoga, Hamilton, Montgomery, and Summit counties. County, ZIP, and place-name geography is generated into data/locations.json."
   },
   "elections": [
     {
@@ -438,6 +438,159 @@
             }
           ],
           "issues": []
+        },
+        "adams": {
+          "coverage": {
+            "status": "complete",
+            "method": "common_to_all_precincts",
+            "scope": "Content present on all 27 enumerated precinct ballots",
+            "summary": "Every office and issue shown appears on every enumerated precinct ballot. Candidate order here may differ from the official ballot because Ohio rotates candidate order by precinct. Additional precinct-specific content remains excluded.",
+            "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+            "source_updated_at": "2026-10-12T14:32:40-04:00",
+            "source_age_hours_at_review": 143,
+            "precincts_verified": 27,
+            "precinct_specific_races": 0,
+            "precinct_specific_issues": 14,
+            "reviewed_at": "2026-10-18T17:35:21.686Z",
+            "last_verified": "2026-10-18"
+          },
+          "races": [
+            {
+              "id": "adams-for-representative-to-congress-2nd-district-f9c9be92ea8a",
+              "scope": "Adams County · Vote for one",
+              "office": "U.S. Representative (2nd District)",
+              "office_id": "us-representative",
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:f9c9be92ea8a8e41f977fe39a2067ea3cfd2776580736d5a9fc49c32bb247b06",
+              "write_in_available": false,
+              "candidates": [
+                { "name": "David J. Taylor", "party": "Republican" },
+                { "name": "Jen Mazzuckelli", "party": "Democratic" }
+              ]
+            },
+            {
+              "id": "adams-for-state-representative-90th-district-640172bb5771",
+              "scope": "Adams County · Vote for one",
+              "office": "State Representative (90th District)",
+              "office_id": "state-representative",
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:640172bb5771c619aa1e2d0fbc77c78dec09dd26abdd4035ea05bff7c1de28b7",
+              "write_in_available": false,
+              "candidates": [
+                { "name": "Collin Docterman", "party": "Democratic" },
+                { "name": "Justin Pizzulli", "party": "Republican" }
+              ]
+            },
+            {
+              "id": "adams-for-judge-of-the-court-of-appeals-4th-district-3d3e1ca6f647",
+              "scope": "Adams County · Full term commencing 2-9-2027 · Vote for one",
+              "office": "Judge of the Court of Appeals (4th District)",
+              "office_id": "court-of-appeals-judge",
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:3d3e1ca6f6474bb0ecb117106c53e2a9cabee85cad039a312423567180e69169",
+              "write_in_available": false,
+              "candidates": [
+                { "name": "Peter B. Abele", "party": "Republican" }
+              ]
+            },
+            {
+              "id": "adams-for-judge-of-the-court-of-common-pleas-aabc7c43b2ee",
+              "scope": "Adams County · Full term commencing 2-9-2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:aabc7c43b2ee714cf389b247a2735c875d4e7ee6867b55adc4029d7f7b3ca298",
+              "write_in_available": false,
+              "candidates": [
+                { "name": "Barbara Moore Holt", "party": "No party printed" },
+                { "name": "Lisa Ann Rothwell", "party": "No party printed" }
+              ]
+            },
+            {
+              "id": "adams-for-county-commissioner-7330fa5921e6",
+              "scope": "Adams County · Full term commencing 1-1-2027 · Vote for one",
+              "office": "County Commissioner",
+              "office_id": "county-commissioner",
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:7330fa5921e6ef7434b2e35df7a22149dc28b30ca743ccb1fb4695faa4db46d4",
+              "write_in_available": false,
+              "candidates": [
+                { "name": "Helen L. Newman", "party": "No party printed" },
+                { "name": "Kelly Jones", "party": "Republican" },
+                { "name": "Travis Wilson", "party": "No party printed" },
+                { "name": "Troy D. Thatcher", "party": "No party printed" }
+              ]
+            },
+            {
+              "id": "adams-for-county-auditor-10609999fb46",
+              "scope": "Adams County · Vote for one",
+              "office": "County Auditor",
+              "office_id": "county-auditor",
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:10609999fb462b9dcd667ec4812f629467fb1003b5f65e5473a92726687b4712",
+              "write_in_available": false,
+              "candidates": [
+                { "name": "Clayton Osborne", "party": "No party printed" },
+                { "name": "David Gifford", "party": "Republican" }
+              ]
+            },
+            {
+              "id": "adams-for-prosecuting-attorney-3aac640a14b8",
+              "scope": "Adams County · Unexpired term ending 12-31-2028 · Vote for one",
+              "office": "County Prosecuting Attorney",
+              "office_id": "county-prosecutor",
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:3aac640a14b8acc49b830afa7ea18046c2ae53d662c29b667c93bc61c103c581",
+              "write_in_available": false,
+              "candidates": [
+                { "name": "Ariana D. Norris", "party": "Republican" },
+                { "name": "David Osborne, Jr.", "party": "No party printed" }
+              ]
+            },
+            {
+              "id": "adams-for-judge-of-the-court-of-appeals-4th-district-7fef5c90caf8",
+              "scope": "Adams County · Full term commencing 2-9-2027 · Vote for one",
+              "office": "Judge of the Court of Appeals (4th District)",
+              "office_id": "court-of-appeals-judge",
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:7fef5c90caf82e011010d243188728a458e690582de5439f393d8d3868a5a1c2",
+              "write_in_available": false,
+              "candidates": [
+                { "name": "Jayme Hartley Fountain", "party": "Republican" },
+                { "name": "Todd L. Grace", "party": "Democratic" }
+              ]
+            }
+          ],
+          "issues": [
+            {
+              "id": "adams-proposed-tax-levy-additional-64c2e1f396c8",
+              "label": "Proposed Tax Levy (Additional)",
+              "title": "Adams County — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "An additional tax for the benefit of Adams County for the purpose of continued operation of Adams County Children Services and the care and placement of children including Wilson Children's Home that the county auditor estimates will collect $1,232,128 annually, at a rate not exceeding 1.5 mills for each $1 of taxable value, which amounts to $53 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2026, first due in calendar year 2027.",
+              "choices": ["For the Tax Levy", "Against the Tax Levy"],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:64c2e1f396c800af8ccbf2cff3a89e58503c52cf17c19b57eca77a3a254f9d22"
+            },
+            {
+              "id": "adams-proposed-tax-levy-additional-7ca2335875da",
+              "label": "Proposed Tax Levy (Additional)",
+              "title": "Adams County — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "An additional tax for the benefit of Adams County for the purpose of continued operation of Adams County Emergency Medical Services that the county auditor estimates will collect $2,874,966 annually, at a rate not exceeding 3.5 mills for each $1 of taxable value, which amounts to $123 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2026, first due in calendar year 2027.",
+              "choices": ["For the Tax Levy", "Against the Tax Levy"],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:7ca2335875daaafadf1df053a8d8ddc04992a49eb4243f23da7a134a7c531844"
+            }
+          ]
         }
       },
       "issues": [
