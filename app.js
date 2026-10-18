@@ -531,7 +531,7 @@ newSearch.addEventListener("click", () => {
 });
 
 async function loadJson(path) {
-  const response = await fetch(path, { cache: "no-store" });
+  const response = await fetch(path, { cache: "no-cache" });
   if (!response.ok) throw new Error(`${path} request failed (${response.status})`);
   return response.json();
 }
