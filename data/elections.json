@@ -1,7 +1,7 @@
 {
   "meta": {
     "jurisdiction": "Ohio",
-    "last_reviewed": "2026-10-18",
+    "last_reviewed": "2026-10-15",
     "coverage_note": "Statewide contests plus Adams County content common to every enumerated precinct ballot and selected, explicitly partial countywide contests for Franklin, Cuyahoga, Hamilton, Montgomery, and Summit counties. County, ZIP, and place-name geography is generated into data/locations.json."
   },
   "elections": [
