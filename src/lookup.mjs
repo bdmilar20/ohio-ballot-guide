@@ -60,6 +60,25 @@ export function contestSequenceLabels(races) {
   });
 }
 
+export function issueSequenceLabels(issues) {
+  const totals = new Map();
+  const keyFor = ({ label, title }) => `${label}\0${title}`;
+  for (const issue of issues) {
+    const key = keyFor(issue);
+    totals.set(key, (totals.get(key) ?? 0) + 1);
+  }
+
+  const seen = new Map();
+  return issues.map((issue) => {
+    const key = keyFor(issue);
+    const total = totals.get(key);
+    if (total === 1) return null;
+    const current = (seen.get(key) ?? 0) + 1;
+    seen.set(key, current);
+    return `Separate measure ${current} of ${total}`;
+  });
+}
+
 function countPhrase(count, singular, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
 }
@@ -97,6 +116,10 @@ export function countyCoverageNotice(countyName, coverage, raceCount, issueCount
 
 export function sourceLabel(race, label, sequenceLabel = null) {
   return [label, race.office, sequenceLabel, race.scope].filter(Boolean).join(" — ");
+}
+
+export function issueSourceLabel(issue, label, sequenceLabel = null) {
+  return [label, issue.label, sequenceLabel, issue.title].filter(Boolean).join(" — ");
 }
 
 export function hasPublishedBallotDetails(election) {

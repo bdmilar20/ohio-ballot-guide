@@ -8,6 +8,8 @@ import {
   daysUntilElection,
   hasPublishedBallotDetails,
   issuesForCounty,
+  issueSequenceLabels,
+  issueSourceLabel,
   normalizeQuery,
   partitionCandidates,
   racesForCounty,
@@ -40,6 +42,13 @@ function raceSourceNames(races) {
 
     return labels.map((label) => sourceLabel(race, label, sequenceLabels[index]));
   });
+}
+
+function issueSourceNames(issues) {
+  const sequenceLabels = issueSequenceLabels(issues);
+  return issues.map((issue, index) => (
+    issueSourceLabel(issue, "Official ballot language", sequenceLabels[index])
+  ));
 }
 
 test("normalizes Ohio city suffixes with or without comma spacing", () => {
@@ -79,6 +88,7 @@ test("keeps the county answers the curated data was reviewed with", () => {
     45240: ["hamilton"],
     45249: ["hamilton", "warren"],
     45251: ["hamilton"],
+    45693: ["adams"],
   };
 
   for (const [zip, countyIds] of Object.entries(reviewed)) {
@@ -168,6 +178,25 @@ test("labels repeated office headings only when scope does not distinguish them"
   ]);
 });
 
+test("labels repeated ballot measures only when their visible headings are identical", () => {
+  assert.deepEqual(
+    issueSequenceLabels([
+      { label: "Proposed Tax Levy", title: "Adams County" },
+      { label: "Proposed Tax Levy", title: "Adams County" },
+      { label: "Proposed Tax Levy", title: "Brown County" },
+    ]),
+    ["Separate measure 1 of 2", "Separate measure 2 of 2", null],
+  );
+});
+
+test("includes a ballot measure's sequence cue in its source name", () => {
+  const issue = { label: "Proposed Tax Levy", title: "Adams County" };
+  assert.equal(
+    issueSourceLabel(issue, "Official ballot language", "Separate measure 2 of 2"),
+    "Official ballot language — Proposed Tax Levy — Separate measure 2 of 2 — Adams County",
+  );
+});
+
 test("keeps visible race source labels before the office and scope", () => {
   const race = racesForCounty("summit", election.counties).find(
     ({ id }) => id === "summit-common-pleas-general-2027-01-05",
@@ -211,6 +240,21 @@ test("keeps every rendered race source name unique on each county page", () => {
   }
 });
 
+test("keeps every rendered ballot-measure source name unique on each county page", () => {
+  for (const currentElection of data.elections) {
+    const statewideNames = issueSourceNames(currentElection.issues);
+    for (const [countyId, county] of Object.entries(currentElection.counties)) {
+      const names = [...statewideNames, ...issueSourceNames(county.issues)];
+      const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
+      assert.deepEqual(
+        [...new Set(duplicates)],
+        [],
+        `${currentElection.id}/${countyId} ballot-measure sources need unique accessible names`,
+      );
+    }
+  }
+});
+
 test("publishes sourced, explicitly partial coverage for each covered county", () => {
   const expectedRaceCounts = {
     franklin: 2,
@@ -226,6 +270,38 @@ test("publishes sourced, explicitly partial coverage for each covered county", (
     assert.match(county.coverage.source_url, /^https:\/\//);
     assert.equal(county.races.length, expectedRaceCount);
   }
+});
+
+test("publishes Adams content common to every enumerated precinct ballot", () => {
+  const county = election.counties.adams;
+  assert.deepEqual(
+    {
+      status: county.coverage.status,
+      method: county.coverage.method,
+      precincts: county.coverage.precincts_verified,
+      precinctSpecificRaces: county.coverage.precinct_specific_races,
+      precinctSpecificIssues: county.coverage.precinct_specific_issues,
+      races: county.races.length,
+      issues: county.issues.length,
+    },
+    {
+      status: "complete",
+      method: "common_to_all_precincts",
+      precincts: 27,
+      precinctSpecificRaces: 0,
+      precinctSpecificIssues: 14,
+      races: 8,
+      issues: 2,
+    },
+  );
+  assert.deepEqual(
+    contestSequenceLabels(county.races).filter(Boolean),
+    ["Separate contest 1 of 2", "Separate contest 2 of 2"],
+  );
+  assert.deepEqual(
+    issueSequenceLabels(county.issues),
+    ["Separate measure 1 of 2", "Separate measure 2 of 2"],
+  );
 });
 
 test("uses Montgomery County's current candidate report", () => {

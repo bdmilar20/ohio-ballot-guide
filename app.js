@@ -5,12 +5,14 @@ import {
   daysUntilElection,
   hasPublishedBallotDetails,
   issuesForCounty,
+  issueSequenceLabels,
+  issueSourceLabel,
   partitionCandidates,
   racesForCounty,
   resolveLocation,
   sourceLabel,
   upcomingElections,
-} from "./src/lookup.mjs";
+} from "./src/lookup.mjs?v=20261018";
 
 const OFFICIAL_VOTING_SCHEDULE_URL =
   "https://www.ohiosos.gov/elections/voting-schedule-text-only";
@@ -214,7 +216,9 @@ function renderRaces(container, races, collapseAfter = Number.POSITIVE_INFINITY)
 }
 
 function renderIssues(container, issues) {
-  const cards = issues.map((issue) => {
+  const sequenceLabels = issueSequenceLabels(issues);
+  const cards = issues.map((issue, index) => {
+    const sequenceLabel = sequenceLabels[index];
     const article = document.createElement("article");
     article.className = "issue-card";
 
@@ -224,7 +228,14 @@ function renderIssues(container, issues) {
     label.className = "issue-label";
     label.textContent = issue.label;
     title.textContent = issue.title;
-    heading.append(label, title);
+    heading.append(label);
+    if (sequenceLabel) {
+      const sequence = document.createElement("p");
+      sequence.className = "issue-sequence";
+      sequence.textContent = sequenceLabel;
+      heading.append(sequence);
+    }
+    heading.append(title);
 
     const copy = document.createElement("div");
     const source = document.createElement("a");
@@ -247,7 +258,10 @@ function renderIssues(container, issues) {
     if (issue.choices?.length) {
       const choices = document.createElement("ul");
       choices.className = "issue-choices";
-      choices.setAttribute("aria-label", `Choices for ${issue.label}`);
+      choices.setAttribute(
+        "aria-label",
+        ["Choices for", issue.label, sequenceLabel, issue.title].filter(Boolean).join(" — "),
+      );
       choices.replaceChildren(...issue.choices.map((choice) => {
         const item = document.createElement("li");
         item.textContent = choice;
@@ -259,6 +273,7 @@ function renderIssues(container, issues) {
     source.target = "_blank";
     source.rel = "noreferrer";
     source.textContent = "Read the official ballot language ↗";
+    source.setAttribute("aria-label", issueSourceLabel(issue, "Official ballot language", sequenceLabel));
     verified.className = "verified";
     verified.textContent = `Verified ${displayDate(issue.last_verified)}`;
     copy.append(source, verified);
@@ -516,7 +531,7 @@ newSearch.addEventListener("click", () => {
 });
 
 async function loadJson(path) {
-  const response = await fetch(path);
+  const response = await fetch(path, { cache: "no-store" });
   if (!response.ok) throw new Error(`${path} request failed (${response.status})`);
   return response.json();
 }
