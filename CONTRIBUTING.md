@@ -199,6 +199,39 @@ Set `CHROME_PATH` if the script cannot find Chrome or Chromium. It checks each
 known install path for an executable file and reports every path it tried, so a
 Chromium-only machine or a Linux box does not need any configuration.
 
+## Surveying which counties can be ingested
+
+`data/vtrapp-coverage.json` is generated. Do not hand-edit it; re-run the
+script and commit the result with the command you ran.
+
+```bash
+npm run survey:vtrapp -- --election 20261103G
+```
+
+The survey asks each of Ohio's 88 counties the same three listing requests the
+adapter opens with — fetch the listing, select the election, ask for the
+precinct table — and stops there. It never walks a ballot, so surveying the
+whole state costs about what ingesting one county costs. It is still a live
+government source: **run it by hand, never from CI.**
+
+Useful flags: `--counties adams,van-wert` to survey a subset, `--out <path>` to
+write somewhere other than `data/`, and `--delay <ms>` to change the pacing
+(default 600).
+
+A county that cannot be ingested is a finding, not a failure — the survey
+records the reason and moves on, so one unservable county cannot truncate the
+run into a short list that reads like a complete one. The reason itself comes
+from `assertEnumeration` in the adapter rather than from rules restated here.
+That matters: a second copy of those rules would drift, and either direction of
+drift is silent. A looser survey advertises counties the adapter then refuses;
+a stricter one hides counties we could publish.
+
+`npm run check` recomputes `meta.summary` from the per-county records and
+refuses a file where they disagree, so the headline coverage number cannot be
+edited away from the evidence beneath it. It also refuses a county marked
+ingestable that is missing a freshness stamp or parsed fewer precinct rows than
+the vendor listed.
+
 ## Ingesting county ballots
 
 `lookup.boe.ohio.gov/vtrapp` is one application the state hosts for 72 of the

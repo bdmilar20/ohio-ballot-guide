@@ -10,6 +10,7 @@
     "test": "node --test",
     "ingest:vtrapp": "node scripts/ingest/vtrapp.mjs",
     "project:vtrapp": "node scripts/project-vtrapp.mjs",
-    "refresh:vtrapp": "node scripts/refresh-vtrapp.mjs"
+    "refresh:vtrapp": "node scripts/refresh-vtrapp.mjs",
+    "survey:vtrapp": "node scripts/survey-vtrapp.mjs"
   }
 }

@@ -17,7 +17,7 @@ async function readData(name) {
 // one and watch the validator refuse it.
 async function validateFixture(
   t,
-  { elections = () => {}, locations = () => {}, offices = () => {}, countyBoards = () => {} },
+  { elections = () => {}, locations = () => {}, offices = () => {}, countyBoards = () => {}, coverage = () => {} },
 ) {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "ohio-ballot-guide-"));
   t.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
@@ -26,23 +26,27 @@ async function validateFixture(
   const locationData = await readData("locations.json");
   const officeData = await readData("offices.json");
   const countyBoardData = await readData("county-boards.json");
+  const coverageData = await readData("vtrapp-coverage.json");
   elections(electionData);
   locations(locationData);
   offices(officeData);
   countyBoards(countyBoardData);
+  coverage(coverageData);
 
   const electionFixture = join(temporaryDirectory, "elections.json");
   const locationFixture = join(temporaryDirectory, "locations.json");
   const officeFixture = join(temporaryDirectory, "offices.json");
   const countyBoardFixture = join(temporaryDirectory, "county-boards.json");
+  const coverageFixture = join(temporaryDirectory, "vtrapp-coverage.json");
   await writeFile(electionFixture, JSON.stringify(electionData));
   await writeFile(locationFixture, JSON.stringify(locationData));
   await writeFile(officeFixture, JSON.stringify(officeData));
   await writeFile(countyBoardFixture, JSON.stringify(countyBoardData));
+  await writeFile(coverageFixture, JSON.stringify(coverageData));
 
   return spawnSync(
     process.execPath,
-    [validator, electionFixture, locationFixture, officeFixture, countyBoardFixture],
+    [validator, electionFixture, locationFixture, officeFixture, countyBoardFixture, coverageFixture],
     { encoding: "utf8" },
   );
 }
@@ -380,4 +384,77 @@ test("validator rejects an office source that is not HTTPS", async (t) => {
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /must use HTTPS/);
+});
+
+// The generated coverage artifact is the project's answer to "which counties
+// can we ingest?". Every check below is aimed at the same failure: the file
+// claiming more coverage than the survey actually found.
+
+test("validator rejects a coverage summary that disagrees with its own records", async (t) => {
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      data.meta.summary.ingestable += 1;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /summary must be recomputable/);
+});
+
+test("validator rejects a coverage run that skipped part of Ohio", async (t) => {
+  const result = await validateFixture(t, {
+    coverage: (data) => delete data.counties.vinton,
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /coverage must cover the same counties/);
+});
+
+test("validator rejects a county marked ingestable without a freshness stamp", async (t) => {
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      const [countyId] = Object.entries(data.counties).find(([, record]) => record.ingestable);
+      delete data.counties[countyId].source_updated_at;
+      data.meta.summary = undefined;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /ingestable without a source update stamp|summary must be recomputable/);
+});
+
+test("validator rejects a county marked ingestable that parsed fewer rows than listed", async (t) => {
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      const [countyId] = Object.entries(data.counties).find(([, record]) => record.ingestable);
+      data.counties[countyId].precinct_rows_parsed -= 1;
+      data.meta.summary.precinct_splits -= 1;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /parsed fewer rows than the vendor listed/);
+});
+
+test("validator rejects a blocked county that does not say why", async (t) => {
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      const [countyId] = Object.entries(data.counties).find(([, record]) => !record.ingestable);
+      delete data.counties[countyId].blocked;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /is not ingestable and must say why/);
+});
+
+test("validator rejects a coverage artifact from an older survey schema", async (t) => {
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      data.meta.schema_version = 0;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /re-run npm run survey:vtrapp/);
 });

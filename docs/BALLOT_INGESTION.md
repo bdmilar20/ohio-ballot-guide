@@ -11,7 +11,15 @@ fails closed rather than returning a partial snapshot.
 ## The source
 
 `https://lookup.boe.ohio.gov/vtrapp/<slug>/` is a single state-hosted ASP.NET
-application (vendor fingerprint `tgsistyles.css`, TGSI) serving 72 counties.
+application (vendor fingerprint `tgsistyles.css`, TGSI). It answers for 72 of
+Ohio's 88 counties, 70 of which this adapter can ingest.
+
+**Those counts are generated, not asserted here.** `npm run survey:vtrapp`
+rebuilds `data/vtrapp-coverage.json`, which records per county what the vendor
+answered, whether the election is offered, the board's own update stamp, and
+the precinct-row counts. Quote the artifact rather than a number in this
+document; a board can join or leave the application between elections.
+
 Each precinct split has two endpoints:
 
 | Endpoint | Returns |
@@ -32,6 +40,28 @@ discrepancy.
 The 16 counties not on the vendor are not a tail — they include Cuyahoga,
 Franklin and Hamilton, so most of Ohio's population. They need their own
 adapters under `scripts/ingest/`.
+
+### Two served counties publish no accessible ballot at all
+
+**Lake and Wayne are served, offer the November 3 2026 election, and list their
+precincts — 170 and 121 splits — with only the PDF link in every row.** Not one
+row carries an `xmlview.aspx` link, so the two-link identity check declines
+every row and the county fails closed on "precinct enumeration yielded no
+ballots". That is the adapter behaving correctly, not a parser gap.
+
+The accessible rendering is genuinely absent rather than merely unlinked, which
+was checked with a control rather than assumed. Requesting `xmlview.aspx` for a
+real Lake precinct returns the same 6,583-byte error page as a bogus precinct
+id, byte-for-byte and title-for-title; Adams answers the same request with an
+11,683-byte ballot reporting "contest 1 of 20". Wayne behaves identically at
+6,560 bytes.
+
+So the PDF path is not purely a request-volume optimization. It is the only
+route to 291 precinct splits across two counties, and that changes the
+cost/benefit of building it. The parity requirement above still stands: a PDF
+reader has to demonstrate field-for-field normalized agreement with the HTML on
+counties that publish both before it is trusted on counties that publish
+neither.
 
 ### Six things about this source that are not guessable
 

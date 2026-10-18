@@ -458,7 +458,7 @@ function canonicalize(value) {
 
 const HIDDEN_INPUT = /<input[^>]*type="hidden"[^>]*>/gi;
 
-function hiddenFields(html) {
+export function hiddenFields(html) {
   return Object.fromEntries(
     [...html.matchAll(HIDDEN_INPUT)]
       .map((match) => [match[0].match(/name="([^"]+)"/)?.[1], decodeEntities(match[0].match(/value="([^"]*)"/)?.[1] ?? "")])
@@ -497,6 +497,53 @@ export function createVendorClient({ fetchImpl = fetch, base = VENDOR_BASE, dela
   const post = (url, fields) => request(url, { method: "POST", body: new URLSearchParams(fields).toString() });
   const pause = () => (delayMs > 0 ? new Promise((resolve) => setTimeout(resolve, delayMs)) : Promise.resolve());
   return { base, request, post, pause };
+}
+
+/**
+ * Applies every gate that decides whether a parsed precinct listing is the
+ * whole county, and throws naming the county when one fails.
+ *
+ * This is separate from ingestCounty so that anything else asking "can this
+ * county be ingested?" — the coverage survey, in particular — gets the answer
+ * from these rules rather than from a second copy of them. A second copy would
+ * drift, and it would drift in the direction that reads as coverage: a survey
+ * that is more permissive than the adapter reports counties as ingestable that
+ * the adapter then refuses, and one that is stricter hides counties we could
+ * publish. Both are silent.
+ */
+export function assertEnumeration({ countyId, electionKey, tableFound, listed, precincts, skipped, unexplained }) {
+  if (!tableFound) {
+    throw new Error(
+      `${countyId}: the "Find Ballots" response has no table with id="${PRECINCT_TABLE_ID}", so the vendor's results markup changed`,
+    );
+  }
+  // An unparsed row is the only enumeration failure the count check cannot see:
+  // a pager row is not a precinct row, so listed and parsed agree over the page
+  // the vendor happened to serve.
+  if (unexplained.length > 0) {
+    throw new Error(
+      `${countyId}: the results table has ${unexplained.length} row(s) this adapter does not parse` +
+        ` (${unexplained[0].reason}: ${JSON.stringify(unexplained[0].row)}), so ${listed} may not be the whole county`,
+    );
+  }
+  if (precincts.length === 0) {
+    throw new Error(`${countyId}: precinct enumeration yielded no ballots`);
+  }
+  if (precincts.length !== listed) {
+    throw new Error(
+      `${countyId}: listed ${listed} precinct rows but parsed ${precincts.length}` +
+        (skipped.length ? ` (${skipped[0].reason})` : ""),
+    );
+  }
+  // The rows carry their own election key. If the vendor answered with a
+  // different election than the one we selected, the snapshot would be labelled
+  // with an election it does not contain.
+  const wrongElection = precincts.find((precinct) => precinct.election_key !== electionKey);
+  if (wrongElection) {
+    throw new Error(
+      `${countyId}: precinct ${wrongElection.id} is listed under election ${wrongElection.election_key}, not ${electionKey}`,
+    );
+  }
 }
 
 /**
@@ -548,39 +595,9 @@ export async function ingestCounty({
 
   requireSameStamp(countyId, parsedListing.sourceUpdatedRaw, listed.body, "the precinct list");
 
-  const { tableFound, listed: listedCount, precincts, skipped, unexplained } = parsePrecincts(listed.body);
-  if (!tableFound) {
-    throw new Error(
-      `${countyId}: the "Find Ballots" response has no table with id="${PRECINCT_TABLE_ID}", so the vendor's results markup changed`,
-    );
-  }
-  // An unparsed row is the only enumeration failure the count check cannot see:
-  // a pager row is not a precinct row, so listed and parsed agree over the page
-  // the vendor happened to serve.
-  if (unexplained.length > 0) {
-    throw new Error(
-      `${countyId}: the results table has ${unexplained.length} row(s) this adapter does not parse` +
-        ` (${unexplained[0].reason}: ${JSON.stringify(unexplained[0].row)}), so ${listedCount} may not be the whole county`,
-    );
-  }
-  if (precincts.length === 0) {
-    throw new Error(`${countyId}: precinct enumeration yielded no ballots`);
-  }
-  if (precincts.length !== listedCount) {
-    throw new Error(
-      `${countyId}: listed ${listedCount} precinct rows but parsed ${precincts.length}` +
-        (skipped.length ? ` (${skipped[0].reason})` : ""),
-    );
-  }
-  // The rows carry their own election key. If the vendor answered with a
-  // different election than the one we selected, the snapshot would be labelled
-  // with an election it does not contain.
-  const wrongElection = precincts.find((precinct) => precinct.election_key !== electionKey);
-  if (wrongElection) {
-    throw new Error(
-      `${countyId}: precinct ${wrongElection.id} is listed under election ${wrongElection.election_key}, not ${electionKey}`,
-    );
-  }
+  const enumeration = parsePrecincts(listed.body);
+  assertEnumeration({ countyId, electionKey, ...enumeration });
+  const { precincts } = enumeration;
 
   const ballots = {};
   const seen = new Map();
@@ -634,10 +651,10 @@ export async function ingestCounty({
       source_age_hours: Number(((fetchedAt.getTime() - parsedListing.sourceUpdatedAt.instant) / 3_600_000).toFixed(1)),
     },
     enumeration: {
-      listed_precincts: listedCount,
+      listed_precincts: enumeration.listed,
       parsed_precincts: precinctRecords.length,
-      skipped,
-      unexplained_rows: unexplained,
+      skipped: enumeration.skipped,
+      unexplained_rows: enumeration.unexplained,
     },
     precincts: precinctRecords,
     ballots,
