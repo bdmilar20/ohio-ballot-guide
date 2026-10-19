@@ -237,7 +237,7 @@ function arraysEqual(left, right) {
 // not know". So the same question is asked a second time without consulting
 // the title at all: two contests listing the same candidates with the same
 // parties are the same contest, whatever either one is called.
-function statewideTwinByCandidates(contest, election) {
+export function statewideTwinByCandidates(contest, election) {
   if (!election || contest.kind !== "office") return null;
   const candidates = sourceCandidateSet(contest);
   if (candidates.length === 0) return null;
@@ -247,14 +247,14 @@ function statewideTwinByCandidates(contest, election) {
   return twin?.id ?? null;
 }
 
-function possiblePublishedRaceMatches(contest, election) {
+export function possiblePublishedRaceMatches(contest, election) {
   if (!election || contest.kind !== "office") return [];
   return election.statewide_races.filter(
     (race) => comparableOffice(race.office) === comparableOffice(contest.title),
   );
 }
 
-function publishedRaceMatch(contest, election) {
+export function publishedRaceMatch(contest, election) {
   const candidates = sourceCandidateSet(contest);
   const matches = possiblePublishedRaceMatches(contest, election).filter(
     (race) => arraysEqual(publishedCandidateSet(race), candidates),
@@ -314,7 +314,7 @@ export function certifiedIssueText(artifact) {
 // body effectively a unique key. A county whose text differs by one byte
 // deliberately falls through to the loud title refusal rather than being
 // fuzzily matched to the wrong issue.
-function statewideIssueTwinByText(contest, issueText) {
+export function statewideIssueTwinByText(contest, issueText) {
   if (contest.kind !== "issue") return null;
   const body = (contest.issue_text_lines ?? []).join("\n");
   if (body.trim() === "") return null;

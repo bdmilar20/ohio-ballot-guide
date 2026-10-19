@@ -594,13 +594,20 @@ export function assertEnumeration({ countyId, electionKey, tableFound, listed, p
  * snapshot, because a snapshot that silently covers fewer precincts than the
  * county listed looks like coverage and is not.
  */
-export async function ingestCounty({
-  countyId,
-  electionKey,
-  electionId = null,
-  client = createVendorClient(),
-  now = () => new Date(),
-}) {
+/**
+ * Walks the vendor's four opening requests and returns the county's precinct
+ * list: the opening GET, the election autopostback, the "Find Ballots" POST,
+ * and the version gate over the page it answers with.
+ *
+ * Extracted because three callers need exactly this sequence --- the ingest
+ * below, the coverage survey, and the contest survey --- and a second copy of
+ * it is how the statewide-issue generator ended up walking the vendor without
+ * the stamp gate or the enumeration check. Every refusal here is the adapter's
+ * own, including the ones a lighter caller might be tempted to skip: a county
+ * whose precinct table cannot be fully accounted for is not a county anything
+ * should report a number about.
+ */
+export async function openCountyListing({ client, countyId, electionKey }) {
   const slug = vendorSlug(countyId);
   const listing = listingUrl(slug, client.base);
   const first = await client.request(listing);
@@ -638,7 +645,51 @@ export async function ingestCounty({
 
   const enumeration = parsePrecincts(listed.body);
   assertEnumeration({ countyId, electionKey, ...enumeration });
-  const { precincts } = enumeration;
+  return { slug, listing, parsedListing, enumeration, precincts: enumeration.precincts };
+}
+
+/**
+ * Reads one county's first enumerated ballot and nothing else.
+ *
+ * For callers that measure the ballot's shape rather than publish it: one walk
+ * instead of the whole county, at the cost of saying nothing about precincts
+ * other than the one it read. The stamp is re-checked after the walk for the
+ * same reason the ingest does it --- a board editing mid-walk otherwise yields
+ * contests from two versions of the ballot and reports success.
+ */
+export async function readFirstBallot({ client, countyId, electionKey }) {
+  const opened = await openCountyListing({ client, countyId, electionKey });
+  const precinct = opened.precincts[0];
+  if (!precinct) throw new Error(`${countyId}: the precinct list parsed no precincts`);
+  const target = { electionKey, precinctId: precinct.id, style: precinct.vendor_style };
+  const url = accessibleBallotUrl(opened.slug, target, client.base);
+  const contests = await walkBallot({ client, url, countyId, precinct });
+
+  const final = await client.request(opened.listing);
+  if (final.status !== 200) {
+    throw new Error(`${countyId}: re-reading the listing after the ballot walk returned HTTP ${final.status}`);
+  }
+  requireSameStamp(countyId, opened.parsedListing.sourceUpdatedRaw, final.body, "the listing re-read after the ballot walk");
+
+  return {
+    precinct,
+    contests,
+    listing_url: opened.listing,
+    ballot_url: url,
+    precincts_listed: opened.precincts.length,
+    source_updated_at: opened.parsedListing.sourceUpdatedAt.iso,
+  };
+}
+
+export async function ingestCounty({
+  countyId,
+  electionKey,
+  electionId = null,
+  client = createVendorClient(),
+  now = () => new Date(),
+}) {
+  const opened = await openCountyListing({ client, countyId, electionKey });
+  const { slug, listing, parsedListing, enumeration, precincts } = opened;
 
   const ballots = {};
   const seen = new Map();
