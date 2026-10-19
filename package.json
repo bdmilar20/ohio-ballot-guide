@@ -13,6 +13,7 @@
     "project:vtrapp": "node scripts/project-vtrapp.mjs",
     "refresh:vtrapp": "node scripts/refresh-vtrapp.mjs",
     "survey:vtrapp": "node scripts/survey-vtrapp.mjs",
-    "gate:vtrapp": "node scripts/gate-vtrapp.mjs"
+    "gate:vtrapp": "node scripts/gate-vtrapp.mjs",
+    "verify": "node scripts/verify-tip.mjs"
   }
 }

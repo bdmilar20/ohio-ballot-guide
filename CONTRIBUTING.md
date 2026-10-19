@@ -481,8 +481,12 @@ or `complete`, so artifacts from an interrupted multi-county run cannot be
 mistaken for a finished refresh. Successful county snapshots and projections
 are retained even if a later job fails, but `elections.candidate.json` is
 written only after every job succeeds and the normal data validator accepts
-the candidate file. Review its diff against `data/elections.json`; applying
-that diff remains a separate publishing decision. A county refresh preserves
+the candidate file. `summary.json` binds that exact validated file by SHA-256;
+`gate:vtrapp` refuses a missing file, a changed byte, an incomplete summary, or
+a summary that points anywhere outside the fixed candidate filename, and then
+re-runs the canonical data validator against the candidate. Review
+its diff against `data/elections.json`; applying that diff remains a separate
+publishing decision. A county refresh preserves
 the root `meta.last_reviewed` and `meta.coverage_note` values: changing either
 would make a dataset-wide claim that the manifest's county jobs did not
 establish.
@@ -507,3 +511,54 @@ Read [`docs/DESIGN.md`](docs/DESIGN.md) before changing `styles.css` or the page
 structure. It records the standard the guide builds to, including the 12px type
 floor that `npm test` enforces and the rule against a red or blue brand accent
 in an election context.
+
+## Verifying a branch tip before reviewing it
+
+Running the gate in your own checkout tells you about whatever that checkout
+contains, which is not reliably the commit the author named — a fetch, another
+worktree, or one uncommitted edit moves it, and the green result still reads as
+evidence about the tip. Verify the commit itself:
+
+```bash
+npm run verify -- --tip 3115500
+npm run verify -- --tip 3115500 --base origin/main
+```
+
+It resolves the SHA, checks out that commit alone in a throwaway worktree, and
+re-reads `git rev-parse HEAD` **inside that worktree** before believing any
+result from it. Then it checks the tree is clean, the signature verifies, and
+the tip contains `--base`, and runs `npm run check` and `npm test` there. Your
+own working tree is never touched, so it is safe to run mid-change.
+
+The signature step asks `git verify-commit`, not whether `%G?` is `G`. The two
+are different questions: `G` additionally requires the signing key to be in
+*your* machine's trust store, so a perfectly good commit from the other agent
+reads as `U` on your machine. Gating on `G` would reject every clean
+cross-agent review. `verify-commit` accepts `G` and `U` and still rejects a bad
+or absent signature, and the verdict says which of the two you got:
+
+```
+  ok   commit signature is good  signed by 38ffbaaf...; valid, but that key is
+                                 not in this machine's trust store, so compare
+                                 it with the author's
+```
+
+That wording is deliberate. "This commit is signed by key X" and "key X belongs
+to the author" are different claims, and only the first is verifiable here.
+
+The verdict lists all seven checks with their outcomes, including the ones that
+did not run:
+
+```
+  ok   worktree HEAD is that exact commit  3115500cc10ff81...
+  ok   commit signature is good  signed by 38ffbaaf...
+  ?    npm test  (not run)
+```
+
+A `?` is not a pass. Printing only failures is what makes a check that silently
+never ran look like one that held, which is the by-hand mistake this command
+replaces. Exit is nonzero unless all seven are `ok`.
+
+Paste the verdict block into the pull request. It is the whole of "I verified
+this tip," and it names the commit it is about, so a later reader can tell
+whether the review covered the tip they are looking at.

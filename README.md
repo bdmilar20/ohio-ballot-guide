@@ -85,7 +85,9 @@ npm run project:vtrapp -- --snapshot .cache/vtrapp-adams-20261103G.json \
 Once projection decisions have been reviewed, `npm run refresh:vtrapp` runs a
 manifest of counties serially and writes a new review bundle. The bundle keeps
 every source snapshot and projection, a compact change summary, and a validated
-`elections.candidate.json`; it never overwrites `data/elections.json`. See
+`elections.candidate.json`; the summary records the candidate file's SHA-256 so
+the publication gate cannot approve a file altered or mixed in after the
+refresh. It never overwrites `data/elections.json`. See
 [CONTRIBUTING.md](CONTRIBUTING.md#refreshing-reviewed-counties) for the manifest
 format and replay workflow. Reviewed projection decisions are durable inputs in
 `config/vtrapp-<vendor-election>.json`; every generated county already in the

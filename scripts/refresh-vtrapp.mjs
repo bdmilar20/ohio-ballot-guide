@@ -3,6 +3,7 @@
 // a candidate elections file alongside the source snapshots and projections.
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -11,7 +12,18 @@ import { fileURLToPath } from "node:url";
 import { electionIdFromKey, ingestCounty, parseArgs } from "./ingest/vtrapp.mjs";
 import { projectCounty } from "./project-vtrapp.mjs";
 
-export const REFRESH_SCHEMA_VERSION = 1;
+export const REFRESH_MANIFEST_SCHEMA_VERSION = 1;
+export const REFRESH_BUNDLE_SCHEMA_VERSION = 2;
+export const CANDIDATE_ELECTIONS_FILE = "elections.candidate.json";
+
+export function jsonText(value) {
+  return `${JSON.stringify(value, null, 2)}\n`;
+}
+
+export function candidateDigest(text) {
+  invariant(typeof text === "string", "candidate elections content must be text");
+  return `sha256:${createHash("sha256").update(text).digest("hex")}`;
+}
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message);
@@ -32,8 +44,8 @@ export function projectionFilename({ county, election }) {
 export function validateRefreshManifest(manifest) {
   invariant(isRecord(manifest), "refresh manifest must be an object");
   invariant(
-    manifest.schema_version === REFRESH_SCHEMA_VERSION,
-    `refresh manifest schema_version must be ${REFRESH_SCHEMA_VERSION}`,
+    manifest.schema_version === REFRESH_MANIFEST_SCHEMA_VERSION,
+    `refresh manifest schema_version must be ${REFRESH_MANIFEST_SCHEMA_VERSION}`,
   );
   invariant(Array.isArray(manifest.jobs) && manifest.jobs.length > 0, "refresh manifest needs at least one job");
 
@@ -146,10 +158,11 @@ export async function refreshVtrapp({
   return {
     candidate,
     summary: {
-      schema_version: REFRESH_SCHEMA_VERSION,
+      schema_version: REFRESH_BUNDLE_SCHEMA_VERSION,
       status: "complete",
       completed_jobs: jobs.length,
-      candidate_elections_file: "elections.candidate.json",
+      candidate_elections_file: CANDIDATE_ELECTIONS_FILE,
+      candidate_sha256: candidateDigest(jsonText(candidate)),
       jobs,
     },
   };
@@ -160,26 +173,43 @@ async function readJson(path) {
 }
 
 async function writeJson(path, value) {
-  await writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
+  await writeFile(path, jsonText(value));
 }
 
-async function validateCandidate(candidate, projectRoot) {
+function validateCandidateFile(candidatePath, projectRoot) {
+  const result = spawnSync(process.execPath, [
+    join(projectRoot, "scripts", "validate-data.mjs"),
+    candidatePath,
+    join(projectRoot, "data", "locations.json"),
+    join(projectRoot, "data", "offices.json"),
+    join(projectRoot, "data", "county-boards.json"),
+  ], { encoding: "utf8" });
+  const failure =
+    result.error?.message ||
+    result.stderr?.trim() ||
+    result.stdout?.trim() ||
+    `validator exited with ${result.signal ? `signal ${result.signal}` : `status ${result.status}`}`;
+  invariant(
+    result.status === 0,
+    `candidate elections data failed validation: ${failure}`,
+  );
+  return result.stdout.trim();
+}
+
+export async function validateCandidateText(candidateText, projectRoot) {
+  invariant(typeof candidateText === "string", "candidate elections content must be text");
   const directory = await mkdtemp(join(tmpdir(), "vtrapp-refresh-validation-"));
   try {
     const candidatePath = join(directory, "elections.json");
-    await writeJson(candidatePath, candidate);
-    const result = spawnSync(process.execPath, [
-      join(projectRoot, "scripts", "validate-data.mjs"),
-      candidatePath,
-      join(projectRoot, "data", "locations.json"),
-      join(projectRoot, "data", "offices.json"),
-      join(projectRoot, "data", "county-boards.json"),
-    ], { encoding: "utf8" });
-    invariant(result.status === 0, `candidate elections data failed validation: ${result.stderr.trim() || result.stdout.trim()}`);
-    return result.stdout.trim();
+    await writeFile(candidatePath, candidateText);
+    return validateCandidateFile(candidatePath, projectRoot);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+}
+
+async function validateCandidate(candidate, projectRoot) {
+  return validateCandidateText(jsonText(candidate), projectRoot);
 }
 
 async function prepareOutputDirectory(outputDirectory, manifest) {
@@ -192,7 +222,7 @@ async function prepareOutputDirectory(outputDirectory, manifest) {
   }
   await writeJson(join(outputDirectory, "manifest.json"), manifest);
   await writeJson(join(outputDirectory, "status.json"), {
-    schema_version: REFRESH_SCHEMA_VERSION,
+    schema_version: REFRESH_BUNDLE_SCHEMA_VERSION,
     status: "running",
     completed_jobs: [],
   });
@@ -229,7 +259,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
         await writeJson(join(outputDirectory, projectionFilename(job)), projection);
         completedJobs.push(`${job.county}:${job.election}`);
         await writeJson(join(outputDirectory, "status.json"), {
-          schema_version: REFRESH_SCHEMA_VERSION,
+          schema_version: REFRESH_BUNDLE_SCHEMA_VERSION,
           status: "running",
           completed_jobs: completedJobs,
         });
@@ -238,22 +268,22 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
 
     const validation = await validateCandidate(result.candidate, projectRoot);
     result.summary.validation = validation;
-    await writeJson(join(outputDirectory, "elections.candidate.json"), result.candidate);
+    await writeJson(join(outputDirectory, CANDIDATE_ELECTIONS_FILE), result.candidate);
     await writeJson(join(outputDirectory, "summary.json"), result.summary);
     await writeJson(join(outputDirectory, "status.json"), {
-      schema_version: REFRESH_SCHEMA_VERSION,
+      schema_version: REFRESH_BUNDLE_SCHEMA_VERSION,
       status: "complete",
       completed_jobs: completedJobs,
       summary_file: "summary.json",
-      candidate_elections_file: "elections.candidate.json",
+      candidate_elections_file: CANDIDATE_ELECTIONS_FILE,
     });
     console.log(`Wrote complete refresh bundle to ${outputDirectory}: ${completedJobs.length} job(s)`);
   } catch (error) {
     if (outputPrepared) {
       try {
-        await rm(join(outputDirectory, "elections.candidate.json"), { force: true });
+        await rm(join(outputDirectory, CANDIDATE_ELECTIONS_FILE), { force: true });
         await writeJson(join(outputDirectory, "status.json"), {
-          schema_version: REFRESH_SCHEMA_VERSION,
+          schema_version: REFRESH_BUNDLE_SCHEMA_VERSION,
           status: "failed",
           completed_jobs: completedJobs,
           error: error.message,
