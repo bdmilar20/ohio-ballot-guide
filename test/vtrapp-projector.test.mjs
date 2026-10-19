@@ -841,3 +841,33 @@ test("CLI review refuses to project without the certified statewide issue text",
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /absent\.json/);
 });
+
+test("refuses a county issue the title rule recognizes with no mapping and no certified text", () => {
+  // The refusal every county whose ballot text does not match falls back to.
+  // It was reachable but not load-bearing: the only test that exercised it
+  // accepted either this message or the unrelated office-mapping one, so
+  // deleting the refusal left the suite green.
+  const { snapshot, election } = fixture();
+  assert.throws(
+    () => projectCounty(snapshot, election, {
+      maxSourceAgeHours: 24,
+      reviewedAt: "2026-10-16T18:00:00.000Z",
+      officeMappings: { "For County Commissioner": "county-commissioner" },
+      statewideIssueText: {},
+    }),
+    /issue "Issue 3" may duplicate state-issue-3; add an explicit statewide issue mapping/,
+  );
+});
+
+test("refuses a statewide issue mapping that names an issue nobody publishes", () => {
+  const { snapshot, election } = fixture();
+  assert.throws(
+    () => projectCounty(snapshot, election, {
+      maxSourceAgeHours: 24,
+      reviewedAt: "2026-10-16T18:00:00.000Z",
+      officeMappings: { "For County Commissioner": "county-commissioner" },
+      statewideIssueMappings: { "Issue 3": "state-issue-9" },
+    }),
+    /statewide issue mapping for "Issue 3" references unknown issue state-issue-9/,
+  );
+});

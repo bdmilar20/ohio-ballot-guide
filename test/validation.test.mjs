@@ -835,3 +835,16 @@ test("validator recomputes the statewide issue summary", async (t) => {
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /summary must be recomputable/);
 });
+
+test("validator rejects statewide issue text that does not name its generator", async (t) => {
+  // The one hand edit to a generated file that leaves every other field
+  // consistent: rewrite it by hand and claim something else produced it.
+  const result = await validateFixture(t, {
+    statewideIssueText: (data) => {
+      data.meta.generated_by = "scripts/something-else.mjs";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /must name the generator that produced it/);
+});
