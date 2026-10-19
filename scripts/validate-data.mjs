@@ -454,7 +454,11 @@ assert.equal(
   STATEWIDE_ISSUE_SCHEMA_VERSION,
   `statewide issue text must be schema ${STATEWIDE_ISSUE_SCHEMA_VERSION}; re-run npm run generate:statewide-issues`,
 );
-assert.equal(statewideIssueText.meta.generated_by, "scripts/build-statewide-issues.mjs");
+assert.equal(
+  statewideIssueText.meta.generated_by,
+  "scripts/build-statewide-issues.mjs",
+  "statewide issue text must name the generator that produced it, so a hand-written file cannot pass as generated",
+);
 assertDate(statewideIssueText.meta.generated_on, "statewide issue text meta.generated_on");
 assert.equal(statewideIssueText.meta.vendor_base, VENDOR_BASE, "statewide issue text must name the vendor it read");
 assert.equal(
