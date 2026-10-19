@@ -257,6 +257,15 @@ statewide race into county content. The projector calculates freshness again at
 review time, rejects uncertain common parses, and emits a candidate county
 record without editing `data/elections.json`.
 
+Statewide issue identity is generated rather than repeated in every county
+config. `scripts/build-statewide-issues.mjs` reads one ballot from every county
+the coverage survey marks enumerable, learns each published issue body from the
+county headings the title matcher recognizes, and then requires that exact body
+once in every county read. The canonical artifact is not replaced after a
+partial run, a county failure, a duplicate, or a text disagreement. The
+projector uses the resulting exact body as a title-independent backstop;
+`statewide_issue_mappings` remains available only for reviewed source drift.
+
 County records now support `issues[]` alongside `races[]`. Projected records
 carry their source-content fingerprint, and `coverage` records the source
 update time, age at review, review timestamp, and the number of precincts

@@ -40,11 +40,12 @@ function expectedCountyName(location) {
   return location.name.replace(/ County$/, "");
 }
 
-export function validateRefreshConfigs({ configs, electionData, locations, offices }) {
+export function validateRefreshConfigs({ configs, electionData, locations, offices, statewideIssueText }) {
   invariant(Array.isArray(configs), "refresh configs must be an array");
   invariant(isRecord(locations?.counties), "locations data needs a counties object");
   invariant(isRecord(offices?.offices), "offices data needs an offices object");
   invariant(Array.isArray(electionData?.elections), "elections data needs an elections array");
+  invariant(isRecord(statewideIssueText?.issues), "statewide issue text needs an issues object");
 
   const elections = new Map(electionData.elections.map((election) => [election.id, election]));
   const officeIds = new Set(Object.keys(offices.offices));
@@ -100,6 +101,16 @@ export function validateRefreshConfigs({ configs, electionData, locations, offic
         new Set((election.issues ?? []).map(({ id }) => id)),
         `${label} statewide issue`,
       );
+      const mappedStatewideIssues = new Set(Object.values(job.projection.statewide_issue_mappings));
+      for (const issue of election.issues ?? []) {
+        const certified = statewideIssueText.meta?.election?.id === electionId
+          && statewideIssueText.issues[issue.id]?.counties?.includes(job.county);
+        invariant(
+          mappedStatewideIssues.has(issue.id) || certified,
+          `${label} cannot reproduce removal of statewide issue ${issue.id}; ` +
+            "add a reviewed mapping or regenerate certified statewide issue text for this county",
+        );
+      }
 
       const identity = `${electionId}\0${job.county}`;
       const existing = jobs.get(identity);
@@ -146,12 +157,15 @@ export async function loadRefreshConfigs(directory) {
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
   try {
     const projectRoot = fileURLToPath(new URL("..", import.meta.url));
-    const [configDirectory, electionsPath, locationsPath, officesPath] = process.argv.slice(2);
+    const [configDirectory, electionsPath, locationsPath, officesPath, statewideIssuePath] = process.argv.slice(2);
     const result = validateRefreshConfigs({
       configs: await loadRefreshConfigs(resolve(configDirectory ?? join(projectRoot, "config"))),
       electionData: await readJson(resolve(electionsPath ?? join(projectRoot, "data", "elections.json"))),
       locations: await readJson(resolve(locationsPath ?? join(projectRoot, "data", "locations.json"))),
       offices: await readJson(resolve(officesPath ?? join(projectRoot, "data", "offices.json"))),
+      statewideIssueText: await readJson(
+        resolve(statewideIssuePath ?? join(projectRoot, "data", "statewide-issue-text.json")),
+      ),
     });
     console.log(
       `Refresh configs valid: ${result.configs} config(s), ${result.jobs} job(s), ` +

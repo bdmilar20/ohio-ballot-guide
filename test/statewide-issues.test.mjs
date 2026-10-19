@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 import {
@@ -83,6 +84,53 @@ test("refuses to emit an issue whose counties disagree about its text", () => {
   );
 });
 
+test("refuses a different body from a county whose title does not name the issue", () => {
+  // The title matcher cannot see lorain's real heading shape. Agreement among
+  // only the title-matched counties therefore is not statewide agreement.
+  assert.throws(
+    () => resolveStatewideIssues({
+      election,
+      countyIssues: {
+        adams: [issue("Issue 3", { body: CERTIFIED })],
+        lorain: [
+          issue("3 Proposed Constitutional Amendment", {
+            body: ["This proposed amendment would:", "Require something else."],
+          }),
+        ],
+      },
+    }),
+    /do not unanimously print the ballot text of state-issue-3.*lorain/,
+  );
+});
+
+test("refuses certification when a read county carries no copy of the issue", () => {
+  assert.throws(
+    () => resolveStatewideIssues({
+      election,
+      countyIssues: {
+        adams: [issue("Issue 3", { body: CERTIFIED })],
+        lorain: [issue("Proposed Tax Levy", { body: ["A local levy."] })],
+      },
+    }),
+    /do not unanimously print the ballot text of state-issue-3.*lorain/,
+  );
+});
+
+test("refuses to count one county twice when it prints the certified body twice", () => {
+  assert.throws(
+    () => resolveStatewideIssues({
+      election,
+      countyIssues: {
+        adams: [
+          issue("Issue 3", { body: CERTIFIED }),
+          issue("3 Proposed Constitutional Amendment", { body: CERTIFIED }),
+        ],
+      },
+    }),
+    /appears more than once with the certified body in adams/,
+  );
+});
+
 test("refuses to guess the text when no county's title names the issue", () => {
   // Nothing anchors the body to the published issue, so there is nothing to
   // learn. Picking the most widespread issue text would be a guess.
@@ -121,4 +169,16 @@ test("summarizes the weakest issue, not the average", () => {
     identified_by_title_in: 12,
     body_present_in: 40,
   });
+});
+
+test("the generator refuses a partial county limit before touching the network", () => {
+  const result = spawnSync(process.execPath, [
+    new URL("../scripts/build-statewide-issues.mjs", import.meta.url).pathname,
+    "--election", "20261103G",
+    "--limit", "3",
+  ], { encoding: "utf8" });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /--limit cannot produce certified statewide issue text/);
+  assert.equal(result.stdout, "");
 });

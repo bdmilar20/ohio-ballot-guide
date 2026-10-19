@@ -73,6 +73,18 @@ it and [docs/BALLOT_INGESTION.md](docs/BALLOT_INGESTION.md) for the contract it
 is built to — what the source is, where the adapter stops, and why each gate
 fails closed.
 
+Statewide issue identity is generated from agreement across every enumerable
+county instead of copied into each county config. This also talks to the live
+vendor and is run by hand:
+
+```bash
+npm run generate:statewide-issues -- --election 20261103G
+```
+
+The generator refuses to replace `data/statewide-issue-text.json` unless every
+enumerable county responds and prints the same complete body for each published
+statewide issue.
+
 The projector turns a complete snapshot into a review report without editing
 published data. A reviewed config may then emit only content whose complete
 normalized form appears on every enumerated precinct ballot:

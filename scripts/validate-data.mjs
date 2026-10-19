@@ -3,7 +3,12 @@ import { readFile } from "node:fs/promises";
 
 import { normalizeQuery, ZIP_PATTERN } from "../src/lookup.mjs";
 import { OHIO_SCHEDULE_RULES, scheduleFields } from "./build-election-schedule.mjs";
-import { bodyDigest, STATEWIDE_ISSUE_SCHEMA_VERSION } from "./build-statewide-issues.mjs";
+import {
+  bodyDigest,
+  STATEWIDE_ISSUE_SCHEMA_VERSION,
+  summarizeIssues,
+} from "./build-statewide-issues.mjs";
+import { electionIdFromKey, VENDOR_BASE } from "./ingest/vtrapp.mjs";
 import { SURVEY_SCHEMA_VERSION, summarize } from "./survey-vtrapp.mjs";
 import { assertStampLog } from "./vtrapp-stamp-log.mjs";
 
@@ -443,7 +448,7 @@ console.log(
 //   - an entry for an issue data/elections.json does not publish, or a
 //     published issue with no entry, either of which leaves the projector
 //     unable to recognize an amendment it is about to publish twice;
-//   - a count that claims more counties than the run read.
+//   - anything short of exact coverage of every currently enumerable county.
 assert.equal(
   statewideIssueText.meta.schema_version,
   STATEWIDE_ISSUE_SCHEMA_VERSION,
@@ -451,6 +456,18 @@ assert.equal(
 );
 assert.equal(statewideIssueText.meta.generated_by, "scripts/build-statewide-issues.mjs");
 assertDate(statewideIssueText.meta.generated_on, "statewide issue text meta.generated_on");
+assert.equal(statewideIssueText.meta.vendor_base, VENDOR_BASE, "statewide issue text must name the vendor it read");
+assert.equal(
+  electionIdFromKey(statewideIssueText.meta.election.vendor_key),
+  statewideIssueText.meta.election.id,
+  "statewide issue text election id must match its vendor key",
+);
+
+const enumerableCountyIds = Object.entries(coverage.counties)
+  .filter(([, record]) => record.enumerable === true)
+  .map(([countyId]) => countyId)
+  .sort();
+assert.deepEqual(statewideIssueText.meta.failures, {}, "certified statewide issue text cannot contain county failures");
 
 const statewideIssueElection = data.elections.find(
   (election) => election.id === statewideIssueText.meta.election.id,
@@ -464,8 +481,9 @@ assert.deepEqual(
   (statewideIssueElection.issues ?? []).map((issue) => issue.id).sort(),
   `statewide issue text must carry exactly the issues ${statewideIssueElection.id} publishes`,
 );
-
 for (const [issueId, record] of Object.entries(statewideIssueText.issues)) {
+  const publishedIssue = statewideIssueElection.issues.find((issue) => issue.id === issueId);
+  assert.equal(record.label, publishedIssue.label, `${issueId} label must match the published issue`);
   assert.ok(
     typeof record.body_text === "string" && record.body_text.trim() !== "",
     `${issueId} needs non-empty ballot text`,
@@ -475,23 +493,35 @@ for (const [issueId, record] of Object.entries(statewideIssueText.issues)) {
     bodyDigest(record.body_text),
     `${issueId} body_sha256 does not match its own body_text; re-run npm run generate:statewide-issues`,
   );
+  assert.equal(record.counties_read, enumerableCountyIds.length, `${issueId} must read every enumerable county`);
+  assert.equal(record.body_present_in, record.counties_read, `${issueId} ballot text must be unanimous`);
   assert.equal(
     record.counties.length,
     record.body_present_in,
     `${issueId} claims its text is in ${record.body_present_in} counties but lists ${record.counties.length}`,
   );
-  assert.ok(
-    record.body_present_in <= record.counties_read,
-    `${issueId} claims more counties carrying its text than the run read`,
+  for (const countyId of record.counties) {
+    assert.ok(coverage.counties[countyId]?.enumerable, `${issueId} lists non-enumerable or unknown county ${countyId}`);
+  }
+  assert.deepEqual(
+    record.counties,
+    enumerableCountyIds,
+    `${issueId} must list every enumerable county exactly once in sorted order`,
   );
+  assert.ok(record.identified_by_title_in > 0, `${issueId} needs at least one title match to anchor its body`);
   assert.ok(
     record.identified_by_title_in <= record.body_present_in,
     `${issueId} claims the title rule reached more counties than carry the text it learned`,
   );
-  for (const countyId of record.counties) {
-    assert.ok(countyIds.includes(countyId), `${issueId} lists unknown county ${countyId}`);
-  }
 }
+assert.deepEqual(
+  statewideIssueText.meta.summary,
+  summarizeIssues(statewideIssueText.issues, {
+    countiesRead: enumerableCountyIds.length,
+    failures: 0,
+  }),
+  "statewide issue text summary must be recomputable from its issue records",
+);
 
 console.log(
   `Validated statewide issue text generated ${statewideIssueText.meta.generated_on}: ` +

@@ -28,7 +28,7 @@ function fixture() {
               },
             },
             statewide_race_mappings: { "For Governor": "governor" },
-            statewide_issue_mappings: { "Issue 3": "state-issue-3" },
+            statewide_issue_mappings: {},
           },
         }],
       },
@@ -52,6 +52,10 @@ function fixture() {
     },
     locations: { counties: { adams: { name: "Adams County" } } },
     offices: { offices: { "county-commissioner": {} } },
+    statewideIssueText: {
+      meta: { election: { id: "2026-11-03-general" } },
+      issues: { "state-issue-3": { counties: ["adams"] } },
+    },
   };
 }
 
@@ -69,6 +73,7 @@ test("tracked configs cover the published generated counties", async () => {
     electionData: await readJson(new URL("../data/elections.json", import.meta.url)),
     locations: await readJson(new URL("../data/locations.json", import.meta.url)),
     offices: await readJson(new URL("../data/offices.json", import.meta.url)),
+    statewideIssueText: await readJson(new URL("../data/statewide-issue-text.json", import.meta.url)),
   });
   assert.ok(result.generated_counties > 0, "the integration gate must exercise published generated coverage");
   assert.ok(result.jobs >= result.generated_counties);
@@ -81,6 +86,22 @@ test("rejects generated county coverage whose projection decisions were not comm
     () => validateRefreshConfigs(input),
     /2026-11-03-general:adams is generated ballot coverage but has no durable refresh job/,
   );
+});
+
+test("requires each statewide issue removal to be reproducible", () => {
+  const withoutEvidence = fixture();
+  withoutEvidence.statewideIssueText.issues["state-issue-3"].counties = [];
+  assert.throws(
+    () => validateRefreshConfigs(withoutEvidence),
+    /cannot reproduce removal of statewide issue state-issue-3/,
+  );
+
+  // A reviewed mapping remains the escape hatch when a county's ballot text
+  // genuinely differs from the certified statewide body.
+  withoutEvidence.configs[0].manifest.jobs[0].projection.statewide_issue_mappings = {
+    "Issue 3": "state-issue-3",
+  };
+  assert.doesNotThrow(() => validateRefreshConfigs(withoutEvidence));
 });
 
 test("rejects config drift from the office mapping and source age that produced published data", async (t) => {

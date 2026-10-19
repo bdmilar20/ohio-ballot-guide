@@ -775,6 +775,23 @@ test("an explicit statewide issue mapping still decides before the certified tex
   assert.ok(result.removed_statewide_duplicates.some(({ id }) => id === "state-issue-3"));
 });
 
+test("an explicit mapping cannot contradict an exact certified text match", () => {
+  const { snapshot, election } = fixture();
+  election.issues.push({ id: "state-issue-2", label: "State Issue 2" });
+  withRetitledStateIssue(snapshot);
+
+  assert.throws(
+    () => projectCounty(snapshot, election, {
+      maxSourceAgeHours: 24,
+      reviewedAt: "2026-10-16T18:00:00.000Z",
+      officeMappings: { "For County Commissioner": "county-commissioner" },
+      statewideIssueMappings: { "3 Proposed Constitutional Amendment": "state-issue-2" },
+      statewideIssueText: CERTIFIED_ISSUE_TEXT,
+    }),
+    /references state-issue-2 but its certified ballot text identifies state-issue-3/,
+  );
+});
+
 test("projection refuses a statewide issue text that is not an object", () => {
   const { snapshot, election } = fixture();
   assert.throws(

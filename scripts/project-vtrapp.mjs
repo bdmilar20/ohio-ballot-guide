@@ -602,11 +602,20 @@ export function projectCounty(snapshot, election, {
       continue;
     }
 
+    // Compute the text identity before consulting an override. An explicit
+    // mapping remains the escape hatch when the county's text has genuinely
+    // drifted, but it must not be allowed to contradict an exact certified
+    // body match.
+    const issueTwin = statewideIssueTwinByText(entry.contest, statewideIssueText);
     const statewideIssueId = mappingFor(statewideIssueMappings, entry);
     if (statewideIssueId) {
       invariant(
         election.issues.some((issue) => issue.id === statewideIssueId),
         `statewide issue mapping for "${entry.title}" references unknown issue ${statewideIssueId}`,
+      );
+      invariant(
+        !issueTwin || issueTwin === statewideIssueId,
+        `statewide issue mapping for "${entry.title}" references ${statewideIssueId} but its certified ballot text identifies ${issueTwin}`,
       );
       removedStatewide.push({ fingerprint: entry.fingerprint, id: statewideIssueId });
       continue;
@@ -615,7 +624,6 @@ export function projectCounty(snapshot, election, {
     // call this a statewide issue, so it is the last place to catch one. Every
     // county that prints the certified text is resolved here without a hand
     // mapping, which is why onboarding a county no longer needs one.
-    const issueTwin = statewideIssueTwinByText(entry.contest, statewideIssueText);
     if (issueTwin) {
       invariant(
         !entry.possible_statewide_issue_id || entry.possible_statewide_issue_id === issueTwin,

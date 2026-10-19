@@ -74,8 +74,10 @@ export function bodyDigest(body) {
 /**
  * Reads one county's first accessible ballot and returns its issue contests.
  *
- * A county that cannot be read is a finding to record, not a failure of the
- * build: one propagated timeout has killed a whole-state run here before.
+ * A county that cannot be read is recorded while the rest of the state keeps
+ * running, so one timeout does not hide the other findings. The caller still
+ * refuses to replace the certified artifact unless every enumerable county was
+ * read successfully.
  */
 export async function readCountyIssues({ client, countyId, electionKey }) {
   const slug = vendorSlug(countyId);
@@ -135,6 +137,13 @@ export async function readCountyIssues({ client, countyId, electionKey }) {
     await client.pause();
   }
 
+  // The body is evidence only if the county did not replace its election data
+  // while the ballot was being walked. This is the same boundary the full
+  // ingest enforces around a precinct walk.
+  const after = await client.request(listing);
+  if (after.status !== 200) throw new Error(`the post-walk listing returned HTTP ${after.status}`);
+  requireSameStamp(countyId, parsedListing.sourceUpdatedRaw, after.body, "the post-walk listing");
+
   return {
     precinct: precinct.id,
     contests_read: contests.length,
@@ -189,9 +198,26 @@ export function resolveStatewideIssues({ election, countyIssues }) {
     // Counted separately and over every county, including the ones whose title
     // the rule could not read. This is the number that says whether the text is
     // a usable backstop, and it is the reason the artifact exists.
-    const bodyCounties = countiesRead.filter((countyId) =>
-      countyIssues[countyId].some((contest) => issueBodyText(contest) === body),
-    );
+    const bodyCounties = [];
+    const duplicateCounties = [];
+    for (const countyId of countiesRead) {
+      const matching = countyIssues[countyId].filter((contest) => issueBodyText(contest) === body);
+      if (matching.length === 1) bodyCounties.push(countyId);
+      if (matching.length > 1) duplicateCounties.push(countyId);
+    }
+    if (duplicateCounties.length > 0) {
+      throw new Error(
+        `${issue.id} appears more than once with the certified body in ${duplicateCounties.join(",")}; ` +
+          "one county cannot count as independent agreement with itself",
+      );
+    }
+    if (bodyCounties.length !== countiesRead.length) {
+      const missing = countiesRead.filter((countyId) => !bodyCounties.includes(countyId));
+      throw new Error(
+        `counties do not unanimously print the ballot text of ${issue.id}; ` +
+          `missing or different in ${missing.join(",")}`,
+      );
+    }
 
     resolved[issue.id] = {
       label: issue.label,
@@ -222,7 +248,11 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const electionKey = args.election;
   if (!electionKey) throw new Error("--election <vendor key> is required, for example --election 20261103G");
-  const limit = args.limit ? Number(args.limit) : Infinity;
+  if (args.limit !== undefined) {
+    throw new Error(
+      "--limit cannot produce certified statewide issue text; every enumerable county must agree",
+    );
+  }
 
   const coverage = JSON.parse(await readFile(new URL("../data/vtrapp-coverage.json", import.meta.url), "utf8"));
   const elections = JSON.parse(await readFile(new URL("../data/elections.json", import.meta.url), "utf8"));
@@ -233,8 +263,12 @@ async function main() {
 
   const counties = Object.entries(coverage.counties)
     .filter(([, record]) => record.enumerable === true)
-    .map(([countyId]) => countyId)
-    .slice(0, limit);
+    .map(([countyId]) => countyId);
+  if (counties.length !== coverage.meta?.summary?.enumerable) {
+    throw new Error(
+      `coverage summary says ${coverage.meta?.summary?.enumerable} counties are enumerable but lists ${counties.length}`,
+    );
+  }
 
   const client = createVendorClient();
   const countyIssues = {};
@@ -249,6 +283,16 @@ async function main() {
       failures[countyId] = error instanceof VendorTransportError ? `transport: ${error.message}` : error.message;
     }
     await client.pause();
+  }
+
+  if (Object.keys(failures).length > 0) {
+    const detail = Object.entries(failures)
+      .map(([countyId, reason]) => `${countyId}: ${reason}`)
+      .join(" / ");
+    throw new Error(
+      `failed to read ${Object.keys(failures).length} of ${counties.length} enumerable counties; ` +
+        `refusing to replace certified statewide issue text: ${detail}`,
+    );
   }
 
   const resolved = resolveStatewideIssues({ election, countyIssues });

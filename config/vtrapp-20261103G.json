@@ -38,9 +38,7 @@
           }
         },
         "statewide_race_mappings": {},
-        "statewide_issue_mappings": {
-          "Issue 3": "state-issue-3"
-        }
+        "statewide_issue_mappings": {}
       }
     }
   ]

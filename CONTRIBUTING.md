@@ -362,6 +362,24 @@ Parser tests run against captured fixtures in `test/fixtures/vtrapp`, so
 `npm test` never touches the network. Re-capture them only when the vendor's
 markup changes, and say so in the commit.
 
+## Generating statewide issue identity
+
+County boards do not title the same statewide amendment consistently, so the
+projector recognizes one by its complete ballot body as well as by its heading.
+That body is generated from every county the coverage survey marks enumerable:
+
+```bash
+npm run generate:statewide-issues -- --election 20261103G
+```
+
+The command walks one ballot in every enumerable county and replaces
+`data/statewide-issue-text.json` only after every county responds and prints
+exactly one copy of the same body for each published statewide issue. It refuses
+partial runs, transport failures, missing issues, duplicate copies, and any
+one-byte disagreement. Review the generated diff and run `npm run check`; the
+validator independently requires the artifact to cover the current enumerable
+county set with zero failures.
+
 ## Reviewing and projecting a ballot snapshot
 
 The projector never edits `data/elections.json`. First, create a review report
@@ -383,7 +401,8 @@ Candidate and contest position may rotate between precincts, so the report's
 `observed_choice_orders` and `observed_positions` retain that evidence while a
 single fingerprint joins the same office across precincts. To emit a candidate
 county record, pass a JSON config with an explicit freshness limit, office
-mappings, and mappings for races or issues already published statewide.
+mappings, and explicit overrides only where source content does not match the
+generated statewide identity.
 Mapping keys may be a report fingerprint or contest title; use fingerprints
 when same-title contests need different statewide mappings.
 
@@ -400,9 +419,7 @@ when same-title contests need different statewide mappings.
   "statewide_race_mappings": {
     "For United States Senator": "us-senate"
   },
-  "statewide_issue_mappings": {
-    "Issue 3": "state-issue-3"
-  }
+  "statewide_issue_mappings": {}
 }
 ```
 
@@ -461,9 +478,7 @@ tracked in `config/vtrapp-20261103G.json`.
           }
         },
         "statewide_race_mappings": {},
-        "statewide_issue_mappings": {
-          "Issue 3": "state-issue-3"
-        }
+        "statewide_issue_mappings": {}
       }
     }
   ]
