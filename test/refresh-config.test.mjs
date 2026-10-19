@@ -44,7 +44,7 @@ function fixture() {
               method: "common_to_all_precincts",
               source_age_hours_at_review: 143,
             },
-            races: [{ office_id: "county-commissioner" }],
+            races: [{ office_id: "county-commissioner", office: "County Commissioner" }],
             issues: [],
           },
         },
@@ -93,6 +93,13 @@ test("rejects config drift from the office mapping and source age that produced 
       },
     };
     input.offices.offices["county-auditor"] = {};
+    assert.throws(() => validateRefreshConfigs(input), /durable job cannot reproduce that mapping/);
+  });
+
+  await t.test("published office label drift", () => {
+    const input = fixture();
+    input.configs[0].manifest.jobs[0].projection.office_mappings["For County Commissioner"].office =
+      "County Commissioner (changed)";
     assert.throws(() => validateRefreshConfigs(input), /durable job cannot reproduce that mapping/);
   });
 

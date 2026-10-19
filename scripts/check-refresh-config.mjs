@@ -17,15 +17,15 @@ function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function officeMappingId(mapping, label) {
+function normalizedOfficeMapping(source, mapping, label) {
   if (typeof mapping === "string") {
     invariant(mapping, `${label} must name an office id`);
-    return mapping;
+    return { officeId: mapping, office: source.replace(/^For\s+/i, "") };
   }
   invariant(isRecord(mapping), `${label} must be an office id or an object`);
   invariant(typeof mapping.office_id === "string" && mapping.office_id, `${label} needs office_id`);
   invariant(typeof mapping.office === "string" && mapping.office, `${label} needs the published office label`);
-  return mapping.office_id;
+  return { officeId: mapping.office_id, office: mapping.office };
 }
 
 function validateTargetMappings(mappings, targets, label) {
@@ -78,12 +78,16 @@ export function validateRefreshConfigs({ configs, electionData, locations, offic
         invariant(isRecord(job.projection[field]), `${label} must explicitly record ${field}`);
       }
 
-      const mappedOfficeIds = new Set();
+      const mappedOffices = new Set();
       for (const [source, mapping] of Object.entries(job.projection.office_mappings)) {
         invariant(source, `${label} has an empty office source identity`);
-        const officeId = officeMappingId(mapping, `${label} office mapping ${JSON.stringify(source)}`);
+        const { officeId, office } = normalizedOfficeMapping(
+          source,
+          mapping,
+          `${label} office mapping ${JSON.stringify(source)}`,
+        );
         invariant(officeIds.has(officeId), `${label} office mapping ${JSON.stringify(source)} targets missing office ${JSON.stringify(officeId)}`);
-        mappedOfficeIds.add(officeId);
+        mappedOffices.add(`${officeId}\0${office}`);
       }
 
       validateTargetMappings(
@@ -100,7 +104,7 @@ export function validateRefreshConfigs({ configs, electionData, locations, offic
       const identity = `${electionId}\0${job.county}`;
       const existing = jobs.get(identity);
       invariant(!existing, `${label} duplicates the durable job in ${existing?.configName}`);
-      jobs.set(identity, { configName: config.name, job, mappedOfficeIds });
+      jobs.set(identity, { configName: config.name, job, mappedOffices });
     }
   }
 
@@ -118,7 +122,7 @@ export function validateRefreshConfigs({ configs, electionData, locations, offic
       );
       for (const race of county.races ?? []) {
         invariant(
-          durable.mappedOfficeIds.has(race.office_id),
+          durable.mappedOffices.has(`${race.office_id}\0${race.office}`),
           `${label} publishes office ${JSON.stringify(race.office_id)} but its durable job cannot reproduce that mapping`,
         );
       }
