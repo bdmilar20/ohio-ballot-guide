@@ -277,3 +277,62 @@ test("CLI refuses an existing output directory without changing it", async (t) =
   assert.match(result.stderr, /output directory already exists/);
   assert.equal(await readFile(statusPath, "utf8"), "owner data\n");
 });
+
+// A county ballot carrying the published statewide amendment under a title the
+// matcher does not recognize --- the lorain/tuscarawas shape, measured in 2 of
+// the 70 enumerable counties.
+function snapshotWithRetitledStateIssue(countyId) {
+  const base = snapshot(countyId);
+  const [ballot] = Object.values(base.ballots);
+  ballot.contests.push({
+    order: 3,
+    kind: "issue",
+    title: "3 Proposed Constitutional Amendment",
+    subtitles: [],
+    instructions: [],
+    vote_for: null,
+    issue_text_lines: ["Statewide amendment text"],
+    choices: [
+      { name: "YES", party: null, write_in: false, raw_lines: ["YES"] },
+      { name: "NO", party: null, write_in: false, raw_lines: ["NO"] },
+    ],
+    allows_write_in: false,
+    source_url: "https://example.gov/ballot",
+    raw: { heading_lines: ["3 Proposed Constitutional Amendment"], choice_lines: [["YES"], ["NO"]] },
+    uncertain: [],
+  });
+  const id = ballotId(ballot.contests);
+  base.ballots = { [id]: ballot };
+  base.precincts = [{ id: "01____1", ballot_id: id }];
+  return base;
+}
+
+test("a refresh resolves a retitled statewide issue from the certified text it is given", async () => {
+  // The pipeline, not just the projector: a refresh that did not pass the
+  // certified text through would publish the amendment as county content with
+  // every unit test still green.
+  const input = electionData();
+  input.elections[0].issues = [{ id: "state-issue-3", label: "State Issue 3" }];
+
+  const withoutText = await refreshVtrapp({
+    manifest: manifest(["adams"]),
+    electionData: structuredClone(input),
+    now: () => new Date("2026-10-16T18:00:00.000Z"),
+    ingest: async ({ countyId }) => snapshotWithRetitledStateIssue(countyId),
+  });
+  assert.deepEqual(
+    withoutText.candidate.elections[0].counties.adams.issues.map(({ label }) => label),
+    ["3 Proposed Constitutional Amendment"],
+    "with no certified text the statewide amendment becomes county content",
+  );
+
+  const result = await refreshVtrapp({
+    manifest: manifest(["adams"]),
+    electionData: structuredClone(input),
+    statewideIssueText: { "state-issue-3": "Statewide amendment text" },
+    now: () => new Date("2026-10-16T18:00:00.000Z"),
+    ingest: async ({ countyId }) => snapshotWithRetitledStateIssue(countyId),
+  });
+  assert.deepEqual(result.candidate.elections[0].counties.adams.issues, []);
+  assert.deepEqual(result.summary.jobs[0].removed_statewide_duplicates, ["governor", "state-issue-3"]);
+});

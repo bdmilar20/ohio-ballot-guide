@@ -24,6 +24,7 @@ async function validateFixture(
     countyBoards = () => {},
     coverage = () => {},
     stampLog = () => {},
+    statewideIssueText = () => {},
   },
 ) {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "ohio-ballot-guide-"));
@@ -35,12 +36,14 @@ async function validateFixture(
   const countyBoardData = await readData("county-boards.json");
   const coverageData = await readData("vtrapp-coverage.json");
   const stampLogData = await readData("vtrapp-stamp-log.json");
+  const statewideIssueTextData = await readData("statewide-issue-text.json");
   elections(electionData);
   locations(locationData);
   offices(officeData);
   countyBoards(countyBoardData);
   coverage(coverageData);
   stampLog(stampLogData);
+  statewideIssueText(statewideIssueTextData);
 
   const electionFixture = join(temporaryDirectory, "elections.json");
   const locationFixture = join(temporaryDirectory, "locations.json");
@@ -48,16 +51,30 @@ async function validateFixture(
   const countyBoardFixture = join(temporaryDirectory, "county-boards.json");
   const coverageFixture = join(temporaryDirectory, "vtrapp-coverage.json");
   const stampLogFixture = join(temporaryDirectory, "vtrapp-stamp-log.json");
+  const statewideIssueTextFixture = join(temporaryDirectory, "statewide-issue-text.json");
   await writeFile(electionFixture, JSON.stringify(electionData));
   await writeFile(locationFixture, JSON.stringify(locationData));
   await writeFile(officeFixture, JSON.stringify(officeData));
   await writeFile(countyBoardFixture, JSON.stringify(countyBoardData));
   await writeFile(coverageFixture, JSON.stringify(coverageData));
   await writeFile(stampLogFixture, JSON.stringify(stampLogData));
+  await writeFile(statewideIssueTextFixture, JSON.stringify(statewideIssueTextData));
 
   return spawnSync(
     process.execPath,
-    [validator, electionFixture, locationFixture, officeFixture, countyBoardFixture, coverageFixture, stampLogFixture],
+    // Every generated file the validator reads has to arrive as a fixture. A
+    // path left off this list makes the checks over it read the real committed
+    // data, so they pass whatever the test does and can never be exercised.
+    [
+      validator,
+      electionFixture,
+      locationFixture,
+      officeFixture,
+      countyBoardFixture,
+      coverageFixture,
+      stampLogFixture,
+      statewideIssueTextFixture,
+    ],
     { encoding: "utf8" },
   );
 }
@@ -665,4 +682,121 @@ test("validator rejects a coverage artifact from an older survey schema", async 
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /re-run npm run survey:vtrapp/);
+});
+
+// data/statewide-issue-text.json is generated, and the checks over it exist
+// because the projector now resolves a statewide issue by comparing a county
+// contest to this text. A wrong entry publishes a statewide amendment as one
+// county's own content, or suppresses a genuine local issue.
+test("validator rejects statewide issue text whose digest does not match its body", async (t) => {
+  const result = await validateFixture(t, {
+    statewideIssueText: (data) => {
+      data.issues["state-issue-3"].body_text += " and one more sentence.";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /body_sha256 does not match its own body_text/);
+});
+
+test("validator rejects statewide issue text that omits a published issue", async (t) => {
+  const result = await validateFixture(t, {
+    statewideIssueText: (data) => delete data.issues["state-issue-3"],
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /must carry exactly the issues/);
+});
+
+test("validator rejects statewide issue text for an issue nobody publishes", async (t) => {
+  const result = await validateFixture(t, {
+    statewideIssueText: (data) => {
+      data.issues["state-issue-9"] = structuredClone(data.issues["state-issue-3"]);
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /must carry exactly the issues/);
+});
+
+test("validator rejects statewide issue text with empty ballot text", async (t) => {
+  // An empty body would match every other empty-bodied contest the projector
+  // compares against it.
+  const result = await validateFixture(t, {
+    statewideIssueText: (data) => {
+      const record = data.issues["state-issue-3"];
+      record.body_text = "   ";
+      record.body_sha256 = null;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /needs non-empty ballot text/);
+});
+
+test("validator rejects a county count that disagrees with the county list", async (t) => {
+  const result = await validateFixture(t, {
+    statewideIssueText: (data) => data.issues["state-issue-3"].counties.pop(),
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /but lists/);
+});
+
+test("validator rejects statewide issue text claiming more counties than were read", async (t) => {
+  const result = await validateFixture(t, {
+    statewideIssueText: (data) => {
+      data.issues["state-issue-3"].counties_read = 2;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /claims more counties carrying its text than the run read/);
+});
+
+test("validator rejects a title reach larger than the text reach", async (t) => {
+  // identified_by_title_in counts a subset of body_present_in by construction,
+  // so the reverse means the counting is wrong and the measured 68-of-70 gap
+  // this whole artifact exists for cannot be trusted.
+  const result = await validateFixture(t, {
+    statewideIssueText: (data) => {
+      data.issues["state-issue-3"].identified_by_title_in = data.issues["state-issue-3"].body_present_in + 1;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /claims the title rule reached more counties/);
+});
+
+test("validator rejects statewide issue text that lists an unknown county", async (t) => {
+  const result = await validateFixture(t, {
+    statewideIssueText: (data) => {
+      data.issues["state-issue-3"].counties[0] = "nothing";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /lists unknown county nothing/);
+});
+
+test("validator rejects statewide issue text generated by an older schema", async (t) => {
+  const result = await validateFixture(t, {
+    statewideIssueText: (data) => {
+      data.meta.schema_version += 1;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /re-run npm run generate:statewide-issues/);
+});
+
+test("validator rejects statewide issue text for an election that is not published", async (t) => {
+  const result = await validateFixture(t, {
+    statewideIssueText: (data) => {
+      data.meta.election.id = "1999-11-02-general";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /which is not published/);
 });

@@ -10,7 +10,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { electionIdFromKey, ingestCounty, parseArgs } from "./ingest/vtrapp.mjs";
-import { projectCounty } from "./project-vtrapp.mjs";
+import { certifiedIssueText, projectCounty } from "./project-vtrapp.mjs";
 
 export const REFRESH_MANIFEST_SCHEMA_VERSION = 1;
 export const REFRESH_BUNDLE_SCHEMA_VERSION = 2;
@@ -83,12 +83,13 @@ function countCounty(county) {
   };
 }
 
-function projectionOptions(job, reviewedAt) {
+function projectionOptions(job, reviewedAt, statewideIssueText) {
   return {
     maxSourceAgeHours: job.projection.max_source_age_hours,
     officeMappings: job.projection.office_mappings,
     statewideRaceMappings: job.projection.statewide_race_mappings,
     statewideIssueMappings: job.projection.statewide_issue_mappings,
+    statewideIssueText,
     countyName: job.projection.county_name,
     reviewedAt,
   };
@@ -102,6 +103,7 @@ function projectionOptions(job, reviewedAt) {
 export async function refreshVtrapp({
   manifest,
   electionData,
+  statewideIssueText = {},
   ingest = ({ countyId, electionKey, electionId }) => ingestCounty({ countyId, electionKey, electionId }),
   now = () => new Date(),
   onSnapshot = async () => {},
@@ -130,7 +132,7 @@ export async function refreshVtrapp({
     const reviewedAtValue = now();
     const reviewedAt = reviewedAtValue instanceof Date ? reviewedAtValue : new Date(reviewedAtValue);
     invariant(Number.isFinite(reviewedAt.getTime()), `${job.county}: refresh clock returned an invalid time`);
-    const projection = projectCounty(snapshot, election, projectionOptions(job, reviewedAt));
+    const projection = projectCounty(snapshot, election, projectionOptions(job, reviewedAt, statewideIssueText));
     const before = structuredClone(election.counties?.[job.county] ?? { races: [], issues: [] });
     election.counties ??= {};
     election.counties[job.county] = structuredClone(projection.county);
@@ -241,6 +243,11 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
     const manifest = validateRefreshManifest(await readJson(resolve(args.manifest)));
     const electionPath = resolve(args.elections ?? join(projectRoot, "data", "elections.json"));
     const electionData = await readJson(electionPath);
+    // Required, not optional. A refresh that ran without the certified issue
+    // text would lose the backstop that keeps a statewide amendment a county
+    // titles unusually from being published as that county's own content.
+    const issueTextPath = resolve(args["issue-text"] ?? join(projectRoot, "data", "statewide-issue-text.json"));
+    const statewideIssueText = certifiedIssueText(await readJson(issueTextPath));
     const snapshotsDirectory = args.snapshots ? resolve(args.snapshots) : null;
     outputDirectory = resolve(args.out);
     await prepareOutputDirectory(outputDirectory, manifest);
@@ -253,6 +260,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
     const result = await refreshVtrapp({
       manifest,
       electionData,
+      statewideIssueText,
       ingest,
       onSnapshot: ({ job, snapshot }) => writeJson(join(outputDirectory, snapshotFilename(job)), snapshot),
       onProjection: async ({ job, projection }) => {

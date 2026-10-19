@@ -8,6 +8,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { ballotId, parseArgs, SCHEMA_VERSION as SNAPSHOT_SCHEMA_VERSION } from "./ingest/vtrapp.mjs";
 
@@ -262,12 +263,67 @@ function publishedRaceMatch(contest, election) {
   return matches[0]?.id ?? null;
 }
 
-function possiblePublishedIssueMatch(contest, election) {
+// Exported so the statewide-issue generator can identify the published issue a
+// county contest belongs to using this exact rule rather than a second copy of
+// it. A copy would drift, and the drift would read as agreement.
+export function possiblePublishedIssueMatch(contest, election) {
   if (!election || contest.kind !== "issue") return null;
   const title = comparable(contest.title).replace(/^state /, "");
   const matches = election.issues.filter((issue) => comparable(issue.label).replace(/^state /, "") === title);
   invariant(matches.length <= 1, `contest "${contest.title}" matches multiple published statewide issues`);
   return matches[0]?.id ?? null;
+}
+
+/**
+ * Reduces the generated statewide-issue artifact to the only thing the
+ * projector needs from it: the certified ballot text of each published issue.
+ *
+ * The artifact is written by scripts/build-statewide-issues.mjs, which learns
+ * that text from the counties printing it and refuses to emit an issue its
+ * counties disagree about.
+ */
+export function certifiedIssueText(artifact) {
+  invariant(
+    artifact?.issues && typeof artifact.issues === "object" && !Array.isArray(artifact.issues),
+    "a statewide issue text artifact needs an issues object",
+  );
+  return Object.fromEntries(
+    Object.entries(artifact.issues).map(([id, record]) => {
+      invariant(
+        typeof record?.body_text === "string" && record.body_text.trim() !== "",
+        `statewide issue ${id} needs non-empty certified ballot text`,
+      );
+      return [id, record.body_text];
+    }),
+  );
+}
+
+// The issue counterpart of statewideTwinByCandidates, and it exists for the
+// same reason: possiblePublishedIssueMatch compares the contest TITLE to the
+// published label, and the title is typed by each county. Two of the seventy
+// enumerable counties title the November 2026 amendment "3 Proposed
+// Constitutional Amendment" rather than "Issue 3", so the title rule does not
+// see it --- and an unrecognized statewide issue is published as that county's
+// own, showing a voter the same amendment twice.
+//
+// So the question is asked again without consulting the title: a contest that
+// prints the certified ballot text of a published issue IS that issue. The
+// comparison is exact, with no normalization, because that is what was
+// measured --- all 70 counties carry the November 2026 amendment's 1139-char
+// body byte-identically, and 138 distinct issue bodies statewide make a full
+// body effectively a unique key. A county whose text differs by one byte
+// deliberately falls through to the loud title refusal rather than being
+// fuzzily matched to the wrong issue.
+function statewideIssueTwinByText(contest, issueText) {
+  if (contest.kind !== "issue") return null;
+  const body = (contest.issue_text_lines ?? []).join("\n");
+  if (body.trim() === "") return null;
+  const matches = Object.entries(issueText).filter(([, certified]) => certified === body);
+  invariant(
+    matches.length <= 1,
+    `contest "${contest.title}" prints the certified text of ${matches.map(([id]) => id).join(" and ")}`,
+  );
+  return matches[0]?.[0] ?? null;
 }
 
 function presentedChoiceOrder(contest) {
@@ -468,6 +524,7 @@ export function projectCounty(snapshot, election, {
   officeMappings = {},
   statewideRaceMappings = {},
   statewideIssueMappings = {},
+  statewideIssueText = {},
   countyName = displayCounty(snapshot.county.id),
   reviewedAt = new Date(),
 } = {}) {
@@ -484,6 +541,10 @@ export function projectCounty(snapshot, election, {
   invariant(
     statewideIssueMappings && typeof statewideIssueMappings === "object" && !Array.isArray(statewideIssueMappings),
     "statewideIssueMappings must be an object",
+  );
+  invariant(
+    statewideIssueText && typeof statewideIssueText === "object" && !Array.isArray(statewideIssueText),
+    "statewideIssueText must be an object",
   );
   const reviewedAtInstant = reviewedAt instanceof Date ? reviewedAt.getTime() : Date.parse(reviewedAt);
   invariant(Number.isFinite(reviewedAtInstant), "reviewedAt must be a valid timestamp");
@@ -550,6 +611,19 @@ export function projectCounty(snapshot, election, {
       removedStatewide.push({ fingerprint: entry.fingerprint, id: statewideIssueId });
       continue;
     }
+    // Reached only once the title check and the config have both declined to
+    // call this a statewide issue, so it is the last place to catch one. Every
+    // county that prints the certified text is resolved here without a hand
+    // mapping, which is why onboarding a county no longer needs one.
+    const issueTwin = statewideIssueTwinByText(entry.contest, statewideIssueText);
+    if (issueTwin) {
+      invariant(
+        !entry.possible_statewide_issue_id || entry.possible_statewide_issue_id === issueTwin,
+        `issue "${entry.title}" is titled as ${entry.possible_statewide_issue_id} but prints the certified ballot text of ${issueTwin}`,
+      );
+      removedStatewide.push({ fingerprint: entry.fingerprint, id: issueTwin });
+      continue;
+    }
     invariant(
       !entry.possible_statewide_issue_id,
       `issue "${entry.title}" may duplicate ${entry.possible_statewide_issue_id}; add an explicit statewide issue mapping`,
@@ -610,11 +684,17 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
     if (args.config) {
       invariant(election, `election ${snapshot.election.id} is absent from --elections data`);
       const config = await readJson(args.config);
+      // Read rather than defaulted to empty: an absent artifact silently
+      // removes the backstop, and "silently" is how the duplicate it prevents
+      // reaches a voter.
+      const issueTextPath = args["issue-text"]
+        ?? fileURLToPath(new URL("../data/statewide-issue-text.json", import.meta.url));
       artifact = projectCounty(snapshot, election, {
         maxSourceAgeHours: config.max_source_age_hours,
         officeMappings: config.office_mappings,
         statewideRaceMappings: config.statewide_race_mappings,
         statewideIssueMappings: config.statewide_issue_mappings,
+        statewideIssueText: certifiedIssueText(await readJson(issueTextPath)),
         countyName: config.county_name,
       });
     }

@@ -9,6 +9,7 @@ import { ballotId, SCHEMA_VERSION as SNAPSHOT_SCHEMA_VERSION } from "../scripts/
 import {
   analyzeSnapshot,
   assertCompleteSnapshot,
+  certifiedIssueText,
   contestContentId,
   PROJECTION_SCHEMA_VERSION,
   projectCounty,
@@ -474,12 +475,19 @@ test("CLI writes a reviewed projection without editing election data", async (t)
     },
     statewide_issue_mappings: { "Issue 3": "state-issue-3" },
   }));
+  // Passed as a fixture rather than left to the committed default, so this
+  // test exercises the fixture's certified text and not the real state's.
+  const issueTextPath = join(directory, "statewide-issue-text.json");
+  await writeFile(issueTextPath, JSON.stringify({
+    issues: { "state-issue-3": { body_text: "Statewide amendment text" } },
+  }));
 
   const result = spawnSync(process.execPath, [
     new URL("../scripts/project-vtrapp.mjs", import.meta.url).pathname,
     "--snapshot", snapshotPath,
     "--elections", electionsPath,
     "--config", configPath,
+    "--issue-text", issueTextPath,
     "--out", outputPath,
   ], { encoding: "utf8" });
 
@@ -625,4 +633,194 @@ test("refuses county content whose candidates are a statewide race under another
     }),
     /lists the same candidates as statewide race governor/,
   );
+});
+
+// The certified text of the fixture's published statewide issue, as the
+// generator would have learned it from the counties printing it.
+const CERTIFIED_ISSUE_TEXT = { "state-issue-3": "Statewide amendment text" };
+
+// Retitles the fixture's statewide issue the way lorain and tuscarawas do, so
+// that possiblePublishedIssueMatch stops recognizing it.
+function withRetitledStateIssue(snapshot, title = "3 Proposed Constitutional Amendment") {
+  for (const ballot of Object.values(snapshot.ballots)) {
+    const stateIssue = ballot.contests.find(({ order }) => order === 3);
+    stateIssue.title = title;
+    stateIssue.subtitles = [];
+    stateIssue.raw.heading_lines = [title];
+  }
+  rehashSnapshot(snapshot);
+  return snapshot;
+}
+
+test("resolves a statewide issue a county titles unrecognizably by its certified ballot text", () => {
+  // Measured over all 70 enumerable counties: 68 title the November 2026
+  // amendment so the title rule reads it, 2 (lorain, tuscarawas) fold
+  // "Proposed Constitutional Amendment" into the title and it does not. The
+  // title path's failure is silent --- possible_statewide_issue_id goes empty,
+  // which reads as "not statewide" rather than "do not know" --- and the issue
+  // path has no candidate list to fall back on the way the race path does.
+  const { snapshot, election } = fixture();
+  withRetitledStateIssue(snapshot);
+
+  // The title check really has given up, and without the backstop the
+  // amendment publishes as Adams county content: the bug, reproduced.
+  const review = analyzeSnapshot(snapshot, election);
+  const retitled = review.common_to_all_precincts.find(({ order }) => order === 3)
+    ?? review.common_to_all_precincts.find(({ title }) => title.startsWith("3 Proposed"));
+  assert.equal(retitled.possible_statewide_issue_id, null);
+
+  const options = {
+    maxSourceAgeHours: 24,
+    reviewedAt: "2026-10-16T18:00:00.000Z",
+    officeMappings: { "For County Commissioner": "county-commissioner" },
+  };
+  const unprotected = projectCounty(snapshot, election, options);
+  assert.deepEqual(
+    unprotected.county.issues.map(({ label }) => label).sort(),
+    ["3 Proposed Constitutional Amendment", "Proposed Tax Levy (Additional)"],
+    "without the certified text the statewide amendment is published twice",
+  );
+
+  const result = projectCounty(snapshot, election, {
+    ...options,
+    statewideIssueText: CERTIFIED_ISSUE_TEXT,
+  });
+  assert.deepEqual(result.county.issues.map(({ label }) => label), ["Proposed Tax Levy (Additional)"]);
+  assert.ok(result.removed_statewide_duplicates.some(({ id }) => id === "state-issue-3"));
+});
+
+test("keeps publishing a local issue whose ballot text is nobody else's", () => {
+  // The backstop must not swallow county content. The levy is the reason the
+  // comparison is exact rather than fuzzy.
+  const { snapshot, election } = fixture();
+  const result = projectCounty(snapshot, election, {
+    maxSourceAgeHours: 24,
+    reviewedAt: "2026-10-16T18:00:00.000Z",
+    officeMappings: { "For County Commissioner": "county-commissioner" },
+    statewideIssueMappings: { "Issue 3": "state-issue-3" },
+    statewideIssueText: CERTIFIED_ISSUE_TEXT,
+  });
+  assert.deepEqual(result.county.issues.map(({ label }) => label), ["Proposed Tax Levy (Additional)"]);
+});
+
+test("refuses a contest titled as one published issue that prints another's text", () => {
+  // Title and text disagreeing is not something to resolve by preferring one:
+  // either the published data or the county's ballot is wrong, and a human has
+  // to look. Resolving it silently would suppress or duplicate an amendment.
+  const { snapshot, election } = fixture();
+  election.issues = [
+    { id: "state-issue-3", label: "State Issue 3" },
+    { id: "state-issue-2", label: "State Issue 2" },
+  ];
+  assert.throws(
+    () => projectCounty(snapshot, election, {
+      maxSourceAgeHours: 24,
+      reviewedAt: "2026-10-16T18:00:00.000Z",
+      officeMappings: { "For County Commissioner": "county-commissioner" },
+      statewideIssueText: { "state-issue-2": "Statewide amendment text" },
+    }),
+    /titled as state-issue-3 but prints the certified ballot text of state-issue-2/,
+  );
+});
+
+test("refuses certified text that two published issues share", () => {
+  // Two issues with the same body would make the key ambiguous, and picking
+  // the first would attribute a county's issue to the wrong amendment.
+  const { snapshot, election } = fixture();
+  withRetitledStateIssue(snapshot);
+  assert.throws(
+    () => projectCounty(snapshot, election, {
+      maxSourceAgeHours: 24,
+      reviewedAt: "2026-10-16T18:00:00.000Z",
+      officeMappings: { "For County Commissioner": "county-commissioner" },
+      statewideIssueText: {
+        "state-issue-3": "Statewide amendment text",
+        "state-issue-4": "Statewide amendment text",
+      },
+    }),
+    /prints the certified text of state-issue-3 and state-issue-4/,
+  );
+});
+
+test("never matches an empty ballot text to a published issue", () => {
+  // An empty body matches every other empty body. The generator refuses to
+  // emit one, and the projector refuses to compare one, because either side
+  // alone would be enough to suppress a county issue the parser read thinly.
+  const { snapshot, election } = fixture();
+  for (const ballot of Object.values(snapshot.ballots)) {
+    ballot.contests.find(({ order }) => order === 4).issue_text_lines = [];
+  }
+  rehashSnapshot(snapshot);
+
+  const result = projectCounty(snapshot, election, {
+    maxSourceAgeHours: 24,
+    reviewedAt: "2026-10-16T18:00:00.000Z",
+    officeMappings: { "For County Commissioner": "county-commissioner" },
+    statewideIssueMappings: { "Issue 3": "state-issue-3" },
+    statewideIssueText: { "state-issue-3": "" },
+  });
+  assert.deepEqual(result.county.issues.map(({ label }) => label), ["Proposed Tax Levy (Additional)"]);
+});
+
+test("an explicit statewide issue mapping still decides before the certified text", () => {
+  const { snapshot, election } = fixture();
+  withRetitledStateIssue(snapshot);
+  const result = projectCounty(snapshot, election, {
+    maxSourceAgeHours: 24,
+    reviewedAt: "2026-10-16T18:00:00.000Z",
+    officeMappings: { "For County Commissioner": "county-commissioner" },
+    statewideIssueMappings: { "3 Proposed Constitutional Amendment": "state-issue-3" },
+    statewideIssueText: {},
+  });
+  assert.ok(result.removed_statewide_duplicates.some(({ id }) => id === "state-issue-3"));
+});
+
+test("projection refuses a statewide issue text that is not an object", () => {
+  const { snapshot, election } = fixture();
+  assert.throws(
+    () => projectCounty(snapshot, election, {
+      maxSourceAgeHours: 24,
+      reviewedAt: "2026-10-16T18:00:00.000Z",
+      statewideIssueText: [],
+    }),
+    /statewideIssueText must be an object/,
+  );
+});
+
+test("certifiedIssueText reduces the generated artifact and refuses a damaged one", () => {
+  assert.deepEqual(
+    certifiedIssueText({ issues: { "state-issue-3": { body_text: "text", body_sha256: "sha256:unused" } } }),
+    { "state-issue-3": "text" },
+  );
+  assert.throws(() => certifiedIssueText({}), /needs an issues object/);
+  assert.throws(() => certifiedIssueText({ issues: [] }), /needs an issues object/);
+  assert.throws(
+    () => certifiedIssueText({ issues: { "state-issue-3": { body_text: "  " } } }),
+    /state-issue-3 needs non-empty certified ballot text/,
+  );
+});
+
+test("CLI review refuses to project without the certified statewide issue text", async (t) => {
+  // Defaulting to no text would remove the backstop silently, which is the way
+  // the duplicate it prevents reaches a voter.
+  const directory = await mkdtemp(join(tmpdir(), "vtrapp-projector-no-issue-text-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const { snapshot, election } = fixture();
+  const snapshotPath = join(directory, "snapshot.json");
+  const electionsPath = join(directory, "elections.json");
+  const configPath = join(directory, "config.json");
+  await writeFile(snapshotPath, JSON.stringify(snapshot));
+  await writeFile(electionsPath, JSON.stringify({ elections: [election] }));
+  await writeFile(configPath, JSON.stringify({ max_source_age_hours: 24, county_name: "Adams" }));
+
+  const result = spawnSync(process.execPath, [
+    new URL("../scripts/project-vtrapp.mjs", import.meta.url).pathname,
+    "--snapshot", snapshotPath,
+    "--elections", electionsPath,
+    "--config", configPath,
+    "--issue-text", join(directory, "absent.json"),
+  ], { encoding: "utf8" });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /absent\.json/);
 });
