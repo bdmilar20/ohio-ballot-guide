@@ -9,6 +9,7 @@ import {
   officeLabeller,
   officePhrase,
   readPatterns,
+  surveyedTitlesFor,
 } from "../scripts/map-office-titles.mjs";
 
 const PATTERNS = [
@@ -76,7 +77,7 @@ test("officePhrase drops the article the boards print inconsistently", () => {
 });
 
 test("the labeller hands the projector only an office id and a display name", () => {
-  const labelOffice = officeLabeller({ patterns: PATTERNS, corrections: CORRECTIONS, countyName: "Adams" });
+  const labelOffice = officeLabeller({ patterns: PATTERNS, corrections: CORRECTIONS, countyName: "Adams", allowedTitles: null });
   assert.deepEqual(labelOffice("For Prosecuting Attorney"), {
     office_id: "county-prosecutor",
     office: "County Prosecuting Attorney",
@@ -215,7 +216,7 @@ test("the committed patterns reproduce the office table Adams needed written by 
     "For Prosecuting Attorney": { office_id: "county-prosecutor", office: "County Prosecuting Attorney" },
   };
   const committed = readPatterns(JSON.parse(await readFile(new URL("../data/office-title-patterns.json", import.meta.url), "utf8")));
-  const labelOffice = officeLabeller({ ...committed, countyName: "Adams" });
+  const labelOffice = officeLabeller({ ...committed, countyName: "Adams", allowedTitles: null });
   for (const [title, expected] of Object.entries(handWritten)) {
     assert.deepEqual(labelOffice(title), expected, title);
   }
@@ -226,4 +227,52 @@ test("county display names come from the published locations, not from the id", 
   const names = countyNamesFrom(locations);
   assert.equal(names["van-wert"], "Van Wert", "a two-word county is not 'Van-wert'");
   assert.equal(names.adams, "Adams");
+});
+
+test("free text after a known office phrase is refused, not kept as a qualifier", async () => {
+  // Found in review. Each of these labelled before the qualifier rule existed,
+  // and each would have published a real office id from a title no county has
+  // ever printed.
+  const committed = readPatterns(
+    JSON.parse(await readFile(new URL("../data/office-title-patterns.json", import.meta.url), "utf8")),
+  );
+  for (const title of [
+    "For Mayor and County Commissioner",
+    "For County Auditor and Treasurer",
+    "For Sheriff of the Lake",
+    "For State Senator for Life",
+  ]) {
+    assert.equal(officeFromTitle(title, { ...committed, countyName: "Adams" }), null, title);
+  }
+  // A parenthesised qualifier is still carried through.
+  assert.equal(
+    officeFromTitle("For State Senator (17th District)", { ...committed, countyName: "Adams" }).office,
+    "State Senator (17th District)",
+  );
+});
+
+test("the runtime labeller refuses a title the survey never saw the county print", () => {
+  const allowedTitles = new Set(["For County Auditor"]);
+  const labelOffice = officeLabeller({ patterns: PATTERNS, corrections: CORRECTIONS, countyName: "Adams", allowedTitles });
+  assert.deepEqual(labelOffice("For County Auditor"), { office_id: "county-auditor", office: "County Auditor" });
+  assert.equal(labelOffice("For County Commissioner"), null, "labellable, but not measured for this county");
+});
+
+test("a labeller with no allowedTitles decision at all is refused", () => {
+  assert.throws(
+    () => officeLabeller({ patterns: PATTERNS, corrections: CORRECTIONS, countyName: "Adams" }),
+    /needs allowedTitles/,
+  );
+});
+
+test("surveyedTitlesFor reads only the county asked for", () => {
+  const survey = {
+    local_office_titles: {
+      "For County Auditor": { counties: ["adams", "brown"] },
+      "For County Commissioner": { counties: ["brown"] },
+    },
+  };
+  assert.deepEqual([...surveyedTitlesFor(survey, "adams")], ["For County Auditor"]);
+  assert.deepEqual([...surveyedTitlesFor(survey, "brown")], ["For County Auditor", "For County Commissioner"]);
+  assert.deepEqual([...surveyedTitlesFor(null, "adams")], [], "no survey labels nothing");
 });

@@ -102,7 +102,17 @@ export function officePhrase(title, { countyName = null } = {}) {
  * exactly as printed. A district, a court division, and a term qualifier are
  * the difference between two seats on one ballot, so dropping one would show a
  * voter two contests with the same name and no way to tell them apart.
+ *
+ * **The qualifier must be parenthesised, or there must be none.** Accepting
+ * free text after a known phrase is not conservative, it is the opposite:
+ * `For Mayor and County Commissioner` would have published under `mayor`, and
+ * `For County Auditor and Treasurer` under `county-auditor`, from a single
+ * changed vendor title and with no explicit mapping anywhere. The five titles
+ * whose qualifier the counties did not parenthesise are listed as whole
+ * printed phrases instead, which is a decision someone made about a title
+ * that exists rather than a rule about titles that do not.
  */
+const PARENTHESISED_QUALIFIER = /^(?:\([^()]*\)\s*)*$/;
 export function officeFromTitle(title, { patterns = [], corrections = [], countyName = null } = {}) {
   const correction = corrections.find((entry) => entry.printed === title);
   const corrected = correction ? correction.read_as : title;
@@ -117,7 +127,8 @@ export function officeFromTitle(title, { patterns = [], corrections = [], county
   }
   if (!best) return null;
 
-  const qualifier = phrase.slice(best.printed.length).trim();
+  const qualifier = phrase.slice(best.printed.length).trim().replace(/\s+/g, " ");
+  if (!PARENTHESISED_QUALIFIER.test(qualifier)) return null;
   return {
     office_id: best.office_id,
     office: qualifier ? `${best.office} ${qualifier}` : best.office,
@@ -226,11 +237,31 @@ export function countyNamesFrom(locations) {
  * keeps no opinion about where a label comes from, and so that an explicit
  * mapping in the refresh config still wins over a pattern.
  */
-export function officeLabeller({ patterns, corrections, countyName }) {
+export function officeLabeller({ patterns, corrections, countyName, allowedTitles }) {
+  // Required, not defaulted. The safe value is a set, so a caller that forgets
+  // it must say so rather than get the permissive behaviour for free.
+  if (allowedTitles !== null && !(allowedTitles instanceof Set)) {
+    throw new Error("officeLabeller needs allowedTitles: a Set of measured titles, or null to accept any title");
+  }
   return (title) => {
+    // A title the committed survey never saw this county print has had no
+    // measurement and no review. Labelling it would mean publishing an office
+    // on evidence that does not exist yet.
+    if (allowedTitles && !allowedTitles.has(title)) return null;
     const labelled = officeFromTitle(title, { patterns, corrections, countyName });
     return labelled ? { office_id: labelled.office_id, office: labelled.office } : null;
   };
+}
+
+/**
+ * The local office titles the committed survey saw one county print.
+ */
+export function surveyedTitlesFor(survey, countyId) {
+  return new Set(
+    Object.entries(survey?.local_office_titles ?? {})
+      .filter(([, record]) => record.counties.includes(countyId))
+      .map(([title]) => title),
+  );
 }
 
 async function main() {

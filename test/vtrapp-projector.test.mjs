@@ -893,7 +893,7 @@ test("a derived office label produces exactly what the hand-written mapping prod
   });
   const byPattern = projectCounty(snapshot, election, {
     ...options,
-    labelOffice: officeLabeller({ ...committed, countyName: "Adams" }),
+    labelOffice: officeLabeller({ ...committed, countyName: "Adams", allowedTitles: null }),
   });
   assert.deepEqual(byPattern.county, byHand.county);
   assert.equal(byPattern.county.races[0].office, "County Commissioner");

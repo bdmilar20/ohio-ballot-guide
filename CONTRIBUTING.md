@@ -520,6 +520,14 @@ Like the adapter, live refresh is manual and must never run in CI. Replaying
 saved snapshots is offline, but freshness is recalculated at replay time and
 the manifest's maximum source age still applies.
 
+A projection decision depends on more than the manifest: the certified
+statewide issue text, the curated office title patterns, and the contest survey
+that bounds which titles a pattern may label. Each run copies all three into
+its bundle byte for byte and records their `sha256` in `summary.inputs`, and a
+replay reads them **from the bundle it is replaying** rather than from the
+working tree. Without that, editing any of the three made the same saved
+snapshot replay differently.
+
 ## Design changes
 
 Read [`docs/DESIGN.md`](docs/DESIGN.md) before changing `styles.css` or the page

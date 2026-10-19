@@ -336,3 +336,63 @@ test("a refresh resolves a retitled statewide issue from the certified text it i
   assert.deepEqual(result.candidate.elections[0].counties.adams.issues, []);
   assert.deepEqual(result.summary.jobs[0].removed_statewide_duplicates, ["governor", "state-issue-3"]);
 });
+
+test("a bundle carries every input a projection decision depended on, and a replay reads the bundle's copy", async (t) => {
+  // Found in review: before this, a bundle held only the manifest, so the same
+  // saved snapshot replayed differently after anyone edited the certified
+  // issue text, the office patterns, or the survey that bounds them.
+  const directory = await mkdtemp(join(tmpdir(), "vtrapp-refresh-inputs-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const snapshotDirectory = join(directory, "snapshots");
+  const firstOutput = join(directory, "first");
+  const secondOutput = join(directory, "second");
+  await mkdir(snapshotDirectory);
+
+  const projectRoot = new URL("..", import.meta.url).pathname;
+  const fetchedAt = new Date();
+  const saved = snapshot("adams", fetchedAt.toISOString());
+  saved.source.source_updated_at = new Date(fetchedAt.getTime() - 3_600_000).toISOString();
+  saved.source.source_age_hours = 1;
+  await writeFile(
+    join(snapshotDirectory, snapshotFilename({ county: "adams", election: "20261103G" })),
+    JSON.stringify(saved),
+  );
+  const manifestPath = join(directory, "manifest.json");
+  await writeFile(manifestPath, JSON.stringify(manifest(["adams"])));
+
+  const run = (snapshots, out) =>
+    spawnSync(process.execPath, [
+      join(projectRoot, "scripts", "refresh-vtrapp.mjs"),
+      "--manifest", manifestPath,
+      "--snapshots", snapshots,
+      "--out", out,
+    ], { encoding: "utf8" });
+
+  const first = run(snapshotDirectory, firstOutput);
+  assert.equal(first.status, 0, first.stderr);
+  const firstSummary = JSON.parse(await readFile(join(firstOutput, "summary.json"), "utf8"));
+  assert.deepEqual(
+    firstSummary.inputs.map(({ file }) => file).sort(),
+    ["office-title-patterns.json", "statewide-issue-text.json", "vtrapp-contest-survey.json"],
+  );
+  for (const input of firstSummary.inputs) {
+    const copied = await readFile(join(firstOutput, input.file), "utf8");
+    assert.equal(candidateDigest(copied), input.sha256, `${input.file} digest must describe the copy in the bundle`);
+    assert.equal(input.source, "repository");
+  }
+
+  // Replaying the first bundle must use the first bundle's inputs, not the
+  // working tree's, and reach the same candidate.
+  const second = run(firstOutput, secondOutput);
+  assert.equal(second.status, 0, second.stderr);
+  const secondSummary = JSON.parse(await readFile(join(secondOutput, "summary.json"), "utf8"));
+  assert.deepEqual(
+    secondSummary.inputs.map(({ file, sha256 }) => ({ file, sha256 })).sort((a, b) => a.file.localeCompare(b.file)),
+    firstSummary.inputs.map(({ file, sha256 }) => ({ file, sha256 })).sort((a, b) => a.file.localeCompare(b.file)),
+  );
+  assert.ok(
+    secondSummary.inputs.every(({ source }) => source === "bundle"),
+    "a replay reads the bundle it is replaying",
+  );
+  assert.equal(secondSummary.candidate_sha256, firstSummary.candidate_sha256);
+});

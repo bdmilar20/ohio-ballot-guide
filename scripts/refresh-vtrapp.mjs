@@ -10,7 +10,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { electionIdFromKey, ingestCounty, parseArgs } from "./ingest/vtrapp.mjs";
-import { officeLabeller, readPatterns } from "./map-office-titles.mjs";
+import { officeLabeller, readPatterns, surveyedTitlesFor } from "./map-office-titles.mjs";
 import { certifiedIssueText, projectCounty } from "./project-vtrapp.mjs";
 
 export const REFRESH_MANIFEST_SCHEMA_VERSION = 1;
@@ -84,7 +84,13 @@ function countCounty(county) {
   };
 }
 
-function projectionOptions(job, reviewedAt, statewideIssueText, officeTitlePatterns = { patterns: [], corrections: [] }) {
+function projectionOptions(
+  job,
+  reviewedAt,
+  statewideIssueText,
+  officeTitlePatterns = { patterns: [], corrections: [] },
+  contestSurvey = null,
+) {
   return {
     maxSourceAgeHours: job.projection.max_source_age_hours,
     officeMappings: job.projection.office_mappings,
@@ -93,7 +99,14 @@ function projectionOptions(job, reviewedAt, statewideIssueText, officeTitlePatte
     statewideIssueText,
     // Without this the curated patterns are a file nobody reads, and every
     // county still needs its own office table written out by hand.
-    labelOffice: officeLabeller({ ...officeTitlePatterns, countyName: job.projection.county_name }),
+    labelOffice: officeLabeller({
+      ...officeTitlePatterns,
+      countyName: job.projection.county_name,
+      // Bound to the titles the committed survey saw this county print. With
+      // no survey this is empty and nothing is labelled, which is the right
+      // default: a label with no measurement behind it is a guess.
+      allowedTitles: surveyedTitlesFor(contestSurvey, job.county),
+    }),
     countyName: job.projection.county_name,
     reviewedAt,
   };
@@ -109,6 +122,7 @@ export async function refreshVtrapp({
   electionData,
   statewideIssueText = {},
   officeTitlePatterns = { patterns: [], corrections: [] },
+  contestSurvey = null,
   ingest = ({ countyId, electionKey, electionId }) => ingestCounty({ countyId, electionKey, electionId }),
   now = () => new Date(),
   onSnapshot = async () => {},
@@ -140,7 +154,7 @@ export async function refreshVtrapp({
     const projection = projectCounty(
       snapshot,
       election,
-      projectionOptions(job, reviewedAt, statewideIssueText, officeTitlePatterns),
+      projectionOptions(job, reviewedAt, statewideIssueText, officeTitlePatterns, contestSurvey),
     );
     const before = structuredClone(election.counties?.[job.county] ?? { races: [], issues: [] });
     election.counties ??= {};
@@ -252,19 +266,38 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
     const manifest = validateRefreshManifest(await readJson(resolve(args.manifest)));
     const electionPath = resolve(args.elections ?? join(projectRoot, "data", "elections.json"));
     const electionData = await readJson(electionPath);
-    // Required, not optional. A refresh that ran without the certified issue
-    // text would lose the backstop that keeps a statewide amendment a county
-    // titles unusually from being published as that county's own content.
-    const issueTextPath = resolve(args["issue-text"] ?? join(projectRoot, "data", "statewide-issue-text.json"));
-    const statewideIssueText = certifiedIssueText(await readJson(issueTextPath));
-    // The curated office labels. Read here rather than inside the projector so
-    // that a refresh run records which file it labelled offices from.
-    const patternsPath = resolve(args["office-title-patterns"] ?? join(projectRoot, "data", "office-title-patterns.json"));
-    const officeTitlePatterns = readPatterns(await readJson(patternsPath));
     const snapshotsDirectory = args.snapshots ? resolve(args.snapshots) : null;
+
+    // Every data file a projection decision depends on, beside the manifest.
+    // Replaying a bundle has to reach the same decisions it recorded, and
+    // these three can each change one: the certified issue text keeps a
+    // statewide amendment from publishing as county content, the patterns
+    // name the office, and the survey is what bounds the titles a pattern is
+    // allowed to label. A bundle that carried only the manifest replayed
+    // differently after any of the three was edited.
+    const inputs = [];
+    async function readInput(file, flag) {
+      const explicit = args[flag] ? resolve(args[flag]) : null;
+      const replayed = snapshotsDirectory ? join(snapshotsDirectory, file) : null;
+      // A replay prefers the copy inside the bundle it is replaying, so the
+      // run reproduces that bundle rather than today's working tree.
+      const fromBundle = replayed && (await readFile(replayed, "utf8").then(() => true, () => false));
+      const path = explicit ?? (fromBundle ? replayed : join(projectRoot, "data", file));
+      const text = await readFile(path, "utf8");
+      inputs.push({ file, sha256: candidateDigest(text), source: explicit ? "explicit" : fromBundle ? "bundle" : "repository", text });
+      return JSON.parse(text);
+    }
+
+    const statewideIssueText = certifiedIssueText(await readInput("statewide-issue-text.json", "issue-text"));
+    const officeTitlePatterns = readPatterns(await readInput("office-title-patterns.json", "office-title-patterns"));
+    const contestSurvey = await readInput("vtrapp-contest-survey.json", "contest-survey");
+
     outputDirectory = resolve(args.out);
     await prepareOutputDirectory(outputDirectory, manifest);
     outputPrepared = true;
+    // Copied byte for byte, so the digest recorded in the summary is a digest
+    // of what the bundle actually holds.
+    for (const input of inputs) await writeFile(join(outputDirectory, input.file), input.text);
 
     const ingest = snapshotsDirectory
       ? async ({ countyId, electionKey }) => readJson(join(snapshotsDirectory, snapshotFilename({ county: countyId, election: electionKey })))
@@ -275,6 +308,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
       electionData,
       statewideIssueText,
       officeTitlePatterns,
+      contestSurvey,
       ingest,
       onSnapshot: ({ job, snapshot }) => writeJson(join(outputDirectory, snapshotFilename(job)), snapshot),
       onProjection: async ({ job, projection }) => {
@@ -290,6 +324,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
 
     const validation = await validateCandidate(result.candidate, projectRoot);
     result.summary.validation = validation;
+    result.summary.inputs = inputs.map(({ file, sha256, source }) => ({ file, sha256, source }));
     await writeJson(join(outputDirectory, CANDIDATE_ELECTIONS_FILE), result.candidate);
     await writeJson(join(outputDirectory, "summary.json"), result.summary);
     await writeJson(join(outputDirectory, "status.json"), {

@@ -670,6 +670,13 @@ for (const pattern of officeTitlePatterns.patterns) {
 }
 
 const countyNames = countyNamesFrom(locations);
+// A county the published locations do not name would quietly lose the rule
+// that removes a county's own name from its own office title, and the title
+// would then read as unlabelled for a reason that has nothing to do with the
+// patterns.
+for (const countyId of Object.keys(contestSurvey.counties)) {
+  assert.ok(countyNames[countyId], `the contest survey covers ${countyId}, which the published locations do not name`);
+}
 const officeTitleCoverage = measureCoverage(contestSurvey, {
   ...officeTitlePatterns,
   countyNameFor: (countyId) => countyNames[countyId],
