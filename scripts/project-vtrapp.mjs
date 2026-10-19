@@ -228,6 +228,24 @@ function arraysEqual(left, right) {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
+// The title is the weakest part of the statewide check: it is typed by each
+// county and the survey found "(4th Distrit)" sitting in live data. Any title
+// the matcher fails to recognize --- a typo, a wording this code has not seen,
+// a qualifier in an unexpected place --- leaves possible_statewide_race_ids
+// empty, and an empty list reads as "not a statewide race" rather than as "do
+// not know". So the same question is asked a second time without consulting
+// the title at all: two contests listing the same candidates with the same
+// parties are the same contest, whatever either one is called.
+function statewideTwinByCandidates(contest, election) {
+  if (!election || contest.kind !== "office") return null;
+  const candidates = sourceCandidateSet(contest);
+  if (candidates.length === 0) return null;
+  const twin = election.statewide_races.find(
+    (race) => arraysEqual(publishedCandidateSet(race), candidates),
+  );
+  return twin?.id ?? null;
+}
+
 function possiblePublishedRaceMatches(contest, election) {
   if (!election || contest.kind !== "office") return [];
   return election.statewide_races.filter(
@@ -510,6 +528,15 @@ export function projectCounty(snapshot, election, {
         unmapped.push(entry.title);
         continue;
       }
+      // Reached only once the title check has already decided this is county
+      // content, so this is the last place to catch a statewide race the title
+      // failed to identify. Publishing it here shows a voter the same contest
+      // twice, once statewide and once as their county's own.
+      const twin = statewideTwinByCandidates(entry.contest, election);
+      invariant(
+        !twin,
+        `office "${entry.title}" lists the same candidates as statewide race ${twin}; it is that race under another name, not county content`,
+      );
       races.push(productRace(entry, mapping, snapshot, countyName));
       continue;
     }

@@ -590,3 +590,39 @@ test("keeps the district parenthetical that tells two different seats apart", ()
     "a different appellate district is a different office",
   );
 });
+
+test("refuses county content whose candidates are a statewide race under another name", () => {
+  // The title is the weakest input to the statewide check: each county types it,
+  // and the survey found "(4th Distrit)" in live data. A title this code cannot
+  // recognize leaves possible_statewide_race_ids empty, which reads as "not
+  // statewide" rather than "do not know", and the contest then needs only a
+  // county office mapping to be published as the county's own. The candidates
+  // are the same people either way, so they are asked a second time.
+  const { snapshot, election } = fixture();
+  const misspelled = "For Govenor and Leiutenant Govenor";
+  for (const ballot of Object.values(snapshot.ballots)) {
+    const governor = ballot.contests[0];
+    governor.title = misspelled;
+    governor.raw.heading_lines[0] = misspelled;
+  }
+  rehashSnapshot(snapshot);
+
+  // The title check really has given up: this is the state that makes the
+  // contest publishable, not a loud refusal already covering it.
+  const review = analyzeSnapshot(snapshot, election);
+  const governor = review.common_to_all_precincts.find(({ title }) => title === misspelled);
+  assert.deepEqual(governor.possible_statewide_race_ids, []);
+
+  assert.throws(
+    () => projectCounty(snapshot, election, {
+      maxSourceAgeHours: 24,
+      reviewedAt: "2026-10-16T18:00:00.000Z",
+      officeMappings: {
+        [misspelled]: { office_id: "governor", office: "Governor" },
+        "For County Commissioner": "county-commissioner",
+      },
+      statewideIssueMappings: { "Issue 3": "state-issue-3" },
+    }),
+    /lists the same candidates as statewide race governor/,
+  );
+});
