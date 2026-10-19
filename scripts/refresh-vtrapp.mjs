@@ -105,6 +105,12 @@ function projectionOptions(
       // Bound to the titles the committed survey saw this county print. With
       // no survey this is empty and nothing is labelled, which is the right
       // default: a label with no measurement behind it is a guess.
+      //
+      // It cannot under-cover. The survey reads one precinct, and a contest
+      // common to every precinct is by definition on that one, so the
+      // surveyed titles are a superset of the titles a projection publishes.
+      // What it excludes is a title that appeared after the survey ran, which
+      // is exactly the case that should stop and be looked at.
       allowedTitles: surveyedTitlesFor(contestSurvey, job.county),
     }),
     countyName: job.projection.county_name,
