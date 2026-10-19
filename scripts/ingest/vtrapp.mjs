@@ -607,6 +607,40 @@ export function assertEnumeration({ countyId, electionKey, tableFound, listed, p
  * whose precinct table cannot be fully accounted for is not a county anything
  * should report a number about.
  */
+async function selectElection({ client, listing, countyId, electionKey, body, action = "selecting" }) {
+  const fields = {
+    ...hiddenFields(body),
+    cmbelectionlist: electionKey,
+    __EVENTTARGET: "cmbelectionlist",
+    __EVENTARGUMENT: "",
+  };
+  const selected = await client.post(listing, fields);
+  if (selected.status !== 200) {
+    throw new Error(`${countyId}: ${action} election ${electionKey} returned HTTP ${selected.status}`);
+  }
+  const parsed = parseListing(selected.body);
+  if (!parsed.sourceUpdatedAt) {
+    throw new Error(`${countyId}: the selected election has no "Election data last updated" stamp`);
+  }
+  return { response: selected, parsed };
+}
+
+async function recheckSelectedStamp({ client, listing, countyId, electionKey, expected, where }) {
+  const fresh = await client.request(listing);
+  if (fresh.status !== 200) {
+    throw new Error(`${countyId}: re-reading the listing after the ballot walk returned HTTP ${fresh.status}`);
+  }
+  const selected = await selectElection({
+    client,
+    listing,
+    countyId,
+    electionKey,
+    body: fresh.body,
+    action: "re-selecting",
+  });
+  requireSameStamp(countyId, expected, selected.response.body, where);
+}
+
 export async function openCountyListing({ client, countyId, electionKey }) {
   const slug = vendorSlug(countyId);
   const listing = listingUrl(slug, client.base);
@@ -616,26 +650,29 @@ export async function openCountyListing({ client, countyId, electionKey }) {
   if (classification !== "served") {
     throw new Error(`${countyId}: vendor response is "${classification}", not a served county`);
   }
-  const parsedListing = parseListing(first.body);
-  if (!parsedListing.elections.some((option) => option.value === electionKey)) {
+  const initialListing = parseListing(first.body);
+  if (!initialListing.elections.some((option) => option.value === electionKey)) {
     throw new Error(
-      `${countyId}: election ${electionKey} is absent; offered ${parsedListing.elections.map((o) => o.value).join(", ") || "nothing"}`,
+      `${countyId}: election ${electionKey} is absent; offered ${initialListing.elections.map((o) => o.value).join(", ") || "nothing"}`,
     );
-  }
-  if (!parsedListing.sourceUpdatedAt) {
-    throw new Error(`${countyId}: the listing has no "Election data last updated" stamp`);
   }
 
   // Select the election (autopostback), then ask for the precinct list. A
   // failed postback returns a page with no __VIEWSTATE, which would otherwise
   // surface three steps later as an empty precinct table.
-  const selectFields = { ...hiddenFields(first.body), cmbelectionlist: electionKey, __EVENTTARGET: "cmbelectionlist", __EVENTARGUMENT: "" };
-  const selected = await client.post(listing, selectFields);
-  if (selected.status !== 200) {
-    throw new Error(`${countyId}: selecting election ${electionKey} returned HTTP ${selected.status}`);
-  }
+  const selected = await selectElection({ client, listing, countyId, electionKey, body: first.body });
+  // The stamp is election-scoped. Miami's opening GET defaults to its special
+  // election, whose stamp differs from the requested general election. The
+  // selected response is the first page that identifies the version we are
+  // about to walk, so all later comparisons must anchor here.
+  const parsedListing = selected.parsed;
   await client.pause();
-  const submitFields = { ...hiddenFields(selected.body), cmbelectionlist: electionKey, cmbDistrictCat: "", btnsubmit: "Find Ballots" };
+  const submitFields = {
+    ...hiddenFields(selected.response.body),
+    cmbelectionlist: electionKey,
+    cmbDistrictCat: "",
+    btnsubmit: "Find Ballots",
+  };
   const listed = await client.post(listing, submitFields);
   if (listed.status !== 200) {
     throw new Error(`${countyId}: listing precincts returned HTTP ${listed.status}`);
@@ -665,11 +702,14 @@ export async function readFirstBallot({ client, countyId, electionKey }) {
   const url = accessibleBallotUrl(opened.slug, target, client.base);
   const contests = await walkBallot({ client, url, countyId, precinct });
 
-  const final = await client.request(opened.listing);
-  if (final.status !== 200) {
-    throw new Error(`${countyId}: re-reading the listing after the ballot walk returned HTTP ${final.status}`);
-  }
-  requireSameStamp(countyId, opened.parsedListing.sourceUpdatedRaw, final.body, "the listing re-read after the ballot walk");
+  await recheckSelectedStamp({
+    client,
+    listing: opened.listing,
+    countyId,
+    electionKey,
+    expected: opened.parsedListing.sourceUpdatedRaw,
+    where: "the selected listing re-read after the ballot walk",
+  });
 
   return {
     precinct,
@@ -725,11 +765,14 @@ export async function ingestCounty({
   // about 550 for Adams — so re-read the listing afterwards and require the same
   // stamp. Without this, a source update partway through yields a snapshot that
   // mixes two versions of the ballot and reports success.
-  const final = await client.request(listing);
-  if (final.status !== 200) {
-    throw new Error(`${countyId}: re-reading the listing after the ballot walk returned HTTP ${final.status}`);
-  }
-  requireSameStamp(countyId, parsedListing.sourceUpdatedRaw, final.body, "the listing re-read after the ballot walk");
+  await recheckSelectedStamp({
+    client,
+    listing,
+    countyId,
+    electionKey,
+    expected: parsedListing.sourceUpdatedRaw,
+    where: "the selected listing re-read after the ballot walk",
+  });
 
   const fetchedAt = now();
   return {

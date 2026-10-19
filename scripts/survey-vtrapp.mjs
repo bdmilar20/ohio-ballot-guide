@@ -64,16 +64,11 @@ export async function surveyCounty({ client, countyId, electionKey }) {
     return record;
   }
 
-  const parsedListing = parseListing(first.body);
-  record.elections_offered = parsedListing.elections.length;
-  record.election_offered = parsedListing.elections.some((option) => option.value === electionKey);
-  record.source_updated_at = parsedListing.sourceUpdatedAt?.iso ?? null;
+  const initialListing = parseListing(first.body);
+  record.elections_offered = initialListing.elections.length;
+  record.election_offered = initialListing.elections.some((option) => option.value === electionKey);
   if (!record.election_offered) {
     record.blocked = `election ${electionKey} is absent from the listing`;
-    return record;
-  }
-  if (!record.source_updated_at) {
-    record.blocked = 'the listing has no "Election data last updated" stamp';
     return record;
   }
 
@@ -86,6 +81,15 @@ export async function surveyCounty({ client, countyId, electionKey }) {
   });
   if (selected.status !== 200) {
     record.blocked = `selecting election ${electionKey} returned HTTP ${selected.status}`;
+    return record;
+  }
+  // Update stamps belong to elections, not counties. The opening page may
+  // default to a different election, so the selected response is the first
+  // timestamp that identifies the requested precinct listing.
+  const parsedListing = parseListing(selected.body);
+  record.source_updated_at = parsedListing.sourceUpdatedAt?.iso ?? null;
+  if (!record.source_updated_at) {
+    record.blocked = 'the selected election has no "Election data last updated" stamp';
     return record;
   }
 

@@ -404,11 +404,17 @@ function fakeVendor({
   // default both the precinct list and the post-walk re-read carry the one the
   // listing showed. A test passing "" takes the stamp away.
   stampAfterSubmit,
-  stampAfterWalk,
+  stampAfterSelect,
+  stampAfterReselect,
 } = {}) {
   const listingStamp = listingBody?.match(/Election data last updated:\s*([^<]+)/)?.[1]?.trim() ?? null;
   const orDefault = (value) => (value === undefined ? listingStamp : value);
   const stamped = (stamp, html) => (stamp ? `Election data last updated: ${stamp}<${html}` : html);
+  const listingAt = (stamp) =>
+    listingBody.replace(
+      /Election data last updated:\s*[^<]+</,
+      stamp ? `Election data last updated: ${stamp}<` : "<",
+    );
 
   const page = (inner, viewstate) =>
     `<html><form><input type="hidden" name="__VIEWSTATE" value="${viewstate}" />${inner}</form></html>`;
@@ -424,13 +430,14 @@ function fakeVendor({
       // prove the source did not move during the ballot walk.
       if (!body) {
         if (!enumerated) return respond(200, listingBody);
-        return respond(finalStatus, stamped(orDefault(stampAfterWalk), "<html>final</html>"));
+        return respond(finalStatus, listingBody);
       }
       if (body.has("btnsubmit")) {
         enumerated = true;
         return respond(precinctStatus, stamped(orDefault(stampAfterSubmit), precinctBody));
       }
-      return respond(200, listingBody);
+      const selectedStamp = enumerated ? stampAfterReselect : stampAfterSelect;
+      return respond(200, listingAt(orDefault(selectedStamp)));
     }
 
     const precinctId = new URL(url).searchParams.get("prsid");
@@ -550,6 +557,27 @@ test("refuses a listing with no update stamp, because age cannot be reported", a
   );
 });
 
+test("anchors the source stamp after selecting the requested election", async () => {
+  // Miami's opening GET defaults to a special election updated October 19.
+  // Selecting the requested general election changes the page to that
+  // election's September 30 stamp. Comparing the precinct list with the
+  // opening default falsely reads this stable source as a mid-run edit.
+  const selectedStamp = "09/30/26 08:14:14 AM";
+  const { snapshot } = await runCounty({
+    listingBody: `<html>
+      Election data last updated: 10/19/26 09:49:23 AM<br/>
+      <select name="cmbelectionlist"><option value="NONE">Select an Election Date</option>
+      <option selected value="20261103S">11/3/2026 Special Election</option>
+      <option value="20261103G">11/3/2026 General Election</option></select>
+      <input type="hidden" name="__VIEWSTATE" value="pos:0" /></html>`,
+    stampAfterSelect: selectedStamp,
+    stampAfterSubmit: selectedStamp,
+    stampAfterReselect: selectedStamp,
+  });
+
+  assert.equal(snapshot.source.source_updated_at, "2026-09-30T08:14:14-04:00");
+});
+
 test("refuses an enumeration that produced no ballots", async () => {
   await assert.rejects(
     runCounty({ precinctBody: `<table id="${PRECINCT_TABLE_ID}"></table>` }),
@@ -614,8 +642,8 @@ test("refuses a run in which the source's own timestamp moved", async () => {
 // and produces a snapshot mixing two versions of the ballot.
 test("refuses a source change that happens during the ballot walk", async () => {
   await assert.rejects(
-    runCounty({ stampAfterWalk: "10/14/26 09:00:00 AM" }),
-    /source changed during the run .* at the listing re-read after the ballot walk/,
+    runCounty({ stampAfterReselect: "10/14/26 09:00:00 AM" }),
+    /source changed during the run .* at the selected listing re-read after the ballot walk/,
   );
 });
 
@@ -626,8 +654,8 @@ test("refuses a run whose stamp is absent rather than unchanged", async () => {
     /the precinct list carries no "Election data last updated" stamp/,
   );
   await assert.rejects(
-    runCounty({ stampAfterWalk: "" }),
-    /the listing re-read after the ballot walk carries no "Election data last updated" stamp/,
+    runCounty({ stampAfterReselect: "" }),
+    /the selected election has no "Election data last updated" stamp/,
   );
 });
 
