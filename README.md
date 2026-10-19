@@ -87,7 +87,10 @@ manifest of counties serially and writes a new review bundle. The bundle keeps
 every source snapshot and projection, a compact change summary, and a validated
 `elections.candidate.json`; it never overwrites `data/elections.json`. See
 [CONTRIBUTING.md](CONTRIBUTING.md#refreshing-reviewed-counties) for the manifest
-format and replay workflow.
+format and replay workflow. Reviewed projection decisions are durable inputs in
+`config/vtrapp-<vendor-election>.json`; every generated county already in the
+published data must have a matching job there, so the next refresh never
+depends on reconstructing mappings from an old review.
 
 `npm run gate:vtrapp` decides which counties a bundle may actually publish. A
 board's "last updated" stamp is no use as an age limit — most of Ohio's stamps

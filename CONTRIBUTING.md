@@ -423,11 +423,19 @@ application; precinct-specific content remains only in the report.
 ## Refreshing reviewed counties
 
 After the mappings for one or more counties have been reviewed, record them in
-a manifest and run the adapter and projector together. Jobs run serially so the
-stateful vendor application is not flooded with concurrent ballot walks.
-The entry below shows the manifest shape; its mapping list is shortened, so use
-the county's complete review report rather than treating it as a ready-to-run
-Adams configuration.
+the tracked `config/vtrapp-<vendor-election>.json` manifest and run the adapter
+and projector together. Do not leave this file in `.cache` or `.scratch`: the
+mapping decisions are inputs to every future refresh, and losing them turns a
+repeatable source adapter back into a manual reconstruction. The offline config
+gate requires every generated county already in `data/elections.json` to have
+one durable job, and checks its county name, election, office mappings,
+statewide mappings, and accepted source-age limit against the published data.
+
+Jobs run serially so the stateful vendor application is not flooded with
+concurrent ballot walks. The entry below shows the manifest shape; its mapping
+list is shortened, so use the county's complete review report rather than
+treating it as a ready-to-run Adams configuration. The complete Adams job is
+tracked in `config/vtrapp-20261103G.json`.
 
 ```json
 {

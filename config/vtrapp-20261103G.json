@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "jobs": [
+    {
+      "county": "adams",
+      "election": "20261103G",
+      "projection": {
+        "max_source_age_hours": 168,
+        "county_name": "Adams",
+        "office_mappings": {
+          "For Representative to Congress (2nd District)": {
+            "office_id": "us-representative",
+            "office": "U.S. Representative (2nd District)"
+          },
+          "For State Representative (90th District)": {
+            "office_id": "state-representative",
+            "office": "State Representative (90th District)"
+          },
+          "For Judge of the Court of Appeals (4th District)": {
+            "office_id": "court-of-appeals-judge",
+            "office": "Judge of the Court of Appeals (4th District)"
+          },
+          "For Judge of the Court of Common Pleas": {
+            "office_id": "common-pleas-judge",
+            "office": "Judge of the Court of Common Pleas"
+          },
+          "For County Commissioner": {
+            "office_id": "county-commissioner",
+            "office": "County Commissioner"
+          },
+          "For County Auditor": {
+            "office_id": "county-auditor",
+            "office": "County Auditor"
+          },
+          "For Prosecuting Attorney": {
+            "office_id": "county-prosecutor",
+            "office": "County Prosecuting Attorney"
+          }
+        },
+        "statewide_race_mappings": {},
+        "statewide_issue_mappings": {
+          "Issue 3": "state-issue-3"
+        }
+      }
+    }
+  ]
+}
