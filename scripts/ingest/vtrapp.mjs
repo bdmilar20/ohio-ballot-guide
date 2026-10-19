@@ -359,7 +359,15 @@ export function normalizeContest(panelHtml, { order, sourceUrl = null } = {}) {
     if (lines.length > 2) {
       uncertain.push({ choice: position, reason: `${lines.length} lines in one choice; kept verbatim in raw_lines` });
     }
-    const writeIn = /^write[- ]?in$/i.test(lines[0]);
+    // Erie prints its write-in row with U+2010 HYPHEN rather than an ASCII
+    // hyphen, and an ASCII-only pattern leaves write_in false on all four of
+    // them. The row then survives productRace's write-in filter and publishes
+    // as a candidate literally named "Write-in", while allows_write_in says the
+    // contest takes no write-ins --- and the extra member defeats the
+    // candidate-set comparison that identifies statewide races. Matched here
+    // across the Unicode dashes instead of normalizing the text, because
+    // raw_lines feeds the content fingerprint and must stay verbatim.
+    const writeIn = /^write[\p{Pd}\u2212\u00ad\s]?in$/iu.test(lines[0]);
     return {
       name: lines[0],
       party: lines.length === 2 ? lines[1] : null,
