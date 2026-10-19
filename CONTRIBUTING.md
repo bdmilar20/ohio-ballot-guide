@@ -507,9 +507,25 @@ npm run verify -- --tip 3115500 --base origin/main
 
 It resolves the SHA, checks out that commit alone in a throwaway worktree, and
 re-reads `git rev-parse HEAD` **inside that worktree** before believing any
-result from it. Then it checks the tree is clean, the signature is good, and
+result from it. Then it checks the tree is clean, the signature verifies, and
 the tip contains `--base`, and runs `npm run check` and `npm test` there. Your
 own working tree is never touched, so it is safe to run mid-change.
+
+The signature step asks `git verify-commit`, not whether `%G?` is `G`. The two
+are different questions: `G` additionally requires the signing key to be in
+*your* machine's trust store, so a perfectly good commit from the other agent
+reads as `U` on your machine. Gating on `G` would reject every clean
+cross-agent review. `verify-commit` accepts `G` and `U` and still rejects a bad
+or absent signature, and the verdict says which of the two you got:
+
+```
+  ok   commit signature is good  signed by 38ffbaaf...; valid, but that key is
+                                 not in this machine's trust store, so compare
+                                 it with the author's
+```
+
+That wording is deliberate. "This commit is signed by key X" and "key X belongs
+to the author" are different claims, and only the first is verifiable here.
 
 The verdict lists all seven checks with their outcomes, including the ones that
 did not run:

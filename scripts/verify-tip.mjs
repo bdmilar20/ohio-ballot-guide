@@ -143,12 +143,18 @@ export async function verifyTip({ tip, base = "origin/main", repoRoot = process.
     const changes = gitOrThrow(["status", "--porcelain"], worktree);
     record(STEPS[2], changes === "", changes === "" ? "no uncommitted changes" : changes.split("\n").join("; "));
 
-    // %G? is "G" only for a good signature. A commit signed by an unknown key
-    // reports "U" or "E", which is not the same as unsigned, so the status
-    // character is reported either way rather than collapsed to a boolean.
-    const signature = gitOrThrow(["log", "-1", "--format=%G?%n%GS", sha], worktree).split("\n");
-    const status = signature[0]?.trim();
-    record(STEPS[3], status === "G", status === "G" ? `signed by ${signature[1]?.trim() || "(no signer reported)"}` : `git reports %G? = ${status || "(empty)"}`);
+    // Cryptographic validity, not local trust. `%G?` is "G" only when the
+    // signing key is also in this machine's trust store, so a good commit from
+    // another agent -- which is what a review is usually about -- reads as "U"
+    // on the reviewer's machine while being perfectly well signed. Gating on
+    // "G" fails every clean cross-agent review.
+    //
+    // `git verify-commit` is the authority instead: check_signature() treats G
+    // and U alike and rejects B, E and N, so the two cannot drift apart the way
+    // a hand-written list of acceptable status characters would.
+    const verified = git(["verify-commit", sha], worktree);
+    const [status, signer] = gitOrThrow(["log", "-1", "--format=%G?%n%GS", sha], worktree).split("\n");
+    record(STEPS[3], verified.ok, signatureDetail(verified.ok, status?.trim(), signer?.trim()));
 
     // Asked in the caller's repository: the worktree has the objects but the
     // base ref may be one the detached checkout cannot name.
@@ -189,6 +195,26 @@ export async function verifyTip({ tip, base = "origin/main", repoRoot = process.
     git(["worktree", "remove", "--force", worktree], repoRoot);
     await rm(parent, { recursive: true, force: true });
   }
+}
+
+/**
+ * Describes a signature without overstating what was checked.
+ *
+ * An untrusted-but-valid signature is reported as such rather than silently
+ * accepted, because "this commit is signed by key X" and "key X belongs to the
+ * author" are different claims and only the first one is verifiable here.
+ */
+export function signatureDetail(verified, status, signer) {
+  const who = signer || "an unnamed key";
+  if (!verified) {
+    if (status === "N" || !status) return "the commit is not signed";
+    return `git verify-commit rejected the signature (%G? = ${status})`;
+  }
+  if (status === "G") return `signed by ${who}, a key this machine trusts`;
+  if (status === "U") {
+    return `signed by ${who}; valid, but that key is not in this machine's trust store, so compare it with the author's`;
+  }
+  return `signed by ${who} (%G? = ${status || "(empty)"})`;
 }
 
 function lastLine(text) {
