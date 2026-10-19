@@ -141,7 +141,7 @@ test("every class the classifier can return is declared with a hand-entry cost",
   assert.deepEqual([...new Set(reachable)].sort(), Object.keys(CONTEST_CLASSES).sort());
 });
 
-test("a county record counts its contests and lists its local office titles once", () => {
+test("a county record counts its contests and counts each local office title", () => {
   const record = surveyCounty(
     [
       office("For Governor and Lieutenant Governor", governorChoices),
@@ -158,14 +158,18 @@ test("a county record counts its contests and lists its local office titles once
     statewide_issue_resolved_by_text: 1,
     local_issue: 1,
   });
-  assert.deepEqual(record.local_office_titles, ["For County Commissioner"], "two seats, one title");
+  assert.deepEqual(
+    record.local_office_titles,
+    { "For County Commissioner": 2 },
+    "two seats under one title are two contests, not one",
+  );
 });
 
 test("the summary counts instances and reports every declared class, including the empty ones", () => {
   const summary = summarizeSurvey(
     {
-      adams: { classes: { statewide_race_resolved: 8, local_office: 2 }, local_office_titles: [] },
-      lorain: { classes: { statewide_race_resolved: 8, local_issue: 2 }, local_office_titles: [] },
+      adams: { classes: { statewide_race_resolved: 8, local_office: 2 }, local_office_titles: {} },
+      lorain: { classes: { statewide_race_resolved: 8, local_issue: 2 }, local_office_titles: {} },
     },
     { failures: { licking: "transport: timed out" }, enumerableCounties: 70 },
   );
@@ -188,13 +192,16 @@ test("the summary of nothing is not a hundred percent", () => {
   assert.equal(summary.automatable_share, "0.0%");
 });
 
-test("the title index says how many counties print each local office title", () => {
+test("the title index counts contests as well as counties", () => {
+  // The two figures differ, and the difference is the point: a title printed
+  // twice in one county is two contests a pattern would cover, and a set of
+  // titles cannot see the second one.
   const index = localOfficeTitleIndex({
-    adams: { classes: {}, local_office_titles: ["For County Commissioner", "For County Comissioner"] },
-    brown: { classes: {}, local_office_titles: ["For County Commissioner"] },
+    adams: { classes: {}, local_office_titles: { "For County Commissioner": 2, "For County Comissioner": 1 } },
+    brown: { classes: {}, local_office_titles: { "For County Commissioner": 1 } },
   });
   assert.deepEqual(index, {
-    "For County Comissioner": { county_count: 1, counties: ["adams"] },
-    "For County Commissioner": { county_count: 2, counties: ["adams", "brown"] },
+    "For County Comissioner": { county_count: 1, instances: 1, counties: ["adams"] },
+    "For County Commissioner": { county_count: 2, instances: 3, counties: ["adams", "brown"] },
   });
 });

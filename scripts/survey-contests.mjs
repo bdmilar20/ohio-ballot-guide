@@ -37,7 +37,7 @@ import {
   statewideTwinByCandidates,
 } from "./project-vtrapp.mjs";
 
-export const CONTEST_SURVEY_SCHEMA_VERSION = 1;
+export const CONTEST_SURVEY_SCHEMA_VERSION = 2;
 
 /**
  * Every verdict this survey can reach, and whether it costs a hand decision.
@@ -88,13 +88,25 @@ export function classifyContest(contest, { election, issueText = {} }) {
 
 export function surveyCounty(contests, { election, issueText }) {
   const classes = {};
-  const localOfficeTitles = [];
+  // Counted, not collected into a set. A county routinely prints one title
+  // twice --- several seats of the same court, a full term beside an unexpired
+  // one --- and a set of titles cannot say how many contests a title-pattern
+  // set would cover. Fifty-eight of this election's local office instances are
+  // a repeat of a title already on the same ballot.
+  const localOfficeTitles = {};
   for (const contest of contests) {
     const verdict = classifyContest(contest, { election, issueText });
     classes[verdict.class] = (classes[verdict.class] ?? 0) + 1;
-    if (verdict.class === "local_office") localOfficeTitles.push(contest.title);
+    if (verdict.class === "local_office") {
+      localOfficeTitles[contest.title] = (localOfficeTitles[contest.title] ?? 0) + 1;
+    }
   }
-  return { classes, local_office_titles: [...new Set(localOfficeTitles)].sort() };
+  return {
+    classes,
+    local_office_titles: Object.fromEntries(
+      Object.entries(localOfficeTitles).sort(([left], [right]) => left.localeCompare(right)),
+    ),
+  };
 }
 
 /**
@@ -136,7 +148,7 @@ export function summarizeSurvey(counties, { failures = {}, enumerableCounties = 
 
 /**
  * The distinct local-office titles across every county, with how many counties
- * print each.
+ * print each and how many contests they are.
  *
  * This is the population any title-pattern set has to cover, and the reason the
  * survey writes it rather than a count of it: a pattern set measured against a
@@ -145,15 +157,19 @@ export function summarizeSurvey(counties, { failures = {}, enumerableCounties = 
 export function localOfficeTitleIndex(counties) {
   const index = {};
   for (const [countyId, record] of Object.entries(counties)) {
-    for (const title of record.local_office_titles) {
-      index[title] ??= { counties: [] };
+    for (const [title, count] of Object.entries(record.local_office_titles)) {
+      index[title] ??= { counties: [], instances: 0 };
       index[title].counties.push(countyId);
+      index[title].instances += count;
     }
   }
   return Object.fromEntries(
     Object.entries(index)
       .sort(([left], [right]) => left.localeCompare(right))
-      .map(([title, record]) => [title, { county_count: record.counties.length, counties: record.counties.sort() }]),
+      .map(([title, record]) => [
+        title,
+        { county_count: record.counties.length, instances: record.instances, counties: record.counties.sort() },
+      ]),
   );
 }
 
