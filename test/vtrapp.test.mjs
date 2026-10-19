@@ -306,6 +306,33 @@ test("fails closed when normalization would drop source text", () => {
   assert.throws(() => normalizeContest(panel, { order: 1 }), /would drop source text: A STRAY LINE/);
 });
 
+// Erie prints its write-in row with U+2010 HYPHEN rather than an ASCII hyphen.
+// An ASCII-only pattern leaves write_in false, and that row then survives the
+// projector's write-in filter and publishes as a candidate named "Write-in"
+// while allows_write_in claims the contest takes none.
+test("recognizes a write-in row whatever dash the county printed", () => {
+  const panel = (dash) => `<h2 class="balofficename">For Mayor</h2>
+    <ul class="candidates"><li>Ada Lovelace<br/>Democratic</li><li>Write${dash}in</li></ul>`;
+  for (const [label, dash] of [
+    ["ascii hyphen", "-"],
+    ["U+2010 hyphen, as Erie prints it", "\u2010"],
+    ["en dash", "\u2013"],
+    ["a plain space", " "],
+  ]) {
+    const contest = normalizeContest(panel(dash), { order: 1 });
+    assert.equal(contest.choices[1].write_in, true, `${label} must read as a write-in row`);
+    assert.equal(contest.allows_write_in, true, label);
+    // The text itself stays verbatim: raw_lines feeds the content fingerprint.
+    assert.deepEqual(contest.choices[1].raw_lines, [`Write${dash}in`]);
+  }
+
+  // Still a name, not a write-in row. Widening the dash class must not widen
+  // what counts as the placeholder.
+  const named = normalizeContest(panel("-").replace("Write-in", "Wright-in"), { order: 1 });
+  assert.equal(named.choices[1].write_in, false);
+  assert.equal(named.allows_write_in, false);
+});
+
 test("flags a choice with unexpected extra lines instead of discarding them", () => {
   const panel = `<h2 class="balofficename">For Mayor</h2>
     <ul class="candidates"><li>Ada Lovelace<br/>Democratic<br/>Incumbent note</li></ul>`;
