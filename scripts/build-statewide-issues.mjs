@@ -42,12 +42,12 @@ import {
   hiddenFields,
   listingUrl,
   parseArgs,
-  parseContestPage,
   parseListing,
   parsePrecincts,
   requireSameStamp,
   vendorSlug,
   VendorTransportError,
+  walkBallot,
 } from "./ingest/vtrapp.mjs";
 import { possiblePublishedIssueMatch } from "./project-vtrapp.mjs";
 
@@ -119,23 +119,7 @@ export async function readCountyIssues({ client, countyId, electionKey }) {
     client.base,
   );
 
-  const page = await client.request(url);
-  if (page.status !== 200) throw new Error(`the first ballot returned HTTP ${page.status}`);
-  const start = parseContestPage(page.body, { sourceUrl: url });
-  const contests = [start.contest];
-  let body = page.body;
-  // The walk is checked against the vendor's own contest index rather than
-  // trusted to advance: a page that silently repeats would otherwise be
-  // recorded as agreement between a county and itself.
-  for (let expected = 2; expected <= start.total; expected += 1) {
-    const next = await client.post(url, { ...hiddenFields(body), btn_next: "Next Contest" });
-    if (next.status !== 200) throw new Error(`the walk stopped at ${expected}/${start.total} with HTTP ${next.status}`);
-    const got = parseContestPage(next.body, { sourceUrl: url });
-    if (got.index !== expected) throw new Error(`the walk reached ${got.index} when ${expected} was next`);
-    contests.push(got.contest);
-    body = next.body;
-    await client.pause();
-  }
+  const contests = await walkBallot({ client, url, countyId, precinct });
 
   // The body is evidence only if the county did not replace its election data
   // while the ballot was being walked. This is the same boundary the full
