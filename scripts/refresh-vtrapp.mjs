@@ -176,23 +176,40 @@ async function writeJson(path, value) {
   await writeFile(path, jsonText(value));
 }
 
-async function validateCandidate(candidate, projectRoot) {
+function validateCandidateFile(candidatePath, projectRoot) {
+  const result = spawnSync(process.execPath, [
+    join(projectRoot, "scripts", "validate-data.mjs"),
+    candidatePath,
+    join(projectRoot, "data", "locations.json"),
+    join(projectRoot, "data", "offices.json"),
+    join(projectRoot, "data", "county-boards.json"),
+  ], { encoding: "utf8" });
+  const failure =
+    result.error?.message ||
+    result.stderr?.trim() ||
+    result.stdout?.trim() ||
+    `validator exited with ${result.signal ? `signal ${result.signal}` : `status ${result.status}`}`;
+  invariant(
+    result.status === 0,
+    `candidate elections data failed validation: ${failure}`,
+  );
+  return result.stdout.trim();
+}
+
+export async function validateCandidateText(candidateText, projectRoot) {
+  invariant(typeof candidateText === "string", "candidate elections content must be text");
   const directory = await mkdtemp(join(tmpdir(), "vtrapp-refresh-validation-"));
   try {
     const candidatePath = join(directory, "elections.json");
-    await writeJson(candidatePath, candidate);
-    const result = spawnSync(process.execPath, [
-      join(projectRoot, "scripts", "validate-data.mjs"),
-      candidatePath,
-      join(projectRoot, "data", "locations.json"),
-      join(projectRoot, "data", "offices.json"),
-      join(projectRoot, "data", "county-boards.json"),
-    ], { encoding: "utf8" });
-    invariant(result.status === 0, `candidate elections data failed validation: ${result.stderr.trim() || result.stdout.trim()}`);
-    return result.stdout.trim();
+    await writeFile(candidatePath, candidateText);
+    return validateCandidateFile(candidatePath, projectRoot);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+}
+
+async function validateCandidate(candidate, projectRoot) {
+  return validateCandidateText(jsonText(candidate), projectRoot);
 }
 
 async function prepareOutputDirectory(outputDirectory, manifest) {

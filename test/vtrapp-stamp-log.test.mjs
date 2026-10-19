@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -27,6 +27,7 @@ import {
 const ELECTION = { id: "2026-11-03-general", vendor_key: "20261103G" };
 const HOUR = 3_600_000;
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+const candidateText = await readFile(join(projectRoot, "data", "elections.json"), "utf8");
 
 /** A log built from plain (when, what the stamp said) pairs. */
 function logOf(...entries) {
@@ -48,8 +49,6 @@ function logOf(...entries) {
  * compares against the log.
  */
 const job = (fields) => ({ vendor_election_key: ELECTION.vendor_key, ...fields });
-const candidateText = jsonText({ elections: [] });
-
 function summaryOf(jobs, fields = {}) {
   return {
     schema_version: REFRESH_BUNDLE_SCHEMA_VERSION,
@@ -299,7 +298,7 @@ test("the publication gate is bound to one complete, validated candidate artifac
     for (const validation of ["", "   "]) {
       assert.throws(
         () => assertRefreshBundle({ ...valid, validation }, candidateText),
-        /no successful candidate validation/,
+        /no recorded candidate validation/,
       );
     }
   });
@@ -370,6 +369,23 @@ test("the CLI exits nonzero on an unsettled bundle and zero on a settled one", a
   const pass = gate(["--refresh", settled]);
   assert.equal(pass.status, 0, pass.stderr);
   assert.match(pass.stdout, /All 1 counties .* are settled at the stamp they were walked at/);
+
+  // A hand-built summary can recompute the digest and claim "lgtm". The gate
+  // must re-run the canonical validator rather than trust that string.
+  const invalidCandidateText = jsonText({ elections: [] });
+  const forged = join(directory, "refresh-forged-validation");
+  await mkdir(forged);
+  await writeFile(join(forged, CANDIDATE_ELECTIONS_FILE), invalidCandidateText);
+  await writeFile(
+    join(forged, "summary.json"),
+    JSON.stringify(summaryOf(
+      [job({ county_id: "adams", source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" })],
+      { validation: "lgtm", candidate_sha256: candidateDigest(invalidCandidateText) },
+    )),
+  );
+  const unvalidated = gate(["--refresh", forged]);
+  assert.equal(unvalidated.status, 1);
+  assert.match(unvalidated.stderr, /candidate elections data failed validation/);
 
   // The stamp evidence belongs to the exact validated candidate. Editing the
   // candidate after refresh must invalidate the bundle before county

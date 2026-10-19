@@ -276,9 +276,10 @@ reviewed in the input: refreshing some counties cannot advance the whole
 dataset's review date or replace its coverage description.
 
 The completed summary records the SHA-256 of the exact validated candidate
-file. The publication gate re-hashes that file before checking any county
-stamp, so settlement evidence cannot be applied to a candidate edited after
-validation or copied from another refresh run.
+file. The publication gate re-hashes that file and re-runs the canonical data
+validator before checking any county stamp, so settlement evidence cannot be
+applied to a candidate edited after validation, copied from another refresh
+run, or paired with a hand-written claim that invalid data was checked.
 
 ## Deciding a county is settled enough to publish
 

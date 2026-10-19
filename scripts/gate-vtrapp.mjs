@@ -15,12 +15,14 @@
 
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { parseArgs } from "./ingest/vtrapp.mjs";
 import {
   CANDIDATE_ELECTIONS_FILE,
   candidateDigest,
   REFRESH_BUNDLE_SCHEMA_VERSION,
+  validateCandidateText,
 } from "./refresh-vtrapp.mjs";
 import { assertSettled, assertStampLog, DEFAULT_QUIET_HOURS, settlement } from "./vtrapp-stamp-log.mjs";
 
@@ -55,7 +57,7 @@ export function assertRefreshBundle(summary, candidateText) {
     throw new Error(`refresh summary must name ${CANDIDATE_ELECTIONS_FILE} as its candidate file`);
   }
   if (typeof summary.validation !== "string" || !summary.validation.trim()) {
-    throw new Error("refresh summary has no successful candidate validation result");
+    throw new Error("refresh summary has no recorded candidate validation result");
   }
   if (!/^sha256:[0-9a-f]{64}$/.test(summary.candidate_sha256)) {
     throw new Error("refresh summary has no valid candidate_sha256");
@@ -156,14 +158,21 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
       const summaryPath = join(refreshDirectory, "summary.json");
       const summary = JSON.parse(await readFile(summaryPath, "utf8"));
       let candidateText;
+      const candidatePath = join(refreshDirectory, CANDIDATE_ELECTIONS_FILE);
       try {
-        candidateText = await readFile(join(refreshDirectory, CANDIDATE_ELECTIONS_FILE), "utf8");
+        candidateText = await readFile(candidatePath, "utf8");
       } catch (error) {
         if (error.code === "ENOENT") {
           throw new Error(`refresh bundle is missing ${CANDIDATE_ELECTIONS_FILE}`);
         }
         throw error;
       }
+      // The digest proves this is the candidate described by the refresh, but
+      // a hand-built summary could still claim that invalid data was checked.
+      // Re-run the canonical offline validator against the exact file before
+      // any source-stamp evidence is allowed to approve it.
+      assertRefreshBundle(summary, candidateText);
+      await validateCandidateText(candidateText, fileURLToPath(new URL("..", import.meta.url)));
       const results = gateRefresh(log, summary, { quietHours, candidateText });
       for (const result of results) {
         console.log(`${result.passed ? "ok     " : "BLOCKED"} ${result.county_id.padEnd(12)} ${result.detail}`);
