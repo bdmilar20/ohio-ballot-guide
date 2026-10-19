@@ -7,6 +7,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { electionIdFromKey } from "./ingest/vtrapp.mjs";
+import { derivableOfficeLabels, readPatterns } from "./map-office-titles.mjs";
 import { validateRefreshManifest } from "./refresh-vtrapp.mjs";
 
 function invariant(condition, message) {
@@ -40,7 +41,15 @@ function expectedCountyName(location) {
   return location.name.replace(/ County$/, "");
 }
 
-export function validateRefreshConfigs({ configs, electionData, locations, offices, statewideIssueText }) {
+export function validateRefreshConfigs({
+  configs,
+  electionData,
+  locations,
+  offices,
+  statewideIssueText,
+  contestSurvey = null,
+  officeTitlePatterns = { patterns: [], corrections: [] },
+}) {
   invariant(Array.isArray(configs), "refresh configs must be an array");
   invariant(isRecord(locations?.counties), "locations data needs a counties object");
   invariant(isRecord(offices?.offices), "offices data needs an offices object");
@@ -89,6 +98,17 @@ export function validateRefreshConfigs({ configs, electionData, locations, offic
         );
         invariant(officeIds.has(officeId), `${label} office mapping ${JSON.stringify(source)} targets missing office ${JSON.stringify(officeId)}`);
         mappedOffices.add(`${officeId}\0${office}`);
+      }
+
+      // A label the curated patterns derive from a title the survey measured
+      // this county printing is reproducible in the same sense a hand-written
+      // mapping is, and it is what lets a new county be onboarded without one.
+      for (const label of derivableOfficeLabels(contestSurvey, {
+        ...officeTitlePatterns,
+        countyId: job.county,
+        countyName: expectedCountyName(location),
+      })) {
+        mappedOffices.add(label);
       }
 
       validateTargetMappings(
@@ -157,7 +177,8 @@ export async function loadRefreshConfigs(directory) {
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
   try {
     const projectRoot = fileURLToPath(new URL("..", import.meta.url));
-    const [configDirectory, electionsPath, locationsPath, officesPath, statewideIssuePath] = process.argv.slice(2);
+    const [configDirectory, electionsPath, locationsPath, officesPath, statewideIssuePath, contestSurveyPath, officeTitlePatternPath] =
+      process.argv.slice(2);
     const result = validateRefreshConfigs({
       configs: await loadRefreshConfigs(resolve(configDirectory ?? join(projectRoot, "config"))),
       electionData: await readJson(resolve(electionsPath ?? join(projectRoot, "data", "elections.json"))),
@@ -165,6 +186,12 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
       offices: await readJson(resolve(officesPath ?? join(projectRoot, "data", "offices.json"))),
       statewideIssueText: await readJson(
         resolve(statewideIssuePath ?? join(projectRoot, "data", "statewide-issue-text.json")),
+      ),
+      contestSurvey: await readJson(
+        resolve(contestSurveyPath ?? join(projectRoot, "data", "vtrapp-contest-survey.json")),
+      ),
+      officeTitlePatterns: readPatterns(
+        await readJson(resolve(officeTitlePatternPath ?? join(projectRoot, "data", "office-title-patterns.json"))),
       ),
     });
     console.log(

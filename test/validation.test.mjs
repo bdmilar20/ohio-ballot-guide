@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
+import { localOfficeTitleIndex, summarizeSurvey } from "../scripts/survey-contests.mjs";
+
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const validator = join(projectRoot, "scripts", "validate-data.mjs");
 
@@ -25,6 +27,8 @@ async function validateFixture(
     coverage = () => {},
     stampLog = () => {},
     statewideIssueText = () => {},
+    contestSurvey = () => {},
+    officeTitlePatterns = () => {},
   },
 ) {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "ohio-ballot-guide-"));
@@ -37,6 +41,8 @@ async function validateFixture(
   const coverageData = await readData("vtrapp-coverage.json");
   const stampLogData = await readData("vtrapp-stamp-log.json");
   const statewideIssueTextData = await readData("statewide-issue-text.json");
+  const contestSurveyData = await readData("vtrapp-contest-survey.json");
+  const officeTitlePatternData = await readData("office-title-patterns.json");
   elections(electionData);
   locations(locationData);
   offices(officeData);
@@ -44,6 +50,8 @@ async function validateFixture(
   coverage(coverageData);
   stampLog(stampLogData);
   statewideIssueText(statewideIssueTextData);
+  contestSurvey(contestSurveyData);
+  officeTitlePatterns(officeTitlePatternData);
 
   const electionFixture = join(temporaryDirectory, "elections.json");
   const locationFixture = join(temporaryDirectory, "locations.json");
@@ -52,6 +60,8 @@ async function validateFixture(
   const coverageFixture = join(temporaryDirectory, "vtrapp-coverage.json");
   const stampLogFixture = join(temporaryDirectory, "vtrapp-stamp-log.json");
   const statewideIssueTextFixture = join(temporaryDirectory, "statewide-issue-text.json");
+  const contestSurveyFixture = join(temporaryDirectory, "vtrapp-contest-survey.json");
+  const officeTitlePatternFixture = join(temporaryDirectory, "office-title-patterns.json");
   await writeFile(electionFixture, JSON.stringify(electionData));
   await writeFile(locationFixture, JSON.stringify(locationData));
   await writeFile(officeFixture, JSON.stringify(officeData));
@@ -59,6 +69,8 @@ async function validateFixture(
   await writeFile(coverageFixture, JSON.stringify(coverageData));
   await writeFile(stampLogFixture, JSON.stringify(stampLogData));
   await writeFile(statewideIssueTextFixture, JSON.stringify(statewideIssueTextData));
+  await writeFile(contestSurveyFixture, JSON.stringify(contestSurveyData));
+  await writeFile(officeTitlePatternFixture, JSON.stringify(officeTitlePatternData));
 
   return spawnSync(
     process.execPath,
@@ -74,6 +86,8 @@ async function validateFixture(
       coverageFixture,
       stampLogFixture,
       statewideIssueTextFixture,
+      contestSurveyFixture,
+      officeTitlePatternFixture,
     ],
     { encoding: "utf8" },
   );
@@ -847,4 +861,74 @@ test("validator rejects statewide issue text that does not name its generator", 
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /must name the generator that produced it/);
+});
+
+test("validator rejects an office title pattern that targets an office nobody describes", async (t) => {
+  const result = await validateFixture(t, {
+    officeTitlePatterns: (data) => {
+      data.patterns.push({ printed: "Dog Warden", office_id: "dog-warden", office: "County Dog Warden" });
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /targets missing office "dog-warden"/);
+});
+
+test("validator rejects a surveyed local office title nothing labels", async (t) => {
+  // A title no pattern covers is a county that cannot be published without
+  // someone writing its office table by hand, which is the thing the pattern
+  // set exists to remove.
+  const result = await validateFixture(t, {
+    contestSurvey: (data) => {
+      data.counties.adams.local_office_titles["For Township Fiscal Officer"] = 1;
+      data.counties.adams.classes.local_office = (data.counties.adams.classes.local_office ?? 0) + 1;
+      data.counties.adams.contests_read += 1;
+      // Recomputed rather than hand-adjusted, so this fixture trips the
+      // labelling gate and only the labelling gate. A survey whose summary or
+      // title index no longer followed from its records would fail two checks
+      // at once, and either one could then be deleted while the suite stayed
+      // green.
+      data.local_office_titles = localOfficeTitleIndex(data.counties);
+      data.meta.summary = summarizeSurvey(data.counties, {
+        failures: data.meta.failures,
+        enumerableCounties: data.meta.summary.counties_enumerable,
+      });
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /every local office title the survey found needs a pattern/);
+});
+
+test("validator rejects an office title pattern no county's ballot reaches", async (t) => {
+  const result = await validateFixture(t, {
+    officeTitlePatterns: (data) => {
+      data.patterns.push({ printed: "Dog Warden", office_id: "sheriff", office: "County Dog Warden" });
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /must match at least one title the survey found/);
+});
+
+test("validator rejects a correction for a title no county prints", async (t) => {
+  const result = await validateFixture(t, {
+    officeTitlePatterns: (data) => {
+      data.corrections.push({ printed: "For Shrieve", read_as: "For Sheriff", counties: ["adams"] });
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /corrects a title no county prints/);
+});
+
+test("validator rejects a correction that names the wrong counties", async (t) => {
+  const result = await validateFixture(t, {
+    officeTitlePatterns: (data) => {
+      data.corrections[0].counties = ["adams"];
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /names the wrong counties/);
 });

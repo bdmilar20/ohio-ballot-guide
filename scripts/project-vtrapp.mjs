@@ -525,6 +525,10 @@ export function projectCounty(snapshot, election, {
   statewideRaceMappings = {},
   statewideIssueMappings = {},
   statewideIssueText = {},
+  // Labels an office the config has no explicit mapping for. A function rather
+  // than a data file, so the projector holds no opinion about where a label
+  // comes from and an explicit mapping always wins over a derived one.
+  labelOffice = () => null,
   countyName = displayCounty(snapshot.county.id),
   reviewedAt = new Date(),
 } = {}) {
@@ -546,6 +550,7 @@ export function projectCounty(snapshot, election, {
     statewideIssueText && typeof statewideIssueText === "object" && !Array.isArray(statewideIssueText),
     "statewideIssueText must be an object",
   );
+  invariant(typeof labelOffice === "function", "labelOffice must be a function");
   const reviewedAtInstant = reviewedAt instanceof Date ? reviewedAt.getTime() : Date.parse(reviewedAt);
   invariant(Number.isFinite(reviewedAtInstant), "reviewedAt must be a valid timestamp");
   const fetchedAtInstant = timestamp(snapshot.source.fetched_at, "snapshot.source.fetched_at");
@@ -584,7 +589,7 @@ export function projectCounty(snapshot, election, {
         entry.possible_statewide_race_ids.length === 0,
         `office "${entry.title}" may duplicate ${entry.possible_statewide_race_ids.join(" or ")}; add an explicit statewide race mapping`,
       );
-      const mapping = mappingFor(officeMappings, entry);
+      const mapping = mappingFor(officeMappings, entry) ?? labelOffice(entry.title);
       if (!mapping) {
         unmapped.push(entry.title);
         continue;

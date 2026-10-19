@@ -15,6 +15,7 @@
     "refresh:vtrapp": "node scripts/refresh-vtrapp.mjs",
     "survey:vtrapp": "node scripts/survey-vtrapp.mjs",
     "survey:contests": "node scripts/survey-contests.mjs",
+    "map:offices": "node scripts/map-office-titles.mjs",
     "gate:vtrapp": "node scripts/gate-vtrapp.mjs",
     "verify": "node scripts/verify-tip.mjs"
   }

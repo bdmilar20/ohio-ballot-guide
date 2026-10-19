@@ -10,6 +10,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { electionIdFromKey, ingestCounty, parseArgs } from "./ingest/vtrapp.mjs";
+import { officeLabeller, readPatterns } from "./map-office-titles.mjs";
 import { certifiedIssueText, projectCounty } from "./project-vtrapp.mjs";
 
 export const REFRESH_MANIFEST_SCHEMA_VERSION = 1;
@@ -83,13 +84,16 @@ function countCounty(county) {
   };
 }
 
-function projectionOptions(job, reviewedAt, statewideIssueText) {
+function projectionOptions(job, reviewedAt, statewideIssueText, officeTitlePatterns = { patterns: [], corrections: [] }) {
   return {
     maxSourceAgeHours: job.projection.max_source_age_hours,
     officeMappings: job.projection.office_mappings,
     statewideRaceMappings: job.projection.statewide_race_mappings,
     statewideIssueMappings: job.projection.statewide_issue_mappings,
     statewideIssueText,
+    // Without this the curated patterns are a file nobody reads, and every
+    // county still needs its own office table written out by hand.
+    labelOffice: officeLabeller({ ...officeTitlePatterns, countyName: job.projection.county_name }),
     countyName: job.projection.county_name,
     reviewedAt,
   };
@@ -104,6 +108,7 @@ export async function refreshVtrapp({
   manifest,
   electionData,
   statewideIssueText = {},
+  officeTitlePatterns = { patterns: [], corrections: [] },
   ingest = ({ countyId, electionKey, electionId }) => ingestCounty({ countyId, electionKey, electionId }),
   now = () => new Date(),
   onSnapshot = async () => {},
@@ -132,7 +137,11 @@ export async function refreshVtrapp({
     const reviewedAtValue = now();
     const reviewedAt = reviewedAtValue instanceof Date ? reviewedAtValue : new Date(reviewedAtValue);
     invariant(Number.isFinite(reviewedAt.getTime()), `${job.county}: refresh clock returned an invalid time`);
-    const projection = projectCounty(snapshot, election, projectionOptions(job, reviewedAt, statewideIssueText));
+    const projection = projectCounty(
+      snapshot,
+      election,
+      projectionOptions(job, reviewedAt, statewideIssueText, officeTitlePatterns),
+    );
     const before = structuredClone(election.counties?.[job.county] ?? { races: [], issues: [] });
     election.counties ??= {};
     election.counties[job.county] = structuredClone(projection.county);
@@ -248,6 +257,10 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
     // titles unusually from being published as that county's own content.
     const issueTextPath = resolve(args["issue-text"] ?? join(projectRoot, "data", "statewide-issue-text.json"));
     const statewideIssueText = certifiedIssueText(await readJson(issueTextPath));
+    // The curated office labels. Read here rather than inside the projector so
+    // that a refresh run records which file it labelled offices from.
+    const patternsPath = resolve(args["office-title-patterns"] ?? join(projectRoot, "data", "office-title-patterns.json"));
+    const officeTitlePatterns = readPatterns(await readJson(patternsPath));
     const snapshotsDirectory = args.snapshots ? resolve(args.snapshots) : null;
     outputDirectory = resolve(args.out);
     await prepareOutputDirectory(outputDirectory, manifest);
@@ -261,6 +274,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
       manifest,
       electionData,
       statewideIssueText,
+      officeTitlePatterns,
       ingest,
       onSnapshot: ({ job, snapshot }) => writeJson(join(outputDirectory, snapshotFilename(job)), snapshot),
       onProjection: async ({ job, projection }) => {

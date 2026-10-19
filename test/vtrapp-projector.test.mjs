@@ -6,6 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { ballotId, SCHEMA_VERSION as SNAPSHOT_SCHEMA_VERSION } from "../scripts/ingest/vtrapp.mjs";
+import { officeLabeller, readPatterns } from "../scripts/map-office-titles.mjs";
 import {
   analyzeSnapshot,
   assertCompleteSnapshot,
@@ -869,5 +870,78 @@ test("refuses a statewide issue mapping that names an issue nobody publishes", (
       statewideIssueMappings: { "Issue 3": "state-issue-9" },
     }),
     /statewide issue mapping for "Issue 3" references unknown issue state-issue-9/,
+  );
+});
+
+test("a derived office label produces exactly what the hand-written mapping produced", async () => {
+  // The seventy-county onboarding argument in one assertion: if the curated
+  // patterns do not reproduce a hand-written table byte for byte, they are not
+  // a replacement for writing one per county.
+  const { snapshot, election } = fixture();
+  const committed = readPatterns(
+    JSON.parse(await readFile(new URL("../data/office-title-patterns.json", import.meta.url), "utf8")),
+  );
+  const options = {
+    maxSourceAgeHours: 168,
+    countyName: "Adams",
+    reviewedAt: new Date("2026-10-16T19:00:00.000Z"),
+    statewideIssueMappings: { "Issue 3": "state-issue-3" },
+  };
+  const byHand = projectCounty(snapshot, election, {
+    ...options,
+    officeMappings: { "For County Commissioner": { office_id: "county-commissioner", office: "County Commissioner" } },
+  });
+  const byPattern = projectCounty(snapshot, election, {
+    ...options,
+    labelOffice: officeLabeller({ ...committed, countyName: "Adams" }),
+  });
+  assert.deepEqual(byPattern.county, byHand.county);
+  assert.equal(byPattern.county.races[0].office, "County Commissioner");
+});
+
+test("an explicit office mapping still wins over a derived label", () => {
+  // The config has to stay the override, because the county that needs one is
+  // the county the patterns got wrong.
+  const { snapshot, election } = fixture();
+  const projection = projectCounty(snapshot, election, {
+    maxSourceAgeHours: 168,
+    countyName: "Adams",
+    reviewedAt: new Date("2026-10-16T19:00:00.000Z"),
+    statewideIssueMappings: { "Issue 3": "state-issue-3" },
+    officeMappings: {
+      "For County Commissioner": { office_id: "county-commissioner", office: "County Commissioner, District 2" },
+    },
+    labelOffice: () => ({ office_id: "county-auditor", office: "County Auditor" }),
+  });
+  assert.equal(projection.county.races[0].office, "County Commissioner, District 2");
+  assert.equal(projection.county.races[0].office_id, "county-commissioner");
+});
+
+test("an office no label and no mapping covers is still refused", () => {
+  const { snapshot, election } = fixture();
+  assert.throws(
+    () =>
+      projectCounty(snapshot, election, {
+        maxSourceAgeHours: 168,
+        countyName: "Adams",
+        reviewedAt: new Date("2026-10-16T19:00:00.000Z"),
+        statewideIssueMappings: { "Issue 3": "state-issue-3" },
+        labelOffice: () => null,
+      }),
+    /common office contests need mappings: For County Commissioner/,
+  );
+});
+
+test("a labeller that is not a function is refused before it can be skipped silently", () => {
+  const { snapshot, election } = fixture();
+  assert.throws(
+    () =>
+      projectCounty(snapshot, election, {
+        maxSourceAgeHours: 168,
+        countyName: "Adams",
+        reviewedAt: new Date("2026-10-16T19:00:00.000Z"),
+        labelOffice: { "For County Commissioner": "county-commissioner" },
+      }),
+    /labelOffice must be a function/,
   );
 });

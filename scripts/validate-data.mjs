@@ -9,6 +9,7 @@ import {
   summarizeIssues,
 } from "./build-statewide-issues.mjs";
 import { electionIdFromKey, VENDOR_BASE } from "./ingest/vtrapp.mjs";
+import { countyNamesFrom, measureCoverage, readPatterns } from "./map-office-titles.mjs";
 import {
   CONTEST_CLASSES,
   CONTEST_SURVEY_SCHEMA_VERSION,
@@ -26,6 +27,7 @@ const coverageSource = process.argv[6] ?? new URL("../data/vtrapp-coverage.json"
 const stampLogSource = process.argv[7] ?? new URL("../data/vtrapp-stamp-log.json", import.meta.url);
 const statewideIssueSource = process.argv[8] ?? new URL("../data/statewide-issue-text.json", import.meta.url);
 const contestSurveySource = process.argv[9] ?? new URL("../data/vtrapp-contest-survey.json", import.meta.url);
+const officeTitlePatternSource = process.argv[10] ?? new URL("../data/office-title-patterns.json", import.meta.url);
 const data = JSON.parse(await readFile(dataSource, "utf8"));
 const locations = JSON.parse(await readFile(locationSource, "utf8"));
 const officeData = JSON.parse(await readFile(officeSource, "utf8"));
@@ -34,6 +36,7 @@ const coverage = JSON.parse(await readFile(coverageSource, "utf8"));
 const stampLog = JSON.parse(await readFile(stampLogSource, "utf8"));
 const statewideIssueText = JSON.parse(await readFile(statewideIssueSource, "utf8"));
 const contestSurvey = JSON.parse(await readFile(contestSurveySource, "utf8"));
+const officeTitlePatterns = readPatterns(JSON.parse(await readFile(officeTitlePatternSource, "utf8")));
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const electionTypes = new Set(["general", "primary", "special", "local"]);
 const electionScopes = new Set(["statewide", "county", "municipal"]);
@@ -639,4 +642,60 @@ console.log(
     `${contestSurveySummary.counties_read} of ${contestSurveySummary.counties_enumerable} enumerable counties, ` +
     `${contestSurveySummary.automatable_share} needing no hand entry, ` +
     `${Object.keys(contestSurvey.local_office_titles).length} distinct local office title(s).`,
+);
+
+
+// data/office-title-patterns.json is curated by hand. It is what lets a county
+// be published without someone writing out its office table first, so a wrong
+// entry here is a wrong office name on a ballot page --- and a missing entry
+// is a county that cannot be onboarded. The checks are measured against the
+// generated survey rather than against a list kept beside the patterns, so
+// they fail when the state's ballots change rather than when someone
+// remembers to update an expectation.
+for (const pattern of officeTitlePatterns.patterns) {
+  assert.ok(
+    offices[pattern.office_id],
+    `office title pattern ${JSON.stringify(pattern.printed)} targets missing office ${JSON.stringify(pattern.office_id)}`,
+  );
+}
+
+const countyNames = countyNamesFrom(locations);
+const officeTitleCoverage = measureCoverage(contestSurvey, {
+  ...officeTitlePatterns,
+  countyNameFor: (countyId) => countyNames[countyId],
+});
+assert.deepEqual(
+  officeTitleCoverage.unlabelled.map(({ title }) => title),
+  [],
+  "every local office title the survey found needs a pattern in data/office-title-patterns.json, " +
+    "because a title nothing labels is a county that cannot be published without a hand-written table",
+);
+// A pattern no surveyed title reaches has never been measured against
+// anything, and is the kind of entry that quietly labels the wrong office
+// the first time a county does print it.
+assert.deepEqual(
+  officeTitleCoverage.patterns_unused,
+  [],
+  "every office title pattern must match at least one title the survey found",
+);
+
+for (const correction of officeTitlePatterns.corrections) {
+  const surveyed = contestSurvey.local_office_titles[correction.printed];
+  assert.ok(
+    surveyed,
+    `office title correction ${JSON.stringify(correction.printed)} corrects a title no county prints; remove it`,
+  );
+  assert.deepEqual(
+    correction.counties,
+    surveyed.counties,
+    `office title correction ${JSON.stringify(correction.printed)} names the wrong counties`,
+  );
+}
+assertDate(officeTitlePatterns.meta?.last_verified ?? null, "office title patterns meta.last_verified");
+
+console.log(
+  `Validated ${officeTitlePatterns.patterns.length} office title pattern(s) and ` +
+    `${officeTitlePatterns.corrections.length} correction(s): they label all ` +
+    `${officeTitleCoverage.titles_total} surveyed local office title(s), ` +
+    `${officeTitleCoverage.instances_labelled} of ${officeTitleCoverage.local_office_instances} contest instance(s).`,
 );
