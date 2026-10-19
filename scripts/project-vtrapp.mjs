@@ -184,8 +184,27 @@ function comparable(value) {
     .trim();
 }
 
+// Counties disagree about where the vendor application prints a seat's term
+// qualifier. Adams puts "(Full term commencing 1-1-2027)" in the contest
+// instructions; other counties put it inside the title, and only the title
+// reaches the statewide matcher. An unstripped qualifier is worse than a near
+// miss: it empties possible_statewide_race_ids, so the loud "add an explicit
+// statewide race mapping" refusal is replaced by a demand for a local office
+// mapping, and a county that supplies one publishes a statewide race as its own
+// county content. Which seat a contest is for is decided by candidate set, not
+// by this suffix, so dropping it only widens what the matcher can consider.
+// A term qualifier is recognized by shape rather than by an enumerated list of
+// opening words, because the list is the kind of hand-kept judgement that goes
+// stale. Surveying one ballot in each of 22 counties produced 132 distinct
+// contest titles carrying 65 distinct parentheticals, and "term" separates them
+// exactly: the 5 term qualifiers contain it and the other 60 --- districts,
+// court divisions, levy types, "(by Petition)" --- do not. Those 60 must be
+// kept, because a district or division is what tells two genuinely different
+// seats apart.
+const TERM_QUALIFIER = /\([^)]*\bterm\b[^)]*\)/gi;
+
 function comparableOffice(value) {
-  return comparable(value)
+  return comparable(String(value ?? "").replace(TERM_QUALIFIER, " "))
     .split(" ")
     .filter((word, index) => !(index === 0 && word === "for") && !["the", "of", "ohio"].includes(word))
     .join(" ");

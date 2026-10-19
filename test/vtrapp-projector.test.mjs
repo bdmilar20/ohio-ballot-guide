@@ -512,3 +512,81 @@ test("CLI review fails when the requested elections data lacks the snapshot elec
   assert.match(result.stderr, /election 2026-11-03-general is absent from --elections data/);
   assert.equal(result.stdout, "");
 });
+
+test("resolves a statewide race when the county prints the term qualifier in the title", () => {
+  // The vendor application is not consistent about where a seat's term
+  // qualifier goes. Adams prints "(Full term commencing 1-1-2027)" among the
+  // contest instructions, and the surveyed ballots of other counties print the
+  // same qualifier inside the title. Only the title reaches the statewide
+  // matcher, and before this the qualifier emptied possible_statewide_race_ids
+  // --- which is the dangerous failure, not a loud one: the projector stops
+  // warning that the contest may duplicate a statewide race and instead asks
+  // for a county office mapping, and a county that supplies one publishes the
+  // statewide race a second time as its own county content.
+  for (const qualifier of ["(Full term commencing 1-1-2027)", "(Unexpired term ending 1-2-2029)"]) {
+    const { snapshot, election } = fixture();
+    for (const ballot of Object.values(snapshot.ballots)) {
+      const governor = ballot.contests[0];
+      governor.title = `For Governor and Lieutenant Governor ${qualifier}`;
+      governor.raw.heading_lines[0] = governor.title;
+    }
+    rehashSnapshot(snapshot);
+
+    const review = analyzeSnapshot(snapshot, election);
+    const governor = review.common_to_all_precincts.find(({ title }) => title.startsWith("For Governor"));
+    assert.equal(
+      governor.published_statewide_race_id,
+      "governor",
+      `${qualifier} in the title must not hide a statewide race`,
+    );
+  }
+});
+
+test("keeps the district parenthetical that tells two different seats apart", () => {
+  // Dropping the term qualifier must not drop the parentheticals beside it. A
+  // district is part of the office's identity, so a 7th District contest must
+  // not match a published 4th District race even with identical candidates.
+  const appeals = (district) => office(`For Judge of the Court of Appeals (${district} District)`, 1, [
+    ["Ada Lovelace", "Democratic"],
+    ["Grace Hopper", "Republican"],
+    ["Write-in", null, true],
+  ]);
+  const election = {
+    id: "2026-11-03-general",
+    statewide_races: [{
+      id: "court-of-appeals-4th",
+      office: "Judge of the Court of Appeals (4th District)",
+      candidates: [
+        { name: "Ada Lovelace", party: "Democratic" },
+        { name: "Grace Hopper", party: "Republican" },
+      ],
+    }],
+    issues: [],
+  };
+  const snapshotWith = (contest) => {
+    const contests = [contest];
+    const id = ballotId(contests);
+    const { snapshot } = fixture();
+    snapshot.precincts = [{ id: "01____1", ballot_id: id }];
+    snapshot.ballots = { [id]: { contests } };
+    snapshot.enumeration = { listed_precincts: 1, parsed_precincts: 1, skipped: [], unexplained_rows: [] };
+    return snapshot;
+  };
+
+  const matching = appeals("4th");
+  matching.title = `${matching.title} (Full term commencing 2-9-2027)`;
+  matching.raw.heading_lines[0] = matching.title;
+  assert.deepEqual(
+    analyzeSnapshot(snapshotWith(matching), election).common_to_all_precincts[0].possible_statewide_race_ids,
+    ["court-of-appeals-4th"],
+  );
+
+  const otherDistrict = appeals("7th");
+  otherDistrict.title = `${otherDistrict.title} (Full term commencing 2-9-2027)`;
+  otherDistrict.raw.heading_lines[0] = otherDistrict.title;
+  assert.deepEqual(
+    analyzeSnapshot(snapshotWith(otherDistrict), election).common_to_all_precincts[0].possible_statewide_race_ids,
+    [],
+    "a different appellate district is a different office",
+  );
+});
