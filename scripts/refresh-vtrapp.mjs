@@ -14,7 +14,25 @@ import { officeLabeller, readPatterns, surveyedTitlesFor } from "./map-office-ti
 import { certifiedIssueText, projectCounty } from "./project-vtrapp.mjs";
 
 export const REFRESH_MANIFEST_SCHEMA_VERSION = 1;
-export const REFRESH_BUNDLE_SCHEMA_VERSION = 2;
+// Bumped from 2 when `inputs` became required. A schema 2 bundle carried only
+// the manifest, so there is no way to verify what it read; the gate refuses it
+// by version rather than reporting a missing field on a bundle that predates
+// the field.
+export const REFRESH_BUNDLE_SCHEMA_VERSION = 3;
+
+/**
+ * Every data file beside the manifest that a projection decision depends on.
+ *
+ * The certified issue text keeps a statewide amendment from publishing as
+ * county content, the patterns name the office, and the survey is what bounds
+ * the titles a pattern may label. Each can change a published office, so each
+ * has to be carried into the bundle and verified on replay.
+ */
+export const REFRESH_INPUT_FILES = [
+  "statewide-issue-text.json",
+  "office-title-patterns.json",
+  "vtrapp-contest-survey.json",
+];
 export const CANDIDATE_ELECTIONS_FILE = "elections.candidate.json";
 
 export function jsonText(value) {
@@ -86,6 +104,7 @@ function countCounty(county) {
 
 function projectionOptions(
   job,
+  electionId,
   reviewedAt,
   statewideIssueText,
   officeTitlePatterns = { patterns: [], corrections: [] },
@@ -102,8 +121,9 @@ function projectionOptions(
     labelOffice: officeLabeller({
       ...officeTitlePatterns,
       countyName: job.projection.county_name,
-      // Bound to the titles the committed survey saw this county print. With
-      // no survey this is empty and nothing is labelled, which is the right
+      // Bound to the titles the committed survey saw this county print on
+      // this election's ballot. With no survey, or a survey of another
+      // election, this is empty and nothing is labelled, which is the right
       // default: a label with no measurement behind it is a guess.
       //
       // It cannot under-cover. The survey reads one precinct, and a contest
@@ -111,7 +131,7 @@ function projectionOptions(
       // surveyed titles are a superset of the titles a projection publishes.
       // What it excludes is a title that appeared after the survey ran, which
       // is exactly the case that should stop and be looked at.
-      allowedTitles: surveyedTitlesFor(contestSurvey, job.county),
+      allowedTitles: surveyedTitlesFor(contestSurvey, job.county, electionId),
     }),
     countyName: job.projection.county_name,
     reviewedAt,
@@ -160,7 +180,7 @@ export async function refreshVtrapp({
     const projection = projectCounty(
       snapshot,
       election,
-      projectionOptions(job, reviewedAt, statewideIssueText, officeTitlePatterns, contestSurvey),
+      projectionOptions(job, electionId, reviewedAt, statewideIssueText, officeTitlePatterns, contestSurvey),
     );
     const before = structuredClone(election.counties?.[job.county] ?? { races: [], issues: [] });
     election.counties ??= {};
@@ -207,13 +227,39 @@ async function writeJson(path, value) {
   await writeFile(path, jsonText(value));
 }
 
-function validateCandidateFile(candidatePath, projectRoot) {
+/**
+ * The data files the canonical validator reads positionally, in its order.
+ *
+ * The three projection inputs are overridable because projection and
+ * validation have to read the same bytes. They did not: projection could read
+ * a bundled or explicitly named pattern file while the validator re-read the
+ * repository's, so a malformed-but-shaped bundled pattern drove publication
+ * and the good repository copy is what got checked.
+ *
+ * The coverage survey and stamp log are not overridable here. They are not
+ * projection inputs --- nothing in a projection decision reads them --- so
+ * there is no divergence to close, and the validator checks them against the
+ * committed repository for self-consistency.
+ */
+export function validatorArguments(candidatePath, projectRoot, inputPaths = {}) {
+  const repository = (file) => join(projectRoot, "data", file);
+  return [
+    candidatePath,
+    repository("locations.json"),
+    repository("offices.json"),
+    repository("county-boards.json"),
+    repository("vtrapp-coverage.json"),
+    repository("vtrapp-stamp-log.json"),
+    inputPaths["statewide-issue-text.json"] ?? repository("statewide-issue-text.json"),
+    inputPaths["vtrapp-contest-survey.json"] ?? repository("vtrapp-contest-survey.json"),
+    inputPaths["office-title-patterns.json"] ?? repository("office-title-patterns.json"),
+  ];
+}
+
+function validateCandidateFile(candidatePath, projectRoot, inputPaths) {
   const result = spawnSync(process.execPath, [
     join(projectRoot, "scripts", "validate-data.mjs"),
-    candidatePath,
-    join(projectRoot, "data", "locations.json"),
-    join(projectRoot, "data", "offices.json"),
-    join(projectRoot, "data", "county-boards.json"),
+    ...validatorArguments(candidatePath, projectRoot, inputPaths),
   ], { encoding: "utf8" });
   const failure =
     result.error?.message ||
@@ -227,20 +273,20 @@ function validateCandidateFile(candidatePath, projectRoot) {
   return result.stdout.trim();
 }
 
-export async function validateCandidateText(candidateText, projectRoot) {
+export async function validateCandidateText(candidateText, projectRoot, inputPaths) {
   invariant(typeof candidateText === "string", "candidate elections content must be text");
   const directory = await mkdtemp(join(tmpdir(), "vtrapp-refresh-validation-"));
   try {
     const candidatePath = join(directory, "elections.json");
     await writeFile(candidatePath, candidateText);
-    return validateCandidateFile(candidatePath, projectRoot);
+    return validateCandidateFile(candidatePath, projectRoot, inputPaths);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
 }
 
-async function validateCandidate(candidate, projectRoot) {
-  return validateCandidateText(jsonText(candidate), projectRoot);
+async function validateCandidate(candidate, projectRoot, inputPaths) {
+  return validateCandidateText(jsonText(candidate), projectRoot, inputPaths);
 }
 
 async function prepareOutputDirectory(outputDirectory, manifest) {
@@ -274,23 +320,71 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
     const electionData = await readJson(electionPath);
     const snapshotsDirectory = args.snapshots ? resolve(args.snapshots) : null;
 
-    // Every data file a projection decision depends on, beside the manifest.
-    // Replaying a bundle has to reach the same decisions it recorded, and
-    // these three can each change one: the certified issue text keeps a
-    // statewide amendment from publishing as county content, the patterns
-    // name the office, and the survey is what bounds the titles a pattern is
-    // allowed to label. A bundle that carried only the manifest replayed
-    // differently after any of the three was edited.
+    // The bundle being replayed describes, in its own summary, the exact bytes
+    // its run read. That record is the only thing that makes a replay a
+    // replay: recording a fresh digest of whatever now sits in the snapshot
+    // directory proves nothing, because an edited input simply yields a new
+    // digest and a different candidate without a word of complaint.
+    //
+    // Loaded before any input is read so a mismatch stops the run at the
+    // start rather than after a walk.
+    const replaySummary = snapshotsDirectory
+      ? await readJson(join(snapshotsDirectory, "summary.json")).then(
+          (summary) => summary,
+          (error) => {
+            if (error.code === "ENOENT") return null;
+            throw error;
+          },
+        )
+      : null;
+    if (replaySummary) {
+      invariant(
+        replaySummary.schema_version === REFRESH_BUNDLE_SCHEMA_VERSION,
+        `${snapshotsDirectory} holds a schema ${replaySummary.schema_version} bundle; ` +
+          `only schema ${REFRESH_BUNDLE_SCHEMA_VERSION} records the input digests a replay is verified against`,
+      );
+      invariant(Array.isArray(replaySummary.inputs), `${snapshotsDirectory}/summary.json has no inputs to verify`);
+    }
+    const recordedInputs = new Map((replaySummary?.inputs ?? []).map((entry) => [entry.file, entry]));
+    for (const file of replaySummary ? REFRESH_INPUT_FILES : []) {
+      invariant(
+        recordedInputs.has(file),
+        `${snapshotsDirectory}/summary.json records no digest for ${file}, so that bundle cannot be replayed verifiably`,
+      );
+    }
+
     const inputs = [];
     async function readInput(file, flag) {
       const explicit = args[flag] ? resolve(args[flag]) : null;
+      const recorded = recordedInputs.get(file);
+      // A recorded input is a decision the bundle already carries. Pointing a
+      // flag at some other file is not a replay of that bundle, so it refuses
+      // rather than quietly producing a different candidate from the same
+      // manifest and snapshots.
+      invariant(
+        !(explicit && recorded),
+        `--${flag} conflicts with the ${file} recorded in ${snapshotsDirectory}/summary.json; ` +
+          "a replay reads the bundle's own copy",
+      );
       const replayed = snapshotsDirectory ? join(snapshotsDirectory, file) : null;
       // A replay prefers the copy inside the bundle it is replaying, so the
       // run reproduces that bundle rather than today's working tree.
       const fromBundle = replayed && (await readFile(replayed, "utf8").then(() => true, () => false));
       const path = explicit ?? (fromBundle ? replayed : join(projectRoot, "data", file));
       const text = await readFile(path, "utf8");
-      inputs.push({ file, sha256: candidateDigest(text), source: explicit ? "explicit" : fromBundle ? "bundle" : "repository", text });
+      const sha256 = candidateDigest(text);
+      if (recorded) {
+        invariant(
+          fromBundle,
+          `${snapshotsDirectory}/summary.json records ${file}, but the bundle holds no copy of it to replay`,
+        );
+        invariant(
+          sha256 === recorded.sha256,
+          `${join(snapshotsDirectory, file)} is ${sha256}, but that bundle's summary records ${recorded.sha256}; ` +
+            "the bundled input has been edited since the run it describes",
+        );
+      }
+      inputs.push({ file, sha256, source: explicit ? "explicit" : fromBundle ? "bundle" : "repository", text, path });
       return JSON.parse(text);
     }
 
@@ -328,7 +422,12 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
       },
     });
 
-    const validation = await validateCandidate(result.candidate, projectRoot);
+    // Validated against the bundle's own copies, not the repository's. These
+    // are the bytes the projection above read, and the bytes a later gate run
+    // will read; checking a different file would validate data that never
+    // drove a decision.
+    const bundledInputPaths = Object.fromEntries(inputs.map(({ file }) => [file, join(outputDirectory, file)]));
+    const validation = await validateCandidate(result.candidate, projectRoot, bundledInputPaths);
     result.summary.validation = validation;
     result.summary.inputs = inputs.map(({ file, sha256, source }) => ({ file, sha256, source }));
     await writeJson(join(outputDirectory, CANDIDATE_ELECTIONS_FILE), result.candidate);

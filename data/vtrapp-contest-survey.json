@@ -1,0 +1,2787 @@
+{
+  "meta": {
+    "schema_version": 2,
+    "generated_by": "scripts/survey-contests.mjs",
+    "generated_on": "2026-10-19",
+    "note": "Generated file. Do not hand-edit; re-run npm run survey:contests.",
+    "vendor_base": "https://lookup.boe.ohio.gov/vtrapp",
+    "election": {
+      "id": "2026-11-03-general",
+      "vendor_key": "20261103G"
+    },
+    "method": "One ballot per county, every contest classified by the projector's exported rules with no hand-written mappings. Undercounts within a county: precincts differ by district and by local issue, so these are not county coverage figures.",
+    "certified_issue_text": {
+      "state-issue-3": "sha256:4da7f5da6455e3dae9ae4e5c1e12998ba9c639c039f67c2ac63000a6cab0ce01"
+    },
+    "summary": {
+      "counties_read": 70,
+      "counties_failed": 0,
+      "counties_enumerable": 70,
+      "contest_instances": 1345,
+      "hand_entries": 576,
+      "automatable_instances": 769,
+      "automatable_share": "57.2%",
+      "classes": {
+        "statewide_race_resolved": 559,
+        "local_office": 575,
+        "statewide_issue_resolved_by_text": 70,
+        "local_issue": 140,
+        "statewide_race_needs_mapping": 1,
+        "statewide_race_needs_decision": 0,
+        "statewide_issue_needs_mapping": 0
+      }
+    },
+    "failures": {}
+  },
+  "local_office_titles": {
+    "For Auditor": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "defiance"
+      ]
+    },
+    "For Clerk of the Court of Common Pleas": {
+      "county_count": 3,
+      "instances": 3,
+      "counties": [
+        "preble",
+        "putnam",
+        "richland"
+      ]
+    },
+    "For Clinton County Auditor": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "clinton"
+      ]
+    },
+    "For Clinton County Commissioner": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "clinton"
+      ]
+    },
+    "For Coroner": {
+      "county_count": 7,
+      "instances": 7,
+      "counties": [
+        "ashtabula",
+        "brown",
+        "clark",
+        "marion",
+        "noble",
+        "perry",
+        "pickaway"
+      ]
+    },
+    "For County Auditor": {
+      "county_count": 67,
+      "instances": 67,
+      "counties": [
+        "adams",
+        "allen",
+        "ashland",
+        "ashtabula",
+        "athens",
+        "auglaize",
+        "belmont",
+        "brown",
+        "carroll",
+        "champaign",
+        "clark",
+        "columbiana",
+        "coshocton",
+        "darke",
+        "delaware",
+        "erie",
+        "fairfield",
+        "fayette",
+        "fulton",
+        "gallia",
+        "geauga",
+        "greene",
+        "guernsey",
+        "hardin",
+        "harrison",
+        "highland",
+        "hocking",
+        "holmes",
+        "huron",
+        "jackson",
+        "jefferson",
+        "knox",
+        "lawrence",
+        "licking",
+        "logan",
+        "lorain",
+        "lucas",
+        "madison",
+        "mahoning",
+        "marion",
+        "medina",
+        "meigs",
+        "miami",
+        "monroe",
+        "montgomery",
+        "morgan",
+        "muskingum",
+        "noble",
+        "paulding",
+        "perry",
+        "pickaway",
+        "pike",
+        "portage",
+        "preble",
+        "putnam",
+        "richland",
+        "ross",
+        "scioto",
+        "seneca",
+        "shelby",
+        "tuscarawas",
+        "union",
+        "van-wert",
+        "vinton",
+        "warren",
+        "washington",
+        "williams"
+      ]
+    },
+    "For County Comissioner": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "portage"
+      ]
+    },
+    "For County Commissioner": {
+      "county_count": 65,
+      "instances": 71,
+      "counties": [
+        "adams",
+        "allen",
+        "ashland",
+        "ashtabula",
+        "athens",
+        "auglaize",
+        "belmont",
+        "brown",
+        "carroll",
+        "champaign",
+        "clark",
+        "columbiana",
+        "coshocton",
+        "darke",
+        "delaware",
+        "erie",
+        "fairfield",
+        "fayette",
+        "fulton",
+        "gallia",
+        "geauga",
+        "greene",
+        "guernsey",
+        "hardin",
+        "harrison",
+        "highland",
+        "hocking",
+        "holmes",
+        "huron",
+        "jackson",
+        "jefferson",
+        "knox",
+        "lawrence",
+        "licking",
+        "logan",
+        "lorain",
+        "lucas",
+        "madison",
+        "mahoning",
+        "marion",
+        "meigs",
+        "miami",
+        "monroe",
+        "montgomery",
+        "morgan",
+        "muskingum",
+        "noble",
+        "paulding",
+        "perry",
+        "pickaway",
+        "pike",
+        "preble",
+        "putnam",
+        "richland",
+        "ross",
+        "scioto",
+        "seneca",
+        "shelby",
+        "tuscarawas",
+        "union",
+        "van-wert",
+        "vinton",
+        "warren",
+        "washington",
+        "williams"
+      ]
+    },
+    "For County Commissioner (Full term commencing 1-1-2027)": {
+      "county_count": 2,
+      "instances": 2,
+      "counties": [
+        "defiance",
+        "medina"
+      ]
+    },
+    "For County Commissioner (Unexpired term ending 1-2-2029)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "defiance"
+      ]
+    },
+    "For County Coroner": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "darke"
+      ]
+    },
+    "For County Engineer": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "coshocton"
+      ]
+    },
+    "For County Recorder": {
+      "county_count": 2,
+      "instances": 2,
+      "counties": [
+        "clark",
+        "perry"
+      ]
+    },
+    "For County Recorder (Unexpired term ending 12-31-2028)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "medina"
+      ]
+    },
+    "For County Treasurer": {
+      "county_count": 4,
+      "instances": 4,
+      "counties": [
+        "auglaize",
+        "greene",
+        "meigs",
+        "monroe"
+      ]
+    },
+    "For Judge of Court of Common Pleas": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "geauga"
+      ]
+    },
+    "For Judge of the Court of Appeals": {
+      "county_count": 12,
+      "instances": 15,
+      "counties": [
+        "ashland",
+        "fulton",
+        "geauga",
+        "holmes",
+        "licking",
+        "marion",
+        "meigs",
+        "morgan",
+        "pickaway",
+        "union",
+        "warren",
+        "washington"
+      ]
+    },
+    "For Judge of the Court of Appeals (11th District)": {
+      "county_count": 2,
+      "instances": 4,
+      "counties": [
+        "ashtabula",
+        "portage"
+      ]
+    },
+    "For Judge of the Court of Appeals (12th District)": {
+      "county_count": 5,
+      "instances": 10,
+      "counties": [
+        "brown",
+        "clinton",
+        "fayette",
+        "madison",
+        "preble"
+      ]
+    },
+    "For Judge of the Court of Appeals (2nd District)": {
+      "county_count": 6,
+      "instances": 6,
+      "counties": [
+        "champaign",
+        "clark",
+        "darke",
+        "greene",
+        "miami",
+        "montgomery"
+      ]
+    },
+    "For Judge of the Court of Appeals (3rd District)": {
+      "county_count": 9,
+      "instances": 9,
+      "counties": [
+        "allen",
+        "auglaize",
+        "hardin",
+        "logan",
+        "paulding",
+        "putnam",
+        "seneca",
+        "shelby",
+        "van-wert"
+      ]
+    },
+    "For Judge of the Court of Appeals (3rd District) (Full term commencing 2-9-2027)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "defiance"
+      ]
+    },
+    "For Judge of the Court of Appeals (4th District)": {
+      "county_count": 10,
+      "instances": 14,
+      "counties": [
+        "adams",
+        "athens",
+        "highland",
+        "hocking",
+        "jackson",
+        "lawrence",
+        "pike",
+        "ross",
+        "scioto",
+        "vinton"
+      ]
+    },
+    "For Judge of the Court of Appeals (4th Distrit)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "gallia"
+      ]
+    },
+    "For Judge of the Court of Appeals (5th District)": {
+      "county_count": 9,
+      "instances": 9,
+      "counties": [
+        "coshocton",
+        "delaware",
+        "fairfield",
+        "guernsey",
+        "knox",
+        "muskingum",
+        "perry",
+        "richland",
+        "tuscarawas"
+      ]
+    },
+    "For Judge of the Court of Appeals (6th District)": {
+      "county_count": 4,
+      "instances": 8,
+      "counties": [
+        "erie",
+        "huron",
+        "lucas",
+        "williams"
+      ]
+    },
+    "For Judge of the Court of Appeals (7th District)": {
+      "county_count": 7,
+      "instances": 14,
+      "counties": [
+        "belmont",
+        "carroll",
+        "harrison",
+        "jefferson",
+        "mahoning",
+        "monroe",
+        "noble"
+      ]
+    },
+    "For Judge of the Court of Appeals (9th District)": {
+      "county_count": 2,
+      "instances": 4,
+      "counties": [
+        "lorain",
+        "summit"
+      ]
+    },
+    "For Judge of the Court of Appeals (9th District) (Full term commencing 2-9-2027)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "medina"
+      ]
+    },
+    "For Judge of the Court of Appeals (9th District) (Unexpired term ending 2-9-2029)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "medina"
+      ]
+    },
+    "For Judge of the Court of Common Pleas": {
+      "county_count": 27,
+      "instances": 40,
+      "counties": [
+        "adams",
+        "ashland",
+        "ashtabula",
+        "athens",
+        "auglaize",
+        "belmont",
+        "champaign",
+        "fulton",
+        "hardin",
+        "harrison",
+        "hocking",
+        "holmes",
+        "jefferson",
+        "knox",
+        "lawrence",
+        "lucas",
+        "marion",
+        "meigs",
+        "miami",
+        "morgan",
+        "noble",
+        "pickaway",
+        "scioto",
+        "tuscarawas",
+        "union",
+        "warren",
+        "washington"
+      ]
+    },
+    "For Judge of the Court of Common Pleas - Juvenile/Probate": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "miami"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Domestic Division)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "licking"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Domestic Relations Division)": {
+      "county_count": 2,
+      "instances": 2,
+      "counties": [
+        "lucas",
+        "summit"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Domestic Relations)": {
+      "county_count": 3,
+      "instances": 3,
+      "counties": [
+        "greene",
+        "mahoning",
+        "muskingum"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Family Division)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "logan"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (General Division)": {
+      "county_count": 13,
+      "instances": 25,
+      "counties": [
+        "brown",
+        "delaware",
+        "erie",
+        "fairfield",
+        "highland",
+        "licking",
+        "mahoning",
+        "montgomery",
+        "muskingum",
+        "perry",
+        "portage",
+        "richland",
+        "summit"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (General Division) (Full term commencing 1-1-2027)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "medina"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (General)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "greene"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (General/Domestic Division) (Full term commencing 2-9-2027)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "defiance"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Juvenile / Probate Division)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "portage"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Juvenile and Probate Division)": {
+      "county_count": 3,
+      "instances": 3,
+      "counties": [
+        "gallia",
+        "huron",
+        "williams"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Juvenile Division)": {
+      "county_count": 4,
+      "instances": 4,
+      "counties": [
+        "lucas",
+        "montgomery",
+        "summit",
+        "vinton"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Juvenile/Probate Division)": {
+      "county_count": 2,
+      "instances": 2,
+      "counties": [
+        "fairfield",
+        "van-wert"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Juvenile/Probate Division) (Full term commencing 2-9-2027)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "medina"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Probate & Juvenile Division)": {
+      "county_count": 2,
+      "instances": 2,
+      "counties": [
+        "jackson",
+        "pike"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Probate & Juvenile Divisions)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "ross"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Probate and Juvenile Division)": {
+      "county_count": 3,
+      "instances": 3,
+      "counties": [
+        "carroll",
+        "darke",
+        "monroe"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Probate and Juvenile)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "muskingum"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Probate Division)": {
+      "county_count": 11,
+      "instances": 11,
+      "counties": [
+        "allen",
+        "ashtabula",
+        "belmont",
+        "brown",
+        "clark",
+        "lorain",
+        "lucas",
+        "mahoning",
+        "montgomery",
+        "richland",
+        "summit"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Probate-Juvenile Division)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "perry"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Probate)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "greene"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Probate/Juvenile Division)": {
+      "county_count": 13,
+      "instances": 13,
+      "counties": [
+        "athens",
+        "clinton",
+        "columbiana",
+        "coshocton",
+        "delaware",
+        "fayette",
+        "guernsey",
+        "jefferson",
+        "lawrence",
+        "licking",
+        "madison",
+        "putnam",
+        "shelby"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Probate/Juvenile Division) (Full term commencing 2-9-2027)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "defiance"
+      ]
+    },
+    "For Judge of the Court of Common Pleas (Probate/Juvenile)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "preble"
+      ]
+    },
+    "For Judge of the Court of Common Pleas FTC 2-9 (Juvenile and Probate Division)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "highland"
+      ]
+    },
+    "For Judge of the Court of Common Pleas Probate/Juvenile Division": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "seneca"
+      ]
+    },
+    "FOR MAYOR OF THE CITY OF URBANA": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "champaign"
+      ]
+    },
+    "For Member of County Council at Large": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "summit"
+      ]
+    },
+    "For Members of Charter Commission": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "hardin"
+      ]
+    },
+    "For Prosecuting Attorney": {
+      "county_count": 7,
+      "instances": 7,
+      "counties": [
+        "adams",
+        "auglaize",
+        "jackson",
+        "paulding",
+        "tuscarawas",
+        "van-wert",
+        "washington"
+      ]
+    },
+    "For Representative to Congress": {
+      "county_count": 12,
+      "instances": 12,
+      "counties": [
+        "ashland",
+        "fulton",
+        "geauga",
+        "holmes",
+        "marion",
+        "meigs",
+        "montgomery",
+        "morgan",
+        "pickaway",
+        "union",
+        "warren",
+        "washington"
+      ]
+    },
+    "For Representative to Congress (10th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "greene"
+      ]
+    },
+    "For Representative to Congress (12th District)": {
+      "county_count": 9,
+      "instances": 9,
+      "counties": [
+        "coshocton",
+        "fairfield",
+        "guernsey",
+        "knox",
+        "licking",
+        "monroe",
+        "muskingum",
+        "noble",
+        "perry"
+      ]
+    },
+    "For Representative to Congress (13th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "summit"
+      ]
+    },
+    "For Representative to Congress (14th District)": {
+      "county_count": 2,
+      "instances": 2,
+      "counties": [
+        "ashtabula",
+        "portage"
+      ]
+    },
+    "For Representative to Congress (15th District)": {
+      "county_count": 4,
+      "instances": 4,
+      "counties": [
+        "fayette",
+        "highland",
+        "madison",
+        "miami"
+      ]
+    },
+    "For Representative to Congress (1st District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "clinton"
+      ]
+    },
+    "For Representative to Congress (2nd District)": {
+      "county_count": 11,
+      "instances": 11,
+      "counties": [
+        "adams",
+        "athens",
+        "brown",
+        "gallia",
+        "hocking",
+        "jackson",
+        "lawrence",
+        "pike",
+        "ross",
+        "scioto",
+        "vinton"
+      ]
+    },
+    "For Representative to Congress (4th District)": {
+      "county_count": 9,
+      "instances": 9,
+      "counties": [
+        "allen",
+        "auglaize",
+        "champaign",
+        "clark",
+        "delaware",
+        "hardin",
+        "logan",
+        "shelby",
+        "van-wert"
+      ]
+    },
+    "For Representative to Congress (5th District)": {
+      "county_count": 4,
+      "instances": 4,
+      "counties": [
+        "huron",
+        "lorain",
+        "richland",
+        "seneca"
+      ]
+    },
+    "For Representative to Congress (6th District)": {
+      "county_count": 7,
+      "instances": 7,
+      "counties": [
+        "belmont",
+        "carroll",
+        "columbiana",
+        "harrison",
+        "jefferson",
+        "mahoning",
+        "tuscarawas"
+      ]
+    },
+    "For Representative to Congress (7th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "medina"
+      ]
+    },
+    "For Representative to Congress (8th District)": {
+      "county_count": 2,
+      "instances": 2,
+      "counties": [
+        "darke",
+        "preble"
+      ]
+    },
+    "For Representative to Congress (9th District)": {
+      "county_count": 6,
+      "instances": 6,
+      "counties": [
+        "defiance",
+        "erie",
+        "lucas",
+        "paulding",
+        "putnam",
+        "williams"
+      ]
+    },
+    "For Sheriff": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "holmes"
+      ]
+    },
+    "For State Representative": {
+      "county_count": 13,
+      "instances": 13,
+      "counties": [
+        "ashland",
+        "fulton",
+        "gallia",
+        "geauga",
+        "holmes",
+        "marion",
+        "meigs",
+        "montgomery",
+        "morgan",
+        "pickaway",
+        "union",
+        "warren",
+        "washington"
+      ]
+    },
+    "For State Representative (12th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "madison"
+      ]
+    },
+    "For State Representative (34th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "summit"
+      ]
+    },
+    "For State Representative (40th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "preble"
+      ]
+    },
+    "For State Representative (42nd District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "lucas"
+      ]
+    },
+    "For State Representative (51st District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "tuscarawas"
+      ]
+    },
+    "For State Representative (53rd District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "lorain"
+      ]
+    },
+    "For State Representative (58th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "mahoning"
+      ]
+    },
+    "For State Representative (61st District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "delaware"
+      ]
+    },
+    "For State Representative (67th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "medina"
+      ]
+    },
+    "For State Representative (69th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "fairfield"
+      ]
+    },
+    "For State Representative (69th House District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "licking"
+      ]
+    },
+    "For State Representative (70th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "greene"
+      ]
+    },
+    "For State Representative (71st District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "clinton"
+      ]
+    },
+    "For State Representative (72nd District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "portage"
+      ]
+    },
+    "For State Representative (74th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "clark"
+      ]
+    },
+    "For State Representative (76th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "richland"
+      ]
+    },
+    "For State Representative (78th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "allen"
+      ]
+    },
+    "For State Representative (79th District)": {
+      "county_count": 2,
+      "instances": 2,
+      "counties": [
+        "carroll",
+        "columbiana"
+      ]
+    },
+    "For State Representative (80th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "miami"
+      ]
+    },
+    "For State Representative (81st District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "williams"
+      ]
+    },
+    "For State Representative (82nd District)": {
+      "county_count": 4,
+      "instances": 4,
+      "counties": [
+        "defiance",
+        "paulding",
+        "putnam",
+        "van-wert"
+      ]
+    },
+    "For State Representative (83rd District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "hardin"
+      ]
+    },
+    "For State Representative (84th District)": {
+      "county_count": 2,
+      "instances": 2,
+      "counties": [
+        "auglaize",
+        "darke"
+      ]
+    },
+    "For State Representative (85th District)": {
+      "county_count": 3,
+      "instances": 3,
+      "counties": [
+        "champaign",
+        "logan",
+        "shelby"
+      ]
+    },
+    "For State Representative (88th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "seneca"
+      ]
+    },
+    "For State Representative (89th District)": {
+      "county_count": 2,
+      "instances": 2,
+      "counties": [
+        "erie",
+        "huron"
+      ]
+    },
+    "For State Representative (90th District)": {
+      "county_count": 3,
+      "instances": 3,
+      "counties": [
+        "adams",
+        "brown",
+        "scioto"
+      ]
+    },
+    "For State Representative (91st District)": {
+      "county_count": 3,
+      "instances": 3,
+      "counties": [
+        "fayette",
+        "highland",
+        "pike"
+      ]
+    },
+    "For State Representative (92nd District)": {
+      "county_count": 4,
+      "instances": 4,
+      "counties": [
+        "hocking",
+        "perry",
+        "ross",
+        "vinton"
+      ]
+    },
+    "For State Representative (93rd District)": {
+      "county_count": 2,
+      "instances": 2,
+      "counties": [
+        "jackson",
+        "lawrence"
+      ]
+    },
+    "For State Representative (95th District)": {
+      "county_count": 3,
+      "instances": 3,
+      "counties": [
+        "athens",
+        "harrison",
+        "noble"
+      ]
+    },
+    "For State Representative (96th District)": {
+      "county_count": 3,
+      "instances": 3,
+      "counties": [
+        "belmont",
+        "jefferson",
+        "monroe"
+      ]
+    },
+    "For State Representative (97th District)": {
+      "county_count": 2,
+      "instances": 2,
+      "counties": [
+        "guernsey",
+        "muskingum"
+      ]
+    },
+    "For State Representative (98th District)": {
+      "county_count": 2,
+      "instances": 2,
+      "counties": [
+        "coshocton",
+        "knox"
+      ]
+    },
+    "For State Representative (99th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "ashtabula"
+      ]
+    },
+    "For State Senator": {
+      "county_count": 7,
+      "instances": 7,
+      "counties": [
+        "fulton",
+        "gallia",
+        "geauga",
+        "holmes",
+        "montgomery",
+        "pickaway",
+        "warren"
+      ]
+    },
+    "For State Senator (11th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "lucas"
+      ]
+    },
+    "For State Senator (13th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "lorain"
+      ]
+    },
+    "For State Senator (17th District)": {
+      "county_count": 9,
+      "instances": 9,
+      "counties": [
+        "fayette",
+        "highland",
+        "hocking",
+        "jackson",
+        "lawrence",
+        "perry",
+        "pike",
+        "ross",
+        "vinton"
+      ]
+    },
+    "For State Senator (19th District)": {
+      "county_count": 3,
+      "instances": 3,
+      "counties": [
+        "coshocton",
+        "delaware",
+        "knox"
+      ]
+    },
+    "For State Senator (1st District)": {
+      "county_count": 6,
+      "instances": 6,
+      "counties": [
+        "defiance",
+        "hardin",
+        "paulding",
+        "putnam",
+        "van-wert",
+        "williams"
+      ]
+    },
+    "For State Senator (27th District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "portage"
+      ]
+    },
+    "For State Senator (31st District)": {
+      "county_count": 3,
+      "instances": 3,
+      "counties": [
+        "guernsey",
+        "muskingum",
+        "tuscarawas"
+      ]
+    },
+    "For State Senator (33rd District)": {
+      "county_count": 3,
+      "instances": 3,
+      "counties": [
+        "carroll",
+        "columbiana",
+        "mahoning"
+      ]
+    },
+    "For State Senator (3rd District)": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "madison"
+      ]
+    },
+    "For State Senator (5th District)": {
+      "county_count": 2,
+      "instances": 2,
+      "counties": [
+        "miami",
+        "preble"
+      ]
+    },
+    "For the Judge of Court of Common Pleas Juvenile Probate Division": {
+      "county_count": 1,
+      "instances": 1,
+      "counties": [
+        "tuscarawas"
+      ]
+    }
+  },
+  "counties": {
+    "adams": {
+      "precinct": "01____1",
+      "precincts_listed": 27,
+      "contests_read": 20,
+      "source_updated_at": "2026-10-12T14:32:40-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 3
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (4th District)": 2,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Prosecuting Attorney": 1,
+        "For Representative to Congress (2nd District)": 1,
+        "For State Representative (90th District)": 1
+      }
+    },
+    "allen": {
+      "precinct": "0001__1",
+      "precincts_listed": 114,
+      "contests_read": 16,
+      "source_updated_at": "2026-09-09T09:10:09-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 6,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (3rd District)": 1,
+        "For Judge of the Court of Common Pleas (Probate Division)": 1,
+        "For Representative to Congress (4th District)": 1,
+        "For State Representative (78th District)": 1
+      }
+    },
+    "ashland": {
+      "precinct": "01____1",
+      "precincts_listed": 68,
+      "contests_read": 18,
+      "source_updated_at": "2026-09-15T11:59:12-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 6,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 3
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals": 1,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Representative to Congress": 1,
+        "For State Representative": 1
+      }
+    },
+    "ashtabula": {
+      "precinct": "001___1",
+      "precincts_listed": 134,
+      "contests_read": 22,
+      "source_updated_at": "2026-09-11T10:55:26-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 11,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For Coroner": 1,
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (11th District)": 2,
+        "For Judge of the Court of Common Pleas": 3,
+        "For Judge of the Court of Common Pleas (Probate Division)": 1,
+        "For Representative to Congress (14th District)": 1,
+        "For State Representative (99th District)": 1
+      }
+    },
+    "athens": {
+      "precinct": "0001__1",
+      "precincts_listed": 67,
+      "contests_read": 18,
+      "source_updated_at": "2026-09-10T10:13:25-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (4th District)": 1,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile Division)": 1,
+        "For Representative to Congress (2nd District)": 1,
+        "For State Representative (95th District)": 1
+      }
+    },
+    "auglaize": {
+      "precinct": "0010__1",
+      "precincts_listed": 67,
+      "contests_read": 17,
+      "source_updated_at": "2026-09-15T13:20:34-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For County Treasurer": 1,
+        "For Judge of the Court of Appeals (3rd District)": 1,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Prosecuting Attorney": 1,
+        "For Representative to Congress (4th District)": 1,
+        "For State Representative (84th District)": 1
+      }
+    },
+    "belmont": {
+      "precinct": "0001__1",
+      "precincts_listed": 119,
+      "contests_read": 20,
+      "source_updated_at": "2026-09-29T14:15:12-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (7th District)": 2,
+        "For Judge of the Court of Common Pleas": 2,
+        "For Judge of the Court of Common Pleas (Probate Division)": 1,
+        "For Representative to Congress (6th District)": 1,
+        "For State Representative (96th District)": 1
+      }
+    },
+    "brown": {
+      "precinct": "0010__1",
+      "precincts_listed": 59,
+      "contests_read": 18,
+      "source_updated_at": "2026-09-11T10:20:55-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1
+      },
+      "local_office_titles": {
+        "For Coroner": 1,
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (12th District)": 2,
+        "For Judge of the Court of Common Pleas (General Division)": 1,
+        "For Judge of the Court of Common Pleas (Probate Division)": 1,
+        "For Representative to Congress (2nd District)": 1,
+        "For State Representative (90th District)": 1
+      }
+    },
+    "carroll": {
+      "precinct": "001___1",
+      "precincts_listed": 43,
+      "contests_read": 18,
+      "source_updated_at": "2026-09-17T14:25:38-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (7th District)": 2,
+        "For Judge of the Court of Common Pleas (Probate and Juvenile Division)": 1,
+        "For Representative to Congress (6th District)": 1,
+        "For State Representative (79th District)": 1,
+        "For State Senator (33rd District)": 1
+      }
+    },
+    "champaign": {
+      "precinct": "0001__1",
+      "precincts_listed": 51,
+      "contests_read": 21,
+      "source_updated_at": "2026-09-10T13:17:02-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 4
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (2nd District)": 1,
+        "For Judge of the Court of Common Pleas": 2,
+        "FOR MAYOR OF THE CITY OF URBANA": 1,
+        "For Representative to Congress (4th District)": 1,
+        "For State Representative (85th District)": 1
+      }
+    },
+    "clark": {
+      "precinct": "001___1",
+      "precincts_listed": 126,
+      "contests_read": 20,
+      "source_updated_at": "2026-09-16T10:06:35-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For Coroner": 1,
+        "For County Auditor": 1,
+        "For County Commissioner": 2,
+        "For County Recorder": 1,
+        "For Judge of the Court of Appeals (2nd District)": 1,
+        "For Judge of the Court of Common Pleas (Probate Division)": 1,
+        "For Representative to Congress (4th District)": 1,
+        "For State Representative (74th District)": 1
+      }
+    },
+    "clinton": {
+      "precinct": "01____1",
+      "precincts_listed": 61,
+      "contests_read": 23,
+      "source_updated_at": "2026-09-18T08:01:34-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 7
+      },
+      "local_office_titles": {
+        "For Clinton County Auditor": 1,
+        "For Clinton County Commissioner": 1,
+        "For Judge of the Court of Appeals (12th District)": 2,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile Division)": 1,
+        "For Representative to Congress (1st District)": 1,
+        "For State Representative (71st District)": 1
+      }
+    },
+    "columbiana": {
+      "precinct": "001___1",
+      "precincts_listed": 108,
+      "contests_read": 15,
+      "source_updated_at": "2026-09-14T10:59:03-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 6,
+        "statewide_issue_resolved_by_text": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile Division)": 1,
+        "For Representative to Congress (6th District)": 1,
+        "For State Representative (79th District)": 1,
+        "For State Senator (33rd District)": 1
+      }
+    },
+    "coshocton": {
+      "precinct": "001___1",
+      "precincts_listed": 55,
+      "contests_read": 19,
+      "source_updated_at": "2026-09-14T16:05:06-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For County Engineer": 1,
+        "For Judge of the Court of Appeals (5th District)": 1,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile Division)": 1,
+        "For Representative to Congress (12th District)": 1,
+        "For State Representative (98th District)": 1,
+        "For State Senator (19th District)": 1
+      }
+    },
+    "darke": {
+      "precinct": "01____1",
+      "precincts_listed": 110,
+      "contests_read": 17,
+      "source_updated_at": "2026-09-18T09:31:59-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For County Coroner": 1,
+        "For Judge of the Court of Appeals (2nd District)": 1,
+        "For Judge of the Court of Common Pleas (Probate and Juvenile Division)": 1,
+        "For Representative to Congress (8th District)": 1,
+        "For State Representative (84th District)": 1
+      }
+    },
+    "defiance": {
+      "precinct": "001___1",
+      "precincts_listed": 46,
+      "contests_read": 21,
+      "source_updated_at": "2026-09-17T09:59:34-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 3
+      },
+      "local_office_titles": {
+        "For Auditor": 1,
+        "For County Commissioner (Full term commencing 1-1-2027)": 1,
+        "For County Commissioner (Unexpired term ending 1-2-2029)": 1,
+        "For Judge of the Court of Appeals (3rd District) (Full term commencing 2-9-2027)": 1,
+        "For Judge of the Court of Common Pleas (General/Domestic Division) (Full term commencing 2-9-2027)": 1,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile Division) (Full term commencing 2-9-2027)": 1,
+        "For Representative to Congress (9th District)": 1,
+        "For State Representative (82nd District)": 1,
+        "For State Senator (1st District)": 1
+      }
+    },
+    "delaware": {
+      "precinct": "001___1",
+      "precincts_listed": 258,
+      "contests_read": 22,
+      "source_updated_at": "2026-09-10T11:54:20-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 4
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (5th District)": 1,
+        "For Judge of the Court of Common Pleas (General Division)": 2,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile Division)": 1,
+        "For Representative to Congress (4th District)": 1,
+        "For State Representative (61st District)": 1,
+        "For State Senator (19th District)": 1
+      }
+    },
+    "erie": {
+      "precinct": "0001__1",
+      "precincts_listed": 80,
+      "contests_read": 18,
+      "source_updated_at": "2026-09-16T09:01:15-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (6th District)": 2,
+        "For Judge of the Court of Common Pleas (General Division)": 1,
+        "For Representative to Congress (9th District)": 1,
+        "For State Representative (89th District)": 1
+      }
+    },
+    "fairfield": {
+      "precinct": "01AA__1",
+      "precincts_listed": 173,
+      "contests_read": 16,
+      "source_updated_at": "2026-09-15T12:02:20-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (5th District)": 1,
+        "For Judge of the Court of Common Pleas (General Division)": 1,
+        "For Judge of the Court of Common Pleas (Juvenile/Probate Division)": 1,
+        "For Representative to Congress (12th District)": 1,
+        "For State Representative (69th District)": 1
+      }
+    },
+    "fayette": {
+      "precinct": "0001__1",
+      "precincts_listed": 42,
+      "contests_read": 19,
+      "source_updated_at": "2026-10-13T15:33:51-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (12th District)": 2,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile Division)": 1,
+        "For Representative to Congress (15th District)": 1,
+        "For State Representative (91st District)": 1,
+        "For State Senator (17th District)": 1
+      }
+    },
+    "fulton": {
+      "precinct": "001___1",
+      "precincts_listed": 41,
+      "contests_read": 21,
+      "source_updated_at": "2026-09-18T11:16:23-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 3
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 2,
+        "For Judge of the Court of Appeals": 2,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Representative to Congress": 1,
+        "For State Representative": 1,
+        "For State Senator": 1
+      }
+    },
+    "gallia": {
+      "precinct": "001___1",
+      "precincts_listed": 38,
+      "contests_read": 16,
+      "source_updated_at": "2026-10-05T13:18:22-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (4th Distrit)": 1,
+        "For Judge of the Court of Common Pleas (Juvenile and Probate Division)": 1,
+        "For Representative to Congress (2nd District)": 1,
+        "For State Representative": 1,
+        "For State Senator": 1
+      }
+    },
+    "geauga": {
+      "precinct": "0001__1",
+      "precincts_listed": 91,
+      "contests_read": 19,
+      "source_updated_at": "2026-09-14T08:55:01-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of Court of Common Pleas": 1,
+        "For Judge of the Court of Appeals": 2,
+        "For Representative to Congress": 1,
+        "For State Representative": 1,
+        "For State Senator": 1
+      }
+    },
+    "greene": {
+      "precinct": "001___1",
+      "precincts_listed": 182,
+      "contests_read": 20,
+      "source_updated_at": "2026-09-16T11:24:37-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For County Treasurer": 1,
+        "For Judge of the Court of Appeals (2nd District)": 1,
+        "For Judge of the Court of Common Pleas (Domestic Relations)": 1,
+        "For Judge of the Court of Common Pleas (General)": 1,
+        "For Judge of the Court of Common Pleas (Probate)": 1,
+        "For Representative to Congress (10th District)": 1,
+        "For State Representative (70th District)": 1
+      }
+    },
+    "guernsey": {
+      "precinct": "0001__1",
+      "precincts_listed": 62,
+      "contests_read": 21,
+      "source_updated_at": "2026-09-15T11:35:17-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 5
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (5th District)": 1,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile Division)": 1,
+        "For Representative to Congress (12th District)": 1,
+        "For State Representative (97th District)": 1,
+        "For State Senator (31st District)": 1
+      }
+    },
+    "hardin": {
+      "precinct": "01____1",
+      "precincts_listed": 47,
+      "contests_read": 18,
+      "source_updated_at": "2026-09-11T14:32:18-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (3rd District)": 1,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Members of Charter Commission": 1,
+        "For Representative to Congress (4th District)": 1,
+        "For State Representative (83rd District)": 1,
+        "For State Senator (1st District)": 1
+      }
+    },
+    "harrison": {
+      "precinct": "001___1",
+      "precincts_listed": 34,
+      "contests_read": 21,
+      "source_updated_at": "2026-09-16T11:17:44-04:00",
+      "classes": {
+        "statewide_race_resolved": 7,
+        "statewide_race_needs_mapping": 1,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 4
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (7th District)": 2,
+        "For Judge of the Court of Common Pleas": 2,
+        "For Representative to Congress (6th District)": 1,
+        "For State Representative (95th District)": 1
+      }
+    },
+    "highland": {
+      "precinct": "01____1",
+      "precincts_listed": 65,
+      "contests_read": 18,
+      "source_updated_at": "2026-10-12T14:23:13-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (4th District)": 2,
+        "For Judge of the Court of Common Pleas (General Division)": 1,
+        "For Judge of the Court of Common Pleas FTC 2-9 (Juvenile and Probate Division)": 1,
+        "For Representative to Congress (15th District)": 1,
+        "For State Representative (91st District)": 1,
+        "For State Senator (17th District)": 1
+      }
+    },
+    "hocking": {
+      "precinct": "01____1",
+      "precincts_listed": 31,
+      "contests_read": 18,
+      "source_updated_at": "2026-10-05T12:07:42-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (4th District)": 2,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Representative to Congress (2nd District)": 1,
+        "For State Representative (92nd District)": 1,
+        "For State Senator (17th District)": 1
+      }
+    },
+    "holmes": {
+      "precinct": "001___1",
+      "precincts_listed": 37,
+      "contests_read": 19,
+      "source_updated_at": "2026-09-15T13:23:14-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals": 1,
+        "For Judge of the Court of Common Pleas": 2,
+        "For Representative to Congress": 1,
+        "For Sheriff": 1,
+        "For State Representative": 1,
+        "For State Senator": 1
+      }
+    },
+    "huron": {
+      "precinct": "01____1",
+      "precincts_listed": 74,
+      "contests_read": 18,
+      "source_updated_at": "2026-09-01T14:55:41-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 2,
+        "For Judge of the Court of Appeals (6th District)": 2,
+        "For Judge of the Court of Common Pleas (Juvenile and Probate Division)": 1,
+        "For Representative to Congress (5th District)": 1,
+        "For State Representative (89th District)": 1
+      }
+    },
+    "jackson": {
+      "precinct": "001___1",
+      "precincts_listed": 36,
+      "contests_read": 19,
+      "source_updated_at": "2026-10-06T08:15:50-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (4th District)": 2,
+        "For Judge of the Court of Common Pleas (Probate & Juvenile Division)": 1,
+        "For Prosecuting Attorney": 1,
+        "For Representative to Congress (2nd District)": 1,
+        "For State Representative (93rd District)": 1,
+        "For State Senator (17th District)": 1
+      }
+    },
+    "jefferson": {
+      "precinct": "001___1",
+      "precincts_listed": 92,
+      "contests_read": 22,
+      "source_updated_at": "2026-09-09T09:48:55-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 4
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (7th District)": 2,
+        "For Judge of the Court of Common Pleas": 2,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile Division)": 1,
+        "For Representative to Congress (6th District)": 1,
+        "For State Representative (96th District)": 1
+      }
+    },
+    "knox": {
+      "precinct": "001___1",
+      "precincts_listed": 79,
+      "contests_read": 18,
+      "source_updated_at": "2026-09-17T15:57:13-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (5th District)": 1,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Representative to Congress (12th District)": 1,
+        "For State Representative (98th District)": 1,
+        "For State Senator (19th District)": 1
+      }
+    },
+    "lawrence": {
+      "precinct": "0010__1",
+      "precincts_listed": 99,
+      "contests_read": 18,
+      "source_updated_at": "2026-10-05T10:33:07-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (4th District)": 1,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile Division)": 1,
+        "For Representative to Congress (2nd District)": 1,
+        "For State Representative (93rd District)": 1,
+        "For State Senator (17th District)": 1
+      }
+    },
+    "licking": {
+      "precinct": "0101__1",
+      "precincts_listed": 184,
+      "contests_read": 21,
+      "source_updated_at": "2026-09-30T08:44:19-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 4
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals": 1,
+        "For Judge of the Court of Common Pleas (Domestic Division)": 1,
+        "For Judge of the Court of Common Pleas (General Division)": 1,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile Division)": 1,
+        "For Representative to Congress (12th District)": 1,
+        "For State Representative (69th House District)": 1
+      }
+    },
+    "logan": {
+      "precinct": "010___1",
+      "precincts_listed": 69,
+      "contests_read": 18,
+      "source_updated_at": "2026-09-16T15:51:36-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 6,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 3
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (3rd District)": 1,
+        "For Judge of the Court of Common Pleas (Family Division)": 1,
+        "For Representative to Congress (4th District)": 1,
+        "For State Representative (85th District)": 1
+      }
+    },
+    "lorain": {
+      "precinct": "0010__1",
+      "precincts_listed": 247,
+      "contests_read": 20,
+      "source_updated_at": "2026-09-28T23:13:53-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 3
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (9th District)": 2,
+        "For Judge of the Court of Common Pleas (Probate Division)": 1,
+        "For Representative to Congress (5th District)": 1,
+        "For State Representative (53rd District)": 1,
+        "For State Senator (13th District)": 1
+      }
+    },
+    "lucas": {
+      "precinct": "001A__1",
+      "precincts_listed": 315,
+      "contests_read": 27,
+      "source_updated_at": "2026-10-08T12:02:08-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 11,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 7
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (6th District)": 2,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Judge of the Court of Common Pleas (Domestic Relations Division)": 1,
+        "For Judge of the Court of Common Pleas (Juvenile Division)": 1,
+        "For Judge of the Court of Common Pleas (Probate Division)": 1,
+        "For Representative to Congress (9th District)": 1,
+        "For State Representative (42nd District)": 1,
+        "For State Senator (11th District)": 1
+      }
+    },
+    "madison": {
+      "precinct": "0001__1",
+      "precincts_listed": 40,
+      "contests_read": 19,
+      "source_updated_at": "2026-09-18T10:27:21-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (12th District)": 2,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile Division)": 1,
+        "For Representative to Congress (15th District)": 1,
+        "For State Representative (12th District)": 1,
+        "For State Senator (3rd District)": 1
+      }
+    },
+    "mahoning": {
+      "precinct": "0001__1",
+      "precincts_listed": 237,
+      "contests_read": 22,
+      "source_updated_at": "2026-09-16T13:53:09-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 12,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (7th District)": 2,
+        "For Judge of the Court of Common Pleas (Domestic Relations)": 1,
+        "For Judge of the Court of Common Pleas (General Division)": 3,
+        "For Judge of the Court of Common Pleas (Probate Division)": 1,
+        "For Representative to Congress (6th District)": 1,
+        "For State Representative (58th District)": 1,
+        "For State Senator (33rd District)": 1
+      }
+    },
+    "marion": {
+      "precinct": "001___1",
+      "precincts_listed": 88,
+      "contests_read": 19,
+      "source_updated_at": "2026-09-10T15:58:27-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 3
+      },
+      "local_office_titles": {
+        "For Coroner": 1,
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals": 1,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Representative to Congress": 1,
+        "For State Representative": 1
+      }
+    },
+    "medina": {
+      "precinct": "001___1",
+      "precincts_listed": 145,
+      "contests_read": 18,
+      "source_updated_at": "2026-09-16T17:05:51-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner (Full term commencing 1-1-2027)": 1,
+        "For County Recorder (Unexpired term ending 12-31-2028)": 1,
+        "For Judge of the Court of Appeals (9th District) (Full term commencing 2-9-2027)": 1,
+        "For Judge of the Court of Appeals (9th District) (Unexpired term ending 2-9-2029)": 1,
+        "For Judge of the Court of Common Pleas (General Division) (Full term commencing 1-1-2027)": 1,
+        "For Judge of the Court of Common Pleas (Juvenile/Probate Division) (Full term commencing 2-9-2027)": 1,
+        "For Representative to Congress (7th District)": 1,
+        "For State Representative (67th District)": 1
+      }
+    },
+    "meigs": {
+      "precinct": "01____1",
+      "precincts_listed": 30,
+      "contests_read": 20,
+      "source_updated_at": "2026-10-05T10:36:21-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 4
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For County Treasurer": 1,
+        "For Judge of the Court of Appeals": 1,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Representative to Congress": 1,
+        "For State Representative": 1
+      }
+    },
+    "miami": {
+      "precinct": "001___1",
+      "precincts_listed": 136,
+      "contests_read": 20,
+      "source_updated_at": "2026-09-30T08:14:14-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 3
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (2nd District)": 1,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Judge of the Court of Common Pleas - Juvenile/Probate": 1,
+        "For Representative to Congress (15th District)": 1,
+        "For State Representative (80th District)": 1,
+        "For State Senator (5th District)": 1
+      }
+    },
+    "monroe": {
+      "precinct": "01____1",
+      "precincts_listed": 32,
+      "contests_read": 17,
+      "source_updated_at": "2026-09-14T13:35:59-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For County Treasurer": 1,
+        "For Judge of the Court of Appeals (7th District)": 2,
+        "For Judge of the Court of Common Pleas (Probate and Juvenile Division)": 1,
+        "For Representative to Congress (12th District)": 1,
+        "For State Representative (96th District)": 1
+      }
+    },
+    "montgomery": {
+      "precinct": "0010__1",
+      "precincts_listed": 468,
+      "contests_read": 26,
+      "source_updated_at": "2026-10-01T13:47:22-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 13,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 4
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (2nd District)": 1,
+        "For Judge of the Court of Common Pleas (General Division)": 5,
+        "For Judge of the Court of Common Pleas (Juvenile Division)": 1,
+        "For Judge of the Court of Common Pleas (Probate Division)": 1,
+        "For Representative to Congress": 1,
+        "For State Representative": 1,
+        "For State Senator": 1
+      }
+    },
+    "morgan": {
+      "precinct": "01____1",
+      "precincts_listed": 24,
+      "contests_read": 15,
+      "source_updated_at": "2026-09-08T10:02:15-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 6,
+        "statewide_issue_resolved_by_text": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals": 1,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Representative to Congress": 1,
+        "For State Representative": 1
+      }
+    },
+    "muskingum": {
+      "precinct": "01____1",
+      "precincts_listed": 89,
+      "contests_read": 18,
+      "source_updated_at": "2026-09-09T11:53:52-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (5th District)": 1,
+        "For Judge of the Court of Common Pleas (Domestic Relations)": 1,
+        "For Judge of the Court of Common Pleas (General Division)": 1,
+        "For Judge of the Court of Common Pleas (Probate and Juvenile)": 1,
+        "For Representative to Congress (12th District)": 1,
+        "For State Representative (97th District)": 1,
+        "For State Senator (31st District)": 1
+      }
+    },
+    "noble": {
+      "precinct": "001___1",
+      "precincts_listed": 43,
+      "contests_read": 21,
+      "source_updated_at": "2026-09-16T15:51:07-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 3
+      },
+      "local_office_titles": {
+        "For Coroner": 1,
+        "For County Auditor": 1,
+        "For County Commissioner": 2,
+        "For Judge of the Court of Appeals (7th District)": 2,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Representative to Congress (12th District)": 1,
+        "For State Representative (95th District)": 1
+      }
+    },
+    "paulding": {
+      "precinct": "01____1",
+      "precincts_listed": 34,
+      "contests_read": 17,
+      "source_updated_at": "2026-09-10T11:19:35-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (3rd District)": 1,
+        "For Prosecuting Attorney": 1,
+        "For Representative to Congress (9th District)": 1,
+        "For State Representative (82nd District)": 1,
+        "For State Senator (1st District)": 1
+      }
+    },
+    "perry": {
+      "precinct": "0001__1",
+      "precincts_listed": 57,
+      "contests_read": 21,
+      "source_updated_at": "2026-09-18T11:45:36-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 10,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For Coroner": 1,
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For County Recorder": 1,
+        "For Judge of the Court of Appeals (5th District)": 1,
+        "For Judge of the Court of Common Pleas (General Division)": 1,
+        "For Judge of the Court of Common Pleas (Probate-Juvenile Division)": 1,
+        "For Representative to Congress (12th District)": 1,
+        "For State Representative (92nd District)": 1,
+        "For State Senator (17th District)": 1
+      }
+    },
+    "pickaway": {
+      "precinct": "01____1",
+      "precincts_listed": 65,
+      "contests_read": 18,
+      "source_updated_at": "2026-10-05T13:53:25-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For Coroner": 1,
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals": 1,
+        "For Judge of the Court of Common Pleas": 1,
+        "For Representative to Congress": 1,
+        "For State Representative": 1,
+        "For State Senator": 1
+      }
+    },
+    "pike": {
+      "precinct": "001___1",
+      "precincts_listed": 29,
+      "contests_read": 18,
+      "source_updated_at": "2026-10-05T17:45:11-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (4th District)": 1,
+        "For Judge of the Court of Common Pleas (Probate & Juvenile Division)": 1,
+        "For Representative to Congress (2nd District)": 1,
+        "For State Representative (91st District)": 1,
+        "For State Senator (17th District)": 1
+      }
+    },
+    "portage": {
+      "precinct": "001___1",
+      "precincts_listed": 143,
+      "contests_read": 22,
+      "source_updated_at": "2026-09-16T15:37:18-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 4
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Comissioner": 1,
+        "For Judge of the Court of Appeals (11th District)": 2,
+        "For Judge of the Court of Common Pleas (General Division)": 1,
+        "For Judge of the Court of Common Pleas (Juvenile / Probate Division)": 1,
+        "For Representative to Congress (14th District)": 1,
+        "For State Representative (72nd District)": 1,
+        "For State Senator (27th District)": 1
+      }
+    },
+    "preble": {
+      "precinct": "001___1",
+      "precincts_listed": 65,
+      "contests_read": 19,
+      "source_updated_at": "2026-09-15T14:57:22-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For Clerk of the Court of Common Pleas": 1,
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (12th District)": 2,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile)": 1,
+        "For Representative to Congress (8th District)": 1,
+        "For State Representative (40th District)": 1,
+        "For State Senator (5th District)": 1
+      }
+    },
+    "putnam": {
+      "precinct": "001___1",
+      "precincts_listed": 69,
+      "contests_read": 18,
+      "source_updated_at": "2026-09-17T16:13:04-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For Clerk of the Court of Common Pleas": 1,
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (3rd District)": 1,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile Division)": 1,
+        "For Representative to Congress (9th District)": 1,
+        "For State Representative (82nd District)": 1,
+        "For State Senator (1st District)": 1
+      }
+    },
+    "richland": {
+      "precinct": "0100__1",
+      "precincts_listed": 148,
+      "contests_read": 17,
+      "source_updated_at": "2026-09-11T10:33:01-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1
+      },
+      "local_office_titles": {
+        "For Clerk of the Court of Common Pleas": 1,
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (5th District)": 1,
+        "For Judge of the Court of Common Pleas (General Division)": 1,
+        "For Judge of the Court of Common Pleas (Probate Division)": 1,
+        "For Representative to Congress (5th District)": 1,
+        "For State Representative (76th District)": 1
+      }
+    },
+    "ross": {
+      "precinct": "001___1",
+      "precincts_listed": 82,
+      "contests_read": 18,
+      "source_updated_at": "2026-10-05T10:44:30-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (4th District)": 1,
+        "For Judge of the Court of Common Pleas (Probate & Juvenile Divisions)": 1,
+        "For Representative to Congress (2nd District)": 1,
+        "For State Representative (92nd District)": 1,
+        "For State Senator (17th District)": 1
+      }
+    },
+    "scioto": {
+      "precinct": "0001__1",
+      "precincts_listed": 87,
+      "contests_read": 19,
+      "source_updated_at": "2026-10-12T08:37:52-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 2,
+        "For Judge of the Court of Appeals (4th District)": 1,
+        "For Judge of the Court of Common Pleas": 3,
+        "For Representative to Congress (2nd District)": 1,
+        "For State Representative (90th District)": 1
+      }
+    },
+    "seneca": {
+      "precinct": "001___1",
+      "precincts_listed": 89,
+      "contests_read": 17,
+      "source_updated_at": "2026-09-14T13:34:18-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 6,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 2
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (3rd District)": 1,
+        "For Judge of the Court of Common Pleas Probate/Juvenile Division": 1,
+        "For Representative to Congress (5th District)": 1,
+        "For State Representative (88th District)": 1
+      }
+    },
+    "shelby": {
+      "precinct": "0001__1",
+      "precincts_listed": 76,
+      "contests_read": 16,
+      "source_updated_at": "2026-09-15T13:50:51-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 6,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (3rd District)": 1,
+        "For Judge of the Court of Common Pleas (Probate/Juvenile Division)": 1,
+        "For Representative to Congress (4th District)": 1,
+        "For State Representative (85th District)": 1
+      }
+    },
+    "summit": {
+      "precinct": "001___1",
+      "precincts_listed": 479,
+      "contests_read": 26,
+      "source_updated_at": "2026-09-17T15:45:15-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 14,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 3
+      },
+      "local_office_titles": {
+        "For Judge of the Court of Appeals (9th District)": 2,
+        "For Judge of the Court of Common Pleas (Domestic Relations Division)": 1,
+        "For Judge of the Court of Common Pleas (General Division)": 6,
+        "For Judge of the Court of Common Pleas (Juvenile Division)": 1,
+        "For Judge of the Court of Common Pleas (Probate Division)": 1,
+        "For Member of County Council at Large": 1,
+        "For Representative to Congress (13th District)": 1,
+        "For State Representative (34th District)": 1
+      }
+    },
+    "tuscarawas": {
+      "precinct": "0001__1",
+      "precincts_listed": 123,
+      "contests_read": 20,
+      "source_updated_at": "2026-09-17T11:37:10-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 10,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (5th District)": 1,
+        "For Judge of the Court of Common Pleas": 2,
+        "For Prosecuting Attorney": 1,
+        "For Representative to Congress (6th District)": 1,
+        "For State Representative (51st District)": 1,
+        "For State Senator (31st District)": 1,
+        "For the Judge of Court of Common Pleas Juvenile Probate Division": 1
+      }
+    },
+    "union": {
+      "precinct": "01____1",
+      "precincts_listed": 87,
+      "contests_read": 16,
+      "source_updated_at": "2026-09-10T15:02:05-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals": 1,
+        "For Judge of the Court of Common Pleas": 2,
+        "For Representative to Congress": 1,
+        "For State Representative": 1
+      }
+    },
+    "van-wert": {
+      "precinct": "01____1",
+      "precincts_listed": 47,
+      "contests_read": 18,
+      "source_updated_at": "2026-09-03T16:04:37-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (3rd District)": 1,
+        "For Judge of the Court of Common Pleas (Juvenile/Probate Division)": 1,
+        "For Prosecuting Attorney": 1,
+        "For Representative to Congress (4th District)": 1,
+        "For State Representative (82nd District)": 1,
+        "For State Senator (1st District)": 1
+      }
+    },
+    "vinton": {
+      "precinct": "0001__1",
+      "precincts_listed": 22,
+      "contests_read": 17,
+      "source_updated_at": "2026-10-05T15:23:54-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 7,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 1
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (4th District)": 1,
+        "For Judge of the Court of Common Pleas (Juvenile Division)": 1,
+        "For Representative to Congress (2nd District)": 1,
+        "For State Representative (92nd District)": 1,
+        "For State Senator (17th District)": 1
+      }
+    },
+    "warren": {
+      "precinct": "001___1",
+      "precincts_listed": 291,
+      "contests_read": 22,
+      "source_updated_at": "2026-09-15T13:41:50-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 4
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals": 2,
+        "For Judge of the Court of Common Pleas": 2,
+        "For Representative to Congress": 1,
+        "For State Representative": 1,
+        "For State Senator": 1
+      }
+    },
+    "washington": {
+      "precinct": "0001__1",
+      "precincts_listed": 64,
+      "contests_read": 21,
+      "source_updated_at": "2026-10-05T11:37:36-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 9,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 3
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 2,
+        "For Judge of the Court of Appeals": 1,
+        "For Judge of the Court of Common Pleas": 2,
+        "For Prosecuting Attorney": 1,
+        "For Representative to Congress": 1,
+        "For State Representative": 1
+      }
+    },
+    "williams": {
+      "precinct": "001___1",
+      "precincts_listed": 44,
+      "contests_read": 20,
+      "source_updated_at": "2026-09-17T14:16:48-04:00",
+      "classes": {
+        "statewide_race_resolved": 8,
+        "local_office": 8,
+        "statewide_issue_resolved_by_text": 1,
+        "local_issue": 3
+      },
+      "local_office_titles": {
+        "For County Auditor": 1,
+        "For County Commissioner": 1,
+        "For Judge of the Court of Appeals (6th District)": 2,
+        "For Judge of the Court of Common Pleas (Juvenile and Probate Division)": 1,
+        "For Representative to Congress (9th District)": 1,
+        "For State Representative (81st District)": 1,
+        "For State Senator (1st District)": 1
+      }
+    }
+  }
+}

@@ -528,6 +528,27 @@ replay reads them **from the bundle it is replaying** rather than from the
 working tree. Without that, editing any of the three made the same saved
 snapshot replay differently.
 
+Carrying a digest is not the same as checking one. A replay loads the source
+bundle's own `summary.json` first and refuses before any walk when a recorded
+input is missing from the bundle, its bytes no longer match the recorded
+digest, or a flag such as `--office-title-patterns` names a different file than
+the one the bundle recorded. If you want to try an edited pattern set against
+saved snapshots, that is a new refresh and not a replay: point `--snapshots` at
+a directory holding only the `*-snapshot.json` files. Refresh bundles are
+schema 3 for this reason — a schema 2 bundle recorded no input digests, so
+there is nothing to verify it against and `gate:vtrapp` refuses it by version.
+
+Projection and validation read the same input bytes. The refresh and the gate
+both hand the selected issue text, patterns, and survey to
+`scripts/validate-data.mjs` rather than letting it re-read the repository's
+copies, so a malformed bundled input cannot drive a projection while the good
+repository copy is what gets checked.
+
+An office label derived from a surveyed title is scoped to the **county and the
+election** the survey measured. A primary and a general print different
+offices, so one election's survey authorizes nothing on another's ballot; the
+projector falls through to its "needs mappings" refusal instead.
+
 ## Design changes
 
 Read [`docs/DESIGN.md`](docs/DESIGN.md) before changing `styles.css` or the page

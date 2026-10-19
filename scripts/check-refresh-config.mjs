@@ -103,10 +103,14 @@ export function validateRefreshConfigs({
       // A label the curated patterns derive from a title the survey measured
       // this county printing is reproducible in the same sense a hand-written
       // mapping is, and it is what lets a new county be onboarded without one.
+      // Scoped to this job's election: another election's survey is not a
+      // measurement of this ballot, and authorising from one would let a
+      // primary's titles stand in for a general's.
       for (const label of derivableOfficeLabels(contestSurvey, {
         ...officeTitlePatterns,
         countyId: job.county,
         countyName: expectedCountyName(location),
+        electionId,
       })) {
         mappedOffices.add(label);
       }

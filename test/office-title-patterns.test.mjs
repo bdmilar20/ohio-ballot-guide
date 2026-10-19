@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   countyNamesFrom,
+  derivableOfficeLabels,
   measureCoverage,
   officeFromTitle,
   officeLabeller,
@@ -120,8 +121,15 @@ test("reading the pattern file refuses the shapes that would mislabel an office"
   assert.doesNotThrow(() => readPatterns(file({ patterns: PATTERNS, corrections: CORRECTIONS })));
 });
 
+const ELECTION_ID = "2026-11-03-general";
+const OTHER_ELECTION_ID = "2026-05-05-primary";
+
 const SURVEY = {
-  meta: { schema_version: 2, summary: { contest_instances: 20, automatable_instances: 10, automatable_share: "50.0%" } },
+  meta: {
+    schema_version: 2,
+    election: { id: ELECTION_ID, vendor_key: "20261103G" },
+    summary: { contest_instances: 20, automatable_instances: 10, automatable_share: "50.0%" },
+  },
   local_office_titles: {
     "For County Auditor": { county_count: 2, instances: 2, counties: ["adams", "brown"] },
     // Two seats in one county: one title, two contests.
@@ -265,14 +273,40 @@ test("a labeller with no allowedTitles decision at all is refused", () => {
   );
 });
 
+test("surveyedTitlesFor refuses to authorize titles from another election's survey", () => {
+  // A primary and a general print different offices, so a survey of one is no
+  // measurement of the other. Before this check the November job read the
+  // March survey and published from it.
+  assert.deepEqual([...surveyedTitlesFor(SURVEY, "adams", ELECTION_ID)].sort(), [
+    "For County Auditor",
+    "For County Commissioner",
+  ]);
+  assert.deepEqual([...surveyedTitlesFor(SURVEY, "adams", OTHER_ELECTION_ID)], []);
+  assert.throws(
+    () => surveyedTitlesFor(SURVEY, "adams"),
+    /needs the election id/,
+    "the election must be asked for, not defaulted",
+  );
+});
+
+test("derivableOfficeLabels authorizes nothing from another election's survey", () => {
+  const options = { patterns: PATTERNS, corrections: CORRECTIONS, countyId: "adams", countyName: "Adams" };
+  assert.ok(derivableOfficeLabels(SURVEY, { ...options, electionId: ELECTION_ID }).size > 0);
+  assert.equal(derivableOfficeLabels(SURVEY, { ...options, electionId: OTHER_ELECTION_ID }).size, 0);
+});
+
 test("surveyedTitlesFor reads only the county asked for", () => {
   const survey = {
+    meta: { election: { id: ELECTION_ID } },
     local_office_titles: {
       "For County Auditor": { counties: ["adams", "brown"] },
       "For County Commissioner": { counties: ["brown"] },
     },
   };
-  assert.deepEqual([...surveyedTitlesFor(survey, "adams")], ["For County Auditor"]);
-  assert.deepEqual([...surveyedTitlesFor(survey, "brown")], ["For County Auditor", "For County Commissioner"]);
-  assert.deepEqual([...surveyedTitlesFor(null, "adams")], [], "no survey labels nothing");
+  assert.deepEqual([...surveyedTitlesFor(survey, "adams", ELECTION_ID)], ["For County Auditor"]);
+  assert.deepEqual(
+    [...surveyedTitlesFor(survey, "brown", ELECTION_ID)],
+    ["For County Auditor", "For County Commissioner"],
+  );
+  assert.deepEqual([...surveyedTitlesFor(null, "adams", ELECTION_ID)], [], "no survey labels nothing");
 });

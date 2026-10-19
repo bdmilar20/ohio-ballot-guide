@@ -159,6 +159,7 @@ test("a county can be onboarded with no office table when the patterns cover wha
   const data = fixture();
   data.configs[0].manifest.jobs[0].projection.office_mappings = {};
   data.contestSurvey = {
+    meta: { election: { id: "2026-11-03-general" } },
     local_office_titles: { "For County Commissioner": { county_count: 1, instances: 1, counties: ["adams"] } },
   };
   data.officeTitlePatterns = {
@@ -169,10 +170,29 @@ test("a county can be onboarded with no office table when the patterns cover wha
   assert.deepEqual(validateRefreshConfigs(data), { configs: 1, jobs: 1, generated_counties: 1 });
 });
 
+test("a derived label only covers the election the survey measured", () => {
+  // A primary and a general print different offices. Reading one election's
+  // survey to authorize another's publication is the same mistake as reading
+  // another county's: the measurement is of a different ballot.
+  const data = fixture();
+  data.configs[0].manifest.jobs[0].projection.office_mappings = {};
+  data.contestSurvey = {
+    meta: { election: { id: "2026-05-05-primary" } },
+    local_office_titles: { "For County Commissioner": { county_count: 1, instances: 1, counties: ["adams"] } },
+  };
+  data.officeTitlePatterns = {
+    patterns: [{ printed: "County Commissioner", office_id: "county-commissioner", office: "County Commissioner" }],
+    corrections: [],
+  };
+
+  assert.throws(() => validateRefreshConfigs(data), /cannot reproduce that mapping/);
+});
+
 test("a derived label only covers the county the survey saw print the title", () => {
   const data = fixture();
   data.configs[0].manifest.jobs[0].projection.office_mappings = {};
   data.contestSurvey = {
+    meta: { election: { id: "2026-11-03-general" } },
     local_office_titles: { "For County Commissioner": { county_count: 1, instances: 1, counties: ["brown"] } },
   };
   data.officeTitlePatterns = {

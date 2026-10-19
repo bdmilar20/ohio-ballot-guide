@@ -146,10 +146,9 @@ export function officeFromTitle(title, { patterns = [], corrections = [], county
  * reproducible from the durable job, and a label derived from a measured title
  * is reproducible in exactly the way a hand-written mapping is.
  */
-export function derivableOfficeLabels(survey, { patterns, corrections, countyId, countyName }) {
+export function derivableOfficeLabels(survey, { patterns, corrections, countyId, countyName, electionId }) {
   const labels = new Set();
-  for (const [title, record] of Object.entries(survey?.local_office_titles ?? {})) {
-    if (!record.counties.includes(countyId)) continue;
+  for (const title of surveyedTitlesFor(survey, countyId, electionId)) {
     const labelled = officeFromTitle(title, { patterns, corrections, countyName });
     if (labelled) labels.add(`${labelled.office_id}\0${labelled.office}`);
   }
@@ -254,11 +253,26 @@ export function officeLabeller({ patterns, corrections, countyName, allowedTitle
 }
 
 /**
- * The local office titles the committed survey saw one county print.
+ * The local office titles the committed survey saw one county print on one
+ * election's ballot.
+ *
+ * Scoped to the election as well as the county, because a ballot is an
+ * election's ballot. A primary and a general print different offices, and a
+ * survey of one is no measurement of the other: read without this check, a
+ * March primary survey authorised `For County Auditor` for a November job.
+ * `electionId` is required for the same reason `allowedTitles` is --- the safe
+ * value must be asked for, not arrived at by forgetting.
  */
-export function surveyedTitlesFor(survey, countyId) {
+export function surveyedTitlesFor(survey, countyId, electionId) {
+  if (typeof electionId !== "string" || !electionId) {
+    throw new Error("surveyedTitlesFor needs the election id the titles are being authorized for");
+  }
+  // No survey, or a survey of another election, measured nothing about this
+  // ballot. An empty set labels nothing and the projector refuses, which is
+  // the outcome a missing measurement should produce.
+  if (survey?.meta?.election?.id !== electionId) return new Set();
   return new Set(
-    Object.entries(survey?.local_office_titles ?? {})
+    Object.entries(survey.local_office_titles ?? {})
       .filter(([, record]) => record.counties.includes(countyId))
       .map(([title]) => title),
   );

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -9,6 +9,7 @@ import { ballotId, SCHEMA_VERSION as SNAPSHOT_SCHEMA_VERSION } from "../scripts/
 import {
   CANDIDATE_ELECTIONS_FILE,
   candidateDigest,
+  jsonText,
   refreshVtrapp,
   snapshotFilename,
   validateRefreshManifest,
@@ -37,7 +38,11 @@ function office(title, order, choices) {
   };
 }
 
-function snapshot(countyId, fetchedAt = "2026-10-16T18:00:00.000Z") {
+// The local office title is a parameter because the ballot id is a digest of
+// the ballot's normalized content: retitling a contest after the fact
+// invalidates it, so a fixture that needs a different office has to be built
+// with it rather than edited.
+function snapshot(countyId, fetchedAt = "2026-10-16T18:00:00.000Z", localOfficeTitle = "For County Commissioner") {
   const contests = [
     office("For Governor and Lieutenant Governor", 1, [
       ["Amy Acton and David Pepper", "Democratic"],
@@ -45,7 +50,7 @@ function snapshot(countyId, fetchedAt = "2026-10-16T18:00:00.000Z") {
       ["Vivek Ramaswamy and Robert A. McColley", "Republican"],
       ["Write-in", null, true],
     ]),
-    office("For County Commissioner", 2, [["Ada Lovelace", "Democratic"]]),
+    office(localOfficeTitle, 2, [["Ada Lovelace", "Democratic"]]),
   ];
   const id = ballotId(contests);
   return {
@@ -228,7 +233,12 @@ test("CLI preserves artifacts but withholds the candidate when projection fails"
 
   const projectRoot = new URL("..", import.meta.url).pathname;
   const fetchedAt = new Date();
-  const saved = snapshot("adams", fetchedAt.toISOString());
+  // An unmapped title is no longer enough on its own: the curated patterns
+  // label "For County Commissioner" from the title the survey measured Adams
+  // printing, so emptying office_mappings alone now succeeds. The refusal
+  // this test is about needs an office nothing can label --- no mapping, no
+  // pattern, and no measurement behind it.
+  const saved = snapshot("adams", fetchedAt.toISOString(), "For County Dogcatcher");
   saved.source.source_updated_at = new Date(fetchedAt.getTime() - 3_600_000).toISOString();
   saved.source.source_age_hours = 1;
   await writeFile(
@@ -394,5 +404,104 @@ test("a bundle carries every input a projection decision depended on, and a repl
     secondSummary.inputs.every(({ source }) => source === "bundle"),
     "a replay reads the bundle it is replaying",
   );
-  assert.equal(secondSummary.candidate_sha256, firstSummary.candidate_sha256);
+
+  // Every projection decision has to be the same. The candidate digest is not
+  // the measure of that: freshness is recalculated at replay time, so
+  // `coverage.reviewed_at` legitimately advances and the digest legitimately
+  // changes. Asserting digest equality was asserting an invariant the system
+  // does not have --- so compare the decisions, and name the one field
+  // allowed to differ.
+  const withoutReviewClock = (value) => {
+    if (Array.isArray(value)) return value.map(withoutReviewClock);
+    if (value === null || typeof value !== "object") return value;
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => key !== "reviewed_at")
+        .map(([key, nested]) => [key, withoutReviewClock(nested)]),
+    );
+  };
+  const firstCandidate = JSON.parse(await readFile(join(firstOutput, CANDIDATE_ELECTIONS_FILE), "utf8"));
+  const secondCandidate = JSON.parse(await readFile(join(secondOutput, CANDIDATE_ELECTIONS_FILE), "utf8"));
+  assert.deepEqual(withoutReviewClock(secondCandidate), withoutReviewClock(firstCandidate));
+  const reviewClock = (candidate) => candidate.elections[0].counties.adams.coverage.reviewed_at;
+  assert.notEqual(reviewClock(secondCandidate), undefined, "the replay still records when it reviewed");
+  assert.ok(
+    Date.parse(reviewClock(secondCandidate)) >= Date.parse(reviewClock(firstCandidate)),
+    "the replay's review clock cannot run backwards",
+  );
+
+  // Carrying a digest is not the same as checking one. Before this, a replay
+  // computed a fresh digest from whatever now sat in the snapshot directory,
+  // so an edited bundled input produced a new digest and a different
+  // candidate instead of a refusal.
+  await t.test("an edited bundled input refuses rather than replaying differently", async () => {
+    const edited = join(directory, "edited");
+    await cp(firstOutput, edited, { recursive: true });
+    const patternsPath = join(edited, "office-title-patterns.json");
+    const patterns = JSON.parse(await readFile(patternsPath, "utf8"));
+    patterns.patterns.push({ printed: "Dogcatcher", office_id: "county-auditor", office: "Dogcatcher" });
+    await writeFile(patternsPath, jsonText(patterns));
+
+    const replay = run(edited, join(directory, "edited-replay"));
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /office-title-patterns\.json is sha256:.* but that bundle's summary records/);
+  });
+
+  await t.test("a recorded input the bundle no longer holds refuses", async () => {
+    const stripped = join(directory, "stripped");
+    await cp(firstOutput, stripped, { recursive: true });
+    await rm(join(stripped, "vtrapp-contest-survey.json"));
+
+    const replay = run(stripped, join(directory, "stripped-replay"));
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /records vtrapp-contest-survey\.json, but the bundle holds no copy/);
+  });
+
+  await t.test("a flag cannot stand in for a recorded input", async () => {
+    const replay = spawnSync(process.execPath, [
+      join(projectRoot, "scripts", "refresh-vtrapp.mjs"),
+      "--manifest", manifestPath,
+      "--snapshots", firstOutput,
+      "--office-title-patterns", join(projectRoot, "data", "office-title-patterns.json"),
+      "--out", join(directory, "override-replay"),
+    ], { encoding: "utf8" });
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /--office-title-patterns conflicts with the office-title-patterns\.json recorded in/);
+  });
+
+  // Found in review: the refresh invoked the canonical validator with only the
+  // candidate, locations, offices and county boards, so the validator re-read
+  // the repository's patterns and survey no matter which copies the
+  // projection had used. A malformed-but-shaped bundled input could drive a
+  // publication while the good repository copy was what got checked.
+  await t.test("validation reads the same inputs the projection did", async () => {
+    const patterns = JSON.parse(await readFile(join(projectRoot, "data", "office-title-patterns.json"), "utf8"));
+    // Shaped well enough for readPatterns and harmless to projection, but the
+    // validator refuses a pattern no surveyed title reaches.
+    patterns.patterns.push({ printed: "Dogcatcher", office_id: "county-auditor", office: "County Dogcatcher" });
+    const patternsPath = join(directory, "unused-pattern.json");
+    await writeFile(patternsPath, jsonText(patterns));
+
+    const result = spawnSync(process.execPath, [
+      join(projectRoot, "scripts", "refresh-vtrapp.mjs"),
+      "--manifest", manifestPath,
+      "--snapshots", snapshotDirectory,
+      "--office-title-patterns", patternsPath,
+      "--out", join(directory, "unused-pattern-out"),
+    ], { encoding: "utf8" });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /every office title pattern must match at least one title the survey found/);
+  });
+
+  await t.test("a bundle whose summary records no inputs cannot be replayed", async () => {
+    const unverifiable = join(directory, "unverifiable");
+    await cp(firstOutput, unverifiable, { recursive: true });
+    const summary = JSON.parse(await readFile(join(unverifiable, "summary.json"), "utf8"));
+    delete summary.inputs;
+    await writeFile(join(unverifiable, "summary.json"), jsonText(summary));
+
+    const replay = run(unverifiable, join(directory, "unverifiable-replay"));
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /has no inputs to verify/);
+  });
 });
