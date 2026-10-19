@@ -431,6 +431,13 @@ gate requires every generated county already in `data/elections.json` to have
 one durable job, and checks its county name, election, office mappings,
 statewide mappings, and accepted source-age limit against the published data.
 
+```bash
+npm run check:refresh-config
+```
+
+The same gate runs against the tracked configs in `npm test`; the direct
+command prints the config, job, and generated-county counts for review.
+
 Jobs run serially so the stateful vendor application is not flooded with
 concurrent ballot walks. The entry below shows the manifest shape; its mapping
 list is shortened, so use the county's complete review report rather than

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "generate:schedule": "node scripts/build-election-schedule.mjs",
-    "check": "node scripts/validate-data.mjs",
+    "check": "node scripts/validate-data.mjs && node scripts/check-refresh-config.mjs",
+    "check:refresh-config": "node scripts/check-refresh-config.mjs",
     "check:links": "node scripts/check-links.mjs",
     "test": "node --test",
     "ingest:vtrapp": "node scripts/ingest/vtrapp.mjs",
