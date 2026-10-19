@@ -722,7 +722,7 @@ export function requireSameStamp(countyId, expected, body, where) {
   }
 }
 
-async function walkBallot({ client, url, countyId, precinct }) {
+export async function walkBallot({ client, url, countyId, precinct }) {
   const first = await client.request(url);
   if (first.status !== 200) {
     throw new Error(`${countyId}: precinct ${precinct.id} accessible ballot returned HTTP ${first.status}`);
