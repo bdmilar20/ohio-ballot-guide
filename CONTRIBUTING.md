@@ -538,6 +538,17 @@ a directory holding only the `*-snapshot.json` files. Refresh bundles are
 schema 3 for this reason — a schema 2 bundle recorded no input digests, so
 there is nothing to verify it against and `gate:vtrapp` refuses it by version.
 
+**The manifest is a projection input too, and is held to the same rule.** It is
+where an office mapping and a maximum source age live, so replaying a complete
+bundle under a different `--manifest` would republish the same snapshot under a
+different office with every other check still passing. Each run records
+`summary.manifest_sha256`, and a replay refuses unless both the bundle's own
+`manifest.json` and the `--manifest` it was passed carry the same decisions.
+That digest is taken over a key-sorted form of the manifest, so reformatting it
+or reordering its keys changes nothing — only a changed decision refuses. To
+project saved snapshots under different decisions, use a snapshot-only
+directory, the same distinction that applies to an edited pattern set.
+
 Projection and validation read the same input bytes. The refresh and the gate
 both hand the selected issue text, patterns, and survey to
 `scripts/validate-data.mjs` rather than letting it re-read the repository's

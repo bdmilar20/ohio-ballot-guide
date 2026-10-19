@@ -11,8 +11,10 @@ import {
   CANDIDATE_ELECTIONS_FILE,
   candidateDigest,
   jsonText,
+  manifestDigest,
   REFRESH_BUNDLE_SCHEMA_VERSION,
   REFRESH_INPUT_FILES,
+  REFRESH_MANIFEST_FILE,
 } from "../scripts/refresh-vtrapp.mjs";
 import {
   appendObservation,
@@ -58,6 +60,18 @@ const summaryInputs = REFRESH_INPUT_FILES.map((file) => ({
   sha256: candidateDigest(inputTexts[file]),
   source: "repository",
 }));
+// The manifest is the fourth projection input: it carries the office mappings
+// and age limits. It is recorded by semantic digest, so the fixture text and
+// the recorded digest have to be derived from the same value.
+const manifestFixture = {
+  schema_version: 1,
+  jobs: [{
+    county: "adams",
+    election: ELECTION.vendor_key,
+    projection: { max_source_age_hours: 24, office_mappings: { "For County Commissioner": "county-commissioner" } },
+  }],
+};
+inputTexts[REFRESH_MANIFEST_FILE] = jsonText(manifestFixture);
 
 function summaryOf(jobs, fields = {}) {
   return {
@@ -68,6 +82,7 @@ function summaryOf(jobs, fields = {}) {
     candidate_sha256: candidateDigest(candidateText),
     validation: "Validated fixture candidate.",
     inputs: summaryInputs,
+    manifest_sha256: manifestDigest(manifestFixture),
     jobs,
     ...fields,
   };
@@ -347,6 +362,43 @@ test("the publication gate is bound to one complete, validated candidate artifac
     }
   });
 
+  // Found in review: the three data files were verified and the manifest was
+  // not, so the one input that actually names an office could be swapped with
+  // every other check still passing.
+  await t.test("the manifest the run projected under is recorded and verified", () => {
+    assert.throws(
+      () => assertRefreshBundle({ ...valid, manifest_sha256: undefined }, candidateText),
+      /no valid manifest_sha256/,
+    );
+    assert.throws(
+      () => assertRefreshBundle({ ...valid, manifest_sha256: "sha256:nope" }, candidateText),
+      /no valid manifest_sha256/,
+    );
+    assert.throws(
+      () => assertRefreshBundle(valid, candidateText, { ...inputTexts, [REFRESH_MANIFEST_FILE]: null }),
+      /has no readable manifest\.json/,
+    );
+    assert.throws(
+      () => assertRefreshBundle(valid, candidateText, { ...inputTexts, [REFRESH_MANIFEST_FILE]: "{" }),
+      /unreadable manifest\.json/,
+    );
+    assert.throws(
+      () => assertRefreshBundle(valid, candidateText, { ...inputTexts, [REFRESH_MANIFEST_FILE]: '{"edited":true}\n' }),
+      /manifest\.json in this refresh bundle is .* but its summary records/,
+    );
+  });
+
+  // Reformatting a manifest changes no decision, so it must not refuse: the
+  // digest is over a key-sorted form for exactly this reason.
+  await t.test("a reformatted manifest carrying the same decisions still verifies", () => {
+    const reordered = { jobs: manifestFixture.jobs, schema_version: manifestFixture.schema_version };
+    assert.notEqual(JSON.stringify(reordered), JSON.stringify(manifestFixture));
+    assert.equal(
+      assertRefreshBundle(valid, candidateText, { ...inputTexts, [REFRESH_MANIFEST_FILE]: JSON.stringify(reordered) }),
+      valid,
+    );
+  });
+
   await t.test("a recorded input digest is verified against the bundle's bytes", () => {
     assert.equal(assertRefreshBundle(valid, candidateText, inputTexts), valid);
     for (const file of REFRESH_INPUT_FILES) {
@@ -415,6 +467,9 @@ test("the CLI exits nonzero on an unsettled bundle and zero on a settled one", a
   }));
   const writeInputs = async (path, inputs = repositoryInputs) => {
     for (const [file, text] of Object.entries(inputs)) await writeFile(join(path, file), text);
+    if (!(REFRESH_MANIFEST_FILE in inputs)) {
+      await writeFile(join(path, REFRESH_MANIFEST_FILE), inputTexts[REFRESH_MANIFEST_FILE]);
+    }
   };
   const bundle = async (jobs) => {
     const path = join(directory, `refresh-${jobs[0].county_id}-${jobs.length}`);

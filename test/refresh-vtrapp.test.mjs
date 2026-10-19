@@ -10,6 +10,7 @@ import {
   CANDIDATE_ELECTIONS_FILE,
   candidateDigest,
   jsonText,
+  manifestDigest,
   refreshVtrapp,
   snapshotFilename,
   validateRefreshManifest,
@@ -390,6 +391,19 @@ test("a bundle carries every input a projection decision depended on, and a repl
     assert.equal(candidateDigest(copied), input.sha256, `${input.file} digest must describe the copy in the bundle`);
     assert.equal(input.source, "repository");
   }
+  // The manifest is the fourth input, recorded by the decisions it makes
+  // rather than beside the three data files, because it is compared against a
+  // caller-supplied file whose formatting is not ours to dictate.
+  assert.equal(
+    firstSummary.manifest_sha256,
+    manifestDigest(manifest(["adams"])),
+    "a bundle records the manifest it projected under",
+  );
+  assert.equal(
+    manifestDigest(JSON.parse(await readFile(join(firstOutput, "manifest.json"), "utf8"))),
+    firstSummary.manifest_sha256,
+    "that digest must describe the manifest copy in the bundle",
+  );
 
   // Replaying the first bundle must use the first bundle's inputs, not the
   // working tree's, and reach the same candidate.
@@ -491,6 +505,87 @@ test("a bundle carries every input a projection decision depended on, and a repl
     ], { encoding: "utf8" });
     assert.equal(result.status, 1);
     assert.match(result.stderr, /every office title pattern must match at least one title the survey found/);
+  });
+
+  // Found in review: the three data inputs were verified and the manifest was
+  // not, so a complete bundle replayed under a different --manifest
+  // republished the same snapshot under a different office. Both runs exited
+  // 0, both recorded successful validation, and all three data inputs read
+  // `source: bundle` --- none of them is where an office mapping lives. The
+  // visible name stayed "County Commissioner" while office_id became
+  // county-auditor, so the published race would have read correctly and
+  // linked a voter to the wrong office.
+  await t.test("a replay under a different manifest refuses rather than republishing a different office", async () => {
+    const otherManifest = manifest(["adams"]);
+    otherManifest.jobs[0].projection.office_mappings = { "For County Commissioner": "county-auditor" };
+    const otherManifestPath = join(directory, "other-manifest.json");
+    await writeFile(otherManifestPath, JSON.stringify(otherManifest));
+
+    const out = join(directory, "other-manifest-replay");
+    const replay = spawnSync(process.execPath, [
+      join(projectRoot, "scripts", "refresh-vtrapp.mjs"),
+      "--manifest", otherManifestPath,
+      "--snapshots", firstOutput,
+      "--out", out,
+    ], { encoding: "utf8" });
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /--manifest is sha256:.* but .*summary\.json records sha256:/);
+    await assert.rejects(access(join(out, CANDIDATE_ELECTIONS_FILE)), "a refused replay publishes no candidate");
+  });
+
+  await t.test("an edited bundled manifest refuses", async () => {
+    const edited = join(directory, "edited-manifest");
+    await cp(firstOutput, edited, { recursive: true });
+    const manifestFile = join(edited, "manifest.json");
+    const bundled = JSON.parse(await readFile(manifestFile, "utf8"));
+    bundled.jobs[0].projection.office_mappings = { "For County Commissioner": "county-auditor" };
+    await writeFile(manifestFile, jsonText(bundled));
+
+    const replay = run(edited, join(directory, "edited-manifest-replay"));
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /manifest\.json is sha256:.* but that bundle's summary records/);
+  });
+
+  await t.test("a bundle that records no manifest digest cannot be replayed", async () => {
+    const unrecorded = join(directory, "unrecorded-manifest");
+    await cp(firstOutput, unrecorded, { recursive: true });
+    const summary = JSON.parse(await readFile(join(unrecorded, "summary.json"), "utf8"));
+    delete summary.manifest_sha256;
+    await writeFile(join(unrecorded, "summary.json"), jsonText(summary));
+
+    const replay = run(unrecorded, join(directory, "unrecorded-manifest-replay"));
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /records no manifest_sha256/);
+  });
+
+  await t.test("a recorded manifest the bundle no longer holds refuses", async () => {
+    const stripped = join(directory, "stripped-manifest");
+    await cp(firstOutput, stripped, { recursive: true });
+    await rm(join(stripped, "manifest.json"));
+
+    const replay = run(stripped, join(directory, "stripped-manifest-replay"));
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /holds no manifest\.json to replay/);
+  });
+
+  // The decisions are what must match, not the bytes. A manifest kept in a
+  // repository with different formatting is still that manifest, and refusing
+  // it would make the check cost more than it is worth.
+  await t.test("a reformatted manifest carrying the same decisions still replays", async () => {
+    const reformattedPath = join(directory, "reformatted-manifest.json");
+    const original = JSON.parse(await readFile(manifestPath, "utf8"));
+    const reordered = { jobs: original.jobs, schema_version: original.schema_version };
+    assert.notEqual(JSON.stringify(reordered), JSON.stringify(original));
+    await writeFile(reformattedPath, JSON.stringify(reordered, null, 4));
+
+    const out = join(directory, "reformatted-manifest-replay");
+    const replay = spawnSync(process.execPath, [
+      join(projectRoot, "scripts", "refresh-vtrapp.mjs"),
+      "--manifest", reformattedPath,
+      "--snapshots", firstOutput,
+      "--out", out,
+    ], { encoding: "utf8" });
+    assert.equal(replay.status, 0, replay.stderr);
   });
 
   await t.test("a bundle whose summary records no inputs cannot be replayed", async () => {

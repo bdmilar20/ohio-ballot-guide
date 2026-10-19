@@ -34,6 +34,7 @@ export const REFRESH_INPUT_FILES = [
   "vtrapp-contest-survey.json",
 ];
 export const CANDIDATE_ELECTIONS_FILE = "elections.candidate.json";
+export const REFRESH_MANIFEST_FILE = "manifest.json";
 
 export function jsonText(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
@@ -42,6 +43,34 @@ export function jsonText(value) {
 export function candidateDigest(text) {
   invariant(typeof text === "string", "candidate elections content must be text");
   return `sha256:${createHash("sha256").update(text).digest("hex")}`;
+}
+
+/**
+ * The same value with every object's keys in sorted order, recursively.
+ *
+ * Key order carries no meaning in JSON, so two manifests that differ only in
+ * it describe the same decisions and a replay of either is the same replay.
+ * Comparing raw bytes would refuse a reformatted copy of the very manifest the
+ * bundle was built from, which is a false refusal; what has to refuse is a
+ * changed decision.
+ */
+export function canonicalJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalJson(value[key])]));
+}
+
+/**
+ * Identifies a manifest by the decisions it makes rather than by its bytes.
+ *
+ * Found in review: the bundle copied its manifest but nothing ever read that
+ * copy back, so replaying a complete bundle with a different `--manifest`
+ * silently republished the same snapshot under a different office. The
+ * candidate and all three data inputs verified clean, because none of them is
+ * where an office mapping lives.
+ */
+export function manifestDigest(manifest) {
+  return candidateDigest(jsonText(canonicalJson(manifest)));
 }
 
 function invariant(condition, message) {
@@ -214,6 +243,9 @@ export async function refreshVtrapp({
       completed_jobs: jobs.length,
       candidate_elections_file: CANDIDATE_ELECTIONS_FILE,
       candidate_sha256: candidateDigest(jsonText(candidate)),
+      // The office mappings and age limits this run projected under. Recorded
+      // so a replay can be held to them; see manifestDigest.
+      manifest_sha256: manifestDigest(manifest),
       jobs,
     },
   };
@@ -297,7 +329,7 @@ async function prepareOutputDirectory(outputDirectory, manifest) {
     if (error.code === "EEXIST") throw new Error(`output directory already exists: ${outputDirectory}`);
     throw error;
   }
-  await writeJson(join(outputDirectory, "manifest.json"), manifest);
+  await writeJson(join(outputDirectory, REFRESH_MANIFEST_FILE), manifest);
   await writeJson(join(outputDirectory, "status.json"), {
     schema_version: REFRESH_BUNDLE_SCHEMA_VERSION,
     status: "running",
@@ -350,6 +382,43 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
       invariant(
         recordedInputs.has(file),
         `${snapshotsDirectory}/summary.json records no digest for ${file}, so that bundle cannot be replayed verifiably`,
+      );
+    }
+
+    // The manifest is a projection input too --- it is where an office mapping
+    // and an age limit live --- and verifying the three data files left it the
+    // one decision a replay could change undetected. The bundle's own copy is
+    // the record; `--manifest` has to be that manifest.
+    if (replaySummary) {
+      const recorded = replaySummary.manifest_sha256;
+      invariant(
+        typeof recorded === "string" && /^sha256:[0-9a-f]{64}$/.test(recorded),
+        `${snapshotsDirectory}/summary.json records no manifest_sha256, so its projection decisions cannot be replayed verifiably`,
+      );
+      const bundledManifestPath = join(snapshotsDirectory, REFRESH_MANIFEST_FILE);
+      const bundledManifest = await readJson(bundledManifestPath).then(
+        (value) => value,
+        (error) => {
+          if (error.code === "ENOENT") {
+            throw new Error(
+              `${snapshotsDirectory}/summary.json records a manifest, but the bundle holds no ${REFRESH_MANIFEST_FILE} to replay`,
+            );
+          }
+          throw error;
+        },
+      );
+      const bundled = manifestDigest(validateRefreshManifest(bundledManifest));
+      invariant(
+        bundled === recorded,
+        `${bundledManifestPath} is ${bundled}, but that bundle's summary records ${recorded}; ` +
+          "the bundled manifest has been edited since the run it describes",
+      );
+      const passed = manifestDigest(manifest);
+      invariant(
+        passed === recorded,
+        `--manifest is ${passed}, but ${snapshotsDirectory}/summary.json records ${recorded}; ` +
+          "a replay projects under the manifest its bundle carries. To project saved snapshots under " +
+          "different decisions, point --snapshots at a directory holding only the snapshot files",
       );
     }
 
