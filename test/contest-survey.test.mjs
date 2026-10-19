@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import {
   CONTEST_CLASSES,
   classifyContest,
   localOfficeTitleIndex,
+  readPartial,
   summarizeSurvey,
   surveyCounty,
 } from "../scripts/survey-contests.mjs";
@@ -204,4 +208,33 @@ test("the title index counts contests as well as counties", () => {
     "For County Comissioner": { county_count: 1, instances: 1, counties: ["adams"] },
     "For County Commissioner": { county_count: 2, instances: 3, counties: ["adams", "brown"] },
   });
+});
+
+test("a resumed walk reads back only its own election's counties", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "obg-partial-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, "partial.ndjson");
+
+  assert.deepEqual(await readPartial(path, "20261103G"), {}, "no log yet is not an error");
+
+  const record = { contests_read: 3, classes: { local_office: 1 }, local_office_titles: { "For Sheriff": 1 } };
+  await writeFile(path, `${JSON.stringify({ election: "20261103G", county: "adams", record })}\n`);
+  assert.deepEqual(await readPartial(path, "20261103G"), { adams: record });
+
+  // Resuming one election's walk from another's would report contests from
+  // the wrong ballot under this election's name.
+  await assert.rejects(() => readPartial(path, "20261103S"), /holds election 20261103G/);
+});
+
+test("a partial line a killed process left half-written is refused, not guessed at", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "obg-partial-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, "partial.ndjson");
+  const record = { contests_read: 3, classes: {}, local_office_titles: {} };
+  await writeFile(
+    path,
+    `${JSON.stringify({ election: "20261103G", county: "adams", record })}\n{"election":"20261103G","county":"all`,
+  );
+
+  await assert.rejects(() => readPartial(path, "20261103G"), /not valid JSON/);
 });

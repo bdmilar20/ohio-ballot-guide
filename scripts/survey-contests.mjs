@@ -19,7 +19,7 @@
 // Like the other vendor tools this talks to a live government server, costs one
 // ballot walk per county, and is run by hand, never from CI.
 
-import { readFile, writeFile } from "node:fs/promises";
+import { appendFile, readFile, writeFile } from "node:fs/promises";
 
 import {
   createVendorClient,
@@ -173,11 +173,51 @@ export function localOfficeTitleIndex(counties) {
   );
 }
 
+/**
+ * Reads the counties an earlier run of this election already walked.
+ *
+ * Keyed by election as well as county, because resuming one election's walk
+ * from another's log would silently report contests from the wrong ballot. A
+ * line that does not parse ends the read: a truncated final line is what a
+ * killed process leaves behind, and guessing at it is how a half-written
+ * county record gets counted as whole.
+ */
+export async function readPartial(path, electionKey) {
+  let text;
+  try {
+    text = await readFile(path, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return {};
+    throw error;
+  }
+  const resumed = {};
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    let entry;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      throw new Error(`${path}: a partial survey line is not valid JSON; delete the file to start the walk over`);
+    }
+    if (entry.election !== electionKey) {
+      throw new Error(`${path}: holds election ${entry.election}, not ${electionKey}`);
+    }
+    resumed[entry.county] = entry.record;
+  }
+  return resumed;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const electionKey = args.election;
   if (!electionKey) throw new Error("--election <vendor key> is required, for example --election 20261103G");
   const limit = args.limit ? Number(args.limit) : null;
+  // Seventy live county walks take longer than the things that can kill a
+  // process, and three runs have now died partway through for reasons that had
+  // nothing to do with the vendor. Each county is appended to a log as it is
+  // read, so a rerun with the same --partial resumes rather than starting
+  // over. Counties are still only ever written whole.
+  const partialPath = args.partial ? new URL(args.partial, `file://${process.cwd()}/`) : null;
   // A partial run must not be able to overwrite the canonical artifact. The
   // statewide-issue generator learned this the hard way: every count in a
   // --limit run is internally consistent, so nothing downstream can tell it
@@ -211,21 +251,34 @@ async function main() {
   const client = createVendorClient();
   const surveyed = {};
   const failures = {};
+  const resumed = partialPath ? await readPartial(partialPath, electionKey) : {};
   for (const [index, countyId] of counties.entries()) {
+    if (resumed[countyId]) {
+      surveyed[countyId] = resumed[countyId];
+      process.stderr.write(`[${index + 1}/${counties.length}] ${countyId} (resumed)\n`);
+      continue;
+    }
     process.stderr.write(`[${index + 1}/${counties.length}] ${countyId}\n`);
+    let record = null;
     try {
       const read = await readFirstBallot({ client, countyId, electionKey });
-      surveyed[countyId] = {
+      record = {
         precinct: read.precinct.id,
         precincts_listed: read.precincts_listed,
         contests_read: read.contests.length,
         source_updated_at: read.source_updated_at,
         ...surveyCounty(read.contests, { election, issueText }),
       };
+      surveyed[countyId] = record;
     } catch (error) {
       // Recorded per county. One propagated timeout has ended a whole-state run
       // here twice, and a run that dies at county 60 has measured nothing.
       failures[countyId] = error instanceof VendorTransportError ? `transport: ${error.message}` : error.message;
+    }
+    // Only successes are logged. A failure is not resumable state: it may have
+    // been the vendor having a moment, and a rerun must be free to try again.
+    if (partialPath && record) {
+      await appendFile(partialPath, `${JSON.stringify({ election: electionKey, county: countyId, record })}\n`);
     }
     await client.pause();
   }
