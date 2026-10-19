@@ -1,6 +1,6 @@
 {
   "meta": {
-    "last_reviewed": "2026-10-18",
+    "last_reviewed": "2026-10-19",
     "note": "What each office on the ballot does. Every sentence is supported by the sources listed with it; nothing here describes a candidate, a party, or a policy position."
   },
   "offices": {
@@ -65,6 +65,15 @@
       ],
       "last_verified": "2026-10-15"
     },
+    "state-senator": {
+      "title": "State Senator",
+      "summary": "Ohio's legislative power is vested in the General Assembly, which consists of the Senate and House of Representatives. State senators are elected by their districts for four-year terms and may not hold more than two successive terms.",
+      "sources": [
+        { "label": "Ohio Constitution, Article II, Section 1", "url": "https://codes.ohio.gov/ohio-constitution/section-2.1" },
+        { "label": "Ohio Constitution, Article II, Section 2", "url": "https://codes.ohio.gov/ohio-constitution/section-2.2" }
+      ],
+      "last_verified": "2026-10-19"
+    },
     "state-representative": {
       "title": "State Representative",
       "summary": "Ohio's legislative power is vested in the General Assembly, which consists of the Senate and House of Representatives. State representatives are elected by their districts for two-year terms and may not hold more than four successive terms.",
@@ -99,6 +108,52 @@
         { "label": "Ohio Revised Code 5713.01", "url": "https://codes.ohio.gov/ohio-revised-code/section-5713.01" }
       ],
       "last_verified": "2026-10-15"
+    },
+    "county-treasurer": {
+      "title": "County Treasurer",
+      "summary": "A treasurer is elected in each county every four years. The treasurer holds the county's money, and no money may be paid out of the county treasury except on the warrant of the county auditor.",
+      "sources": [
+        { "label": "Ohio Revised Code 321.01", "url": "https://codes.ohio.gov/ohio-revised-code/section-321.01" },
+        { "label": "Ohio Revised Code 321.15", "url": "https://codes.ohio.gov/ohio-revised-code/section-321.15" }
+      ],
+      "last_verified": "2026-10-19"
+    },
+    "county-recorder": {
+      "title": "County Recorder",
+      "summary": "A recorder is elected in each county every four years. The recorder keeps the county's official records, which include deeds and other instruments conveying land, mortgages, leases, plats and surveys, and liens and easements affecting property in the county.",
+      "sources": [
+        { "label": "Ohio Revised Code 317.01", "url": "https://codes.ohio.gov/ohio-revised-code/section-317.01" },
+        { "label": "Ohio Revised Code 317.08", "url": "https://codes.ohio.gov/ohio-revised-code/section-317.08" }
+      ],
+      "last_verified": "2026-10-19"
+    },
+    "county-engineer": {
+      "title": "County Engineer",
+      "summary": "An engineer is elected in each county every four years, and must be both a registered professional engineer and a registered surveyor licensed in Ohio. The engineer does the county work the law reserves to a registered engineer or surveyor, including the plans, specifications, cost estimates and contract forms for county bridges, culverts, roads, drains and ditches.",
+      "sources": [
+        { "label": "Ohio Revised Code 315.01", "url": "https://codes.ohio.gov/ohio-revised-code/section-315.01" },
+        { "label": "Ohio Revised Code 315.02", "url": "https://codes.ohio.gov/ohio-revised-code/section-315.02" },
+        { "label": "Ohio Revised Code 315.08", "url": "https://codes.ohio.gov/ohio-revised-code/section-315.08" }
+      ],
+      "last_verified": "2026-10-19"
+    },
+    "sheriff": {
+      "title": "County Sheriff",
+      "summary": "A sheriff is elected in each county every four years. The sheriff preserves the public peace, executes the warrants, writs and other process directed to the office by lawful authority, and attends the court of common pleas and the court of appeals while they are in session. State law also sets qualifications for the office, including law enforcement experience and training.",
+      "sources": [
+        { "label": "Ohio Revised Code 311.01", "url": "https://codes.ohio.gov/ohio-revised-code/section-311.01" },
+        { "label": "Ohio Revised Code 311.07", "url": "https://codes.ohio.gov/ohio-revised-code/section-311.07" }
+      ],
+      "last_verified": "2026-10-19"
+    },
+    "coroner": {
+      "title": "County Coroner",
+      "summary": "A coroner is elected in each county every four years. The coroner must be notified when a person dies as a result of criminal or other violent means, by casualty, by suicide, in any suspicious or unusual manner, or suddenly when in apparent good health.",
+      "sources": [
+        { "label": "Ohio Revised Code 313.01", "url": "https://codes.ohio.gov/ohio-revised-code/section-313.01" },
+        { "label": "Ohio Revised Code 313.12", "url": "https://codes.ohio.gov/ohio-revised-code/section-313.12" }
+      ],
+      "last_verified": "2026-10-19"
     },
     "county-prosecutor": {
       "title": "County Prosecuting Attorney",
@@ -144,6 +199,24 @@
         { "label": "Summit County Charter, Article III, Sections 3.01.1–3.01.2", "url": "https://co.summitoh.net/files-generic/13031/file/summitcountycharter.pdf" }
       ],
       "last_verified": "2026-10-15"
+    },
+    "mayor": {
+      "title": "Mayor",
+      "summary": "A mayor is the chief conservator of the peace of the municipality. In a city operating under state law the mayor appoints and may remove the directors of public service and public safety; in a village the mayor is also president of the legislative authority and votes only to break a tie. A municipality that has adopted a charter of its own may give its mayor different powers, because the Ohio Constitution lets a municipality frame its own charter and exercise all powers of local self-government under it.",
+      "sources": [
+        { "label": "Ohio Revised Code 733.03", "url": "https://codes.ohio.gov/ohio-revised-code/section-733.03" },
+        { "label": "Ohio Revised Code 733.24", "url": "https://codes.ohio.gov/ohio-revised-code/section-733.24" },
+        { "label": "Ohio Constitution, Article XVIII, Section 7", "url": "https://codes.ohio.gov/ohio-constitution/section-18.7" }
+      ],
+      "last_verified": "2026-10-19"
+    },
+    "charter-commission": {
+      "title": "Charter Commission",
+      "summary": "When a municipality's voters approve the question of electing a commission to frame a charter, fifteen electors are elected from the municipality at large to serve on it. The charter the commission writes does not take effect unless the municipality's voters approve it, and it must be submitted to the voters within one year of the commission's election.",
+      "sources": [
+        { "label": "Ohio Constitution, Article XVIII, Section 8", "url": "https://codes.ohio.gov/ohio-constitution/section-18.8" }
+      ],
+      "last_verified": "2026-10-19"
     }
   }
 }
