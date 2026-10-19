@@ -7,6 +7,8 @@ import test from "node:test";
 
 import { ballotId, SCHEMA_VERSION as SNAPSHOT_SCHEMA_VERSION } from "../scripts/ingest/vtrapp.mjs";
 import {
+  CANDIDATE_ELECTIONS_FILE,
+  candidateDigest,
   refreshVtrapp,
   snapshotFilename,
   validateRefreshManifest,
@@ -205,8 +207,13 @@ test("CLI replays saved snapshots and emits a validated review bundle", async (t
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Wrote complete refresh bundle/);
   const status = JSON.parse(await readFile(join(outputDirectory, "status.json"), "utf8"));
-  const candidate = JSON.parse(await readFile(join(outputDirectory, "elections.candidate.json"), "utf8"));
+  const savedCandidateText = await readFile(join(outputDirectory, CANDIDATE_ELECTIONS_FILE), "utf8");
+  const candidate = JSON.parse(savedCandidateText);
+  const summary = JSON.parse(await readFile(join(outputDirectory, "summary.json"), "utf8"));
   assert.equal(status.status, "complete");
+  assert.equal(summary.candidate_elections_file, CANDIDATE_ELECTIONS_FILE);
+  assert.equal(summary.candidate_sha256, candidateDigest(savedCandidateText));
+  assert.match(summary.validation, /Validated 4 elections/);
   assert.equal(candidate.elections[0].counties.adams.races[0].office_id, "county-commissioner");
   assert.deepEqual(candidate.meta, actualElections.meta);
   assert.notDeepEqual(candidate, actualElections);

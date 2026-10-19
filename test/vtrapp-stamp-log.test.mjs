@@ -6,7 +6,13 @@ import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { gateRefresh } from "../scripts/gate-vtrapp.mjs";
+import { assertRefreshBundle, gateRefresh } from "../scripts/gate-vtrapp.mjs";
+import {
+  CANDIDATE_ELECTIONS_FILE,
+  candidateDigest,
+  jsonText,
+  REFRESH_BUNDLE_SCHEMA_VERSION,
+} from "../scripts/refresh-vtrapp.mjs";
 import {
   appendObservation,
   assertSettled,
@@ -42,6 +48,24 @@ function logOf(...entries) {
  * compares against the log.
  */
 const job = (fields) => ({ vendor_election_key: ELECTION.vendor_key, ...fields });
+const candidateText = jsonText({ elections: [] });
+
+function summaryOf(jobs, fields = {}) {
+  return {
+    schema_version: REFRESH_BUNDLE_SCHEMA_VERSION,
+    status: "complete",
+    completed_jobs: jobs.length,
+    candidate_elections_file: CANDIDATE_ELECTIONS_FILE,
+    candidate_sha256: candidateDigest(candidateText),
+    validation: "Validated fixture candidate.",
+    jobs,
+    ...fields,
+  };
+}
+
+function gateJobs(log, jobs, options = {}) {
+  return gateRefresh(log, summaryOf(jobs), { candidateText, ...options });
+}
 
 test("a single observation never settles a county, and does not accuse it of moving", () => {
   const log = logOf(["2026-10-18T12:00:00Z", { adams: "2026-10-12T14:32:40-04:00" }]);
@@ -233,12 +257,10 @@ test("gateRefresh blocks the unsettled jobs in a bundle and names them", () => {
     ["2026-10-18T12:00:00Z", { adams: adamsStamp, huron: huronStamp }],
     ["2026-10-21T12:00:00Z", { adams: adamsStamp, huron: "2026-10-20T15:00:00-04:00" }],
   );
-  const results = gateRefresh(log, {
-    jobs: [
-      job({ county_id: "adams", source_updated_at: adamsStamp, fetched_at: "2026-10-21T13:00:00Z" }),
-      job({ county_id: "huron", source_updated_at: "2026-10-20T15:00:00-04:00", fetched_at: "2026-10-21T13:00:00Z" }),
-    ],
-  });
+  const results = gateJobs(log, [
+    job({ county_id: "adams", source_updated_at: adamsStamp, fetched_at: "2026-10-21T13:00:00Z" }),
+    job({ county_id: "huron", source_updated_at: "2026-10-20T15:00:00-04:00", fetched_at: "2026-10-21T13:00:00Z" }),
+  ]);
   assert.deepEqual(
     results.map(({ county_id: county, passed }) => [county, passed]),
     [["adams", true], ["huron", false]],
@@ -248,8 +270,51 @@ test("gateRefresh blocks the unsettled jobs in a bundle and names them", () => {
 
 test("gateRefresh rejects a bundle with nothing in it rather than passing it", () => {
   const log = logOf(["2026-10-18T12:00:00Z", { adams: "2026-10-12T14:32:40-04:00" }]);
-  assert.throws(() => gateRefresh(log, { jobs: [] }), /no jobs to gate/);
-  assert.throws(() => gateRefresh(log, {}), /no jobs to gate/);
+  assert.throws(() => gateRefresh(log, summaryOf([]), { candidateText }), /no jobs to gate/);
+  assert.throws(() => gateRefresh(log, {}, { candidateText }), /must be schema 2/);
+});
+
+test("the publication gate is bound to one complete, validated candidate artifact", async (t) => {
+  const jobs = [job({
+    county_id: "adams",
+    source_updated_at: "2026-10-12T14:32:40-04:00",
+    fetched_at: "2026-10-20T13:00:00Z",
+  })];
+  const valid = summaryOf(jobs);
+  assert.equal(assertRefreshBundle(valid, candidateText), valid);
+
+  await t.test("complete status", () => {
+    assert.throws(() => assertRefreshBundle({ ...valid, status: "running" }, candidateText), /is not complete/);
+  });
+  await t.test("job count", () => {
+    assert.throws(() => assertRefreshBundle({ ...valid, completed_jobs: 0 }, candidateText), /completed_jobs does not match/);
+  });
+  await t.test("fixed candidate path", () => {
+    assert.throws(
+      () => assertRefreshBundle({ ...valid, candidate_elections_file: "../elections.json" }, candidateText),
+      /must name elections\.candidate\.json/,
+    );
+  });
+  await t.test("validation evidence", () => {
+    for (const validation of ["", "   "]) {
+      assert.throws(
+        () => assertRefreshBundle({ ...valid, validation }, candidateText),
+        /no successful candidate validation/,
+      );
+    }
+  });
+  await t.test("recorded digest", () => {
+    assert.throws(() => assertRefreshBundle({ ...valid, candidate_sha256: "sha256:nope" }, candidateText), /no valid candidate_sha256/);
+  });
+  await t.test("candidate presence", () => {
+    assert.throws(() => assertRefreshBundle(valid), /has no readable elections\.candidate\.json/);
+  });
+  await t.test("exact candidate bytes", () => {
+    assert.throws(
+      () => assertRefreshBundle(valid, jsonText({ elections: [{ id: "another-run" }] })),
+      /candidate file digest is .* but this refresh summary records/,
+    );
+  });
 });
 
 test("a zero quiet window still requires two independent sightings", () => {
@@ -292,7 +357,8 @@ test("the CLI exits nonzero on an unsettled bundle and zero on a settled one", a
   const bundle = async (jobs) => {
     const path = join(directory, `refresh-${jobs[0].county_id}-${jobs.length}`);
     await mkdir(path);
-    await writeFile(join(path, "summary.json"), JSON.stringify({ jobs }));
+    await writeFile(join(path, CANDIDATE_ELECTIONS_FILE), candidateText);
+    await writeFile(join(path, "summary.json"), JSON.stringify(summaryOf(jobs)));
     return path;
   };
   const gate = (args) =>
@@ -304,6 +370,18 @@ test("the CLI exits nonzero on an unsettled bundle and zero on a settled one", a
   const pass = gate(["--refresh", settled]);
   assert.equal(pass.status, 0, pass.stderr);
   assert.match(pass.stdout, /All 1 counties .* are settled at the stamp they were walked at/);
+
+  // The stamp evidence belongs to the exact validated candidate. Editing the
+  // candidate after refresh must invalidate the bundle before county
+  // settlement is considered.
+  await writeFile(join(settled, CANDIDATE_ELECTIONS_FILE), jsonText({ elections: [{ id: "mixed-in" }] }));
+  const altered = gate(["--refresh", settled]);
+  assert.equal(altered.status, 1);
+  assert.match(altered.stderr, /candidate file digest is .* but this refresh summary records/);
+  await rm(join(settled, CANDIDATE_ELECTIONS_FILE));
+  const missing = gate(["--refresh", settled]);
+  assert.equal(missing.status, 1);
+  assert.match(missing.stderr, /refresh bundle is missing elections\.candidate\.json/);
 
   // Huron's board edited after the only survey, so the walk disagrees with it.
   const moved = await bundle([
@@ -371,27 +449,27 @@ test("gateRefresh rejects a malformed bundle instead of blaming the county", () 
   const stamp = "2026-10-12T14:32:40-04:00";
   const log = logOf(["2026-10-18T12:00:00Z", { adams: stamp }]);
   assert.throws(
-    () => gateRefresh(log, { jobs: [job({ source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" })] }),
+    () => gateJobs(log, [job({ source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" })]),
     /refresh job 1 does not name a county/,
   );
   assert.throws(
-    () => gateRefresh(log, { jobs: [job({ county_id: "adams", fetched_at: "2026-10-20T13:00:00Z" })] }),
+    () => gateJobs(log, [job({ county_id: "adams", fetched_at: "2026-10-20T13:00:00Z" })]),
     /refresh job 1 \(adams\) has no source_updated_at/,
   );
   assert.throws(
-    () => gateRefresh(log, { jobs: [job({ county_id: "adams", source_updated_at: stamp })] }),
+    () => gateJobs(log, [job({ county_id: "adams", source_updated_at: stamp })]),
     /refresh job 1 \(adams\) has no fetched_at/,
   );
   assert.throws(
-    () => gateRefresh(log, { jobs: [{ county_id: "adams", source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" }] }),
+    () => gateJobs(log, [{ county_id: "adams", source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" }]),
     /refresh job 1 \(adams\) does not name the vendor election it walked/,
   );
   // A log with no election names nothing for the job to match, so there is no
   // comparison to make. Reading it as "no mismatch found" would pass the bundle.
   assert.throws(
-    () => gateRefresh(
+    () => gateJobs(
       { ...log, meta: { ...log.meta, election: undefined } },
-      { jobs: [job({ county_id: "adams", source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" })] },
+      [job({ county_id: "adams", source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" })],
     ),
     /the stamp log does not name the election it observes/,
   );
@@ -407,21 +485,17 @@ test("a settled stamp for the wrong election is a malformed bundle, not a settle
     ["2026-10-14T12:00:00Z", { adams: stamp }],
     ["2026-10-18T12:00:00Z", { adams: stamp }],
   );
-  const wrongElection = {
-    jobs: [
-      {
-        county_id: "adams",
-        vendor_election_key: "20270504P",
-        source_updated_at: stamp,
-        fetched_at: "2026-10-20T13:00:00Z",
-      },
-    ],
-  };
+  const wrongElection = [{
+    county_id: "adams",
+    vendor_election_key: "20270504P",
+    source_updated_at: stamp,
+    fetched_at: "2026-10-20T13:00:00Z",
+  }];
 
   // Settled on every other axis: same county, same stamp, a long quiet span.
   assert.equal(assertSettled(log, { countyId: "adams", stamp, observedAt: "2026-10-20T13:00:00Z" }).status, "settled");
   assert.throws(
-    () => gateRefresh(log, wrongElection),
+    () => gateJobs(log, wrongElection),
     /refresh job 1 \(adams\) walked election 20270504P, but this stamp log observes 20261103G/,
   );
 });

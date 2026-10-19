@@ -17,6 +17,11 @@ import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { parseArgs } from "./ingest/vtrapp.mjs";
+import {
+  CANDIDATE_ELECTIONS_FILE,
+  candidateDigest,
+  REFRESH_BUNDLE_SCHEMA_VERSION,
+} from "./refresh-vtrapp.mjs";
 import { assertSettled, assertStampLog, DEFAULT_QUIET_HOURS, settlement } from "./vtrapp-stamp-log.mjs";
 
 const STATUS_ORDER = ["settled", "unsettled", "moving", "seen-once", "unobserved", "inconsistent"];
@@ -35,6 +40,38 @@ export function formatSettlement(counties) {
   return lines;
 }
 
+export function assertRefreshBundle(summary, candidateText) {
+  if (summary?.schema_version !== REFRESH_BUNDLE_SCHEMA_VERSION) {
+    throw new Error(`refresh summary must be schema ${REFRESH_BUNDLE_SCHEMA_VERSION}`);
+  }
+  if (summary.status !== "complete") throw new Error("refresh summary is not complete");
+  if (!Array.isArray(summary.jobs) || summary.jobs.length === 0) {
+    throw new Error("refresh summary has no jobs to gate");
+  }
+  if (summary.completed_jobs !== summary.jobs.length) {
+    throw new Error("refresh summary completed_jobs does not match its jobs");
+  }
+  if (summary.candidate_elections_file !== CANDIDATE_ELECTIONS_FILE) {
+    throw new Error(`refresh summary must name ${CANDIDATE_ELECTIONS_FILE} as its candidate file`);
+  }
+  if (typeof summary.validation !== "string" || !summary.validation.trim()) {
+    throw new Error("refresh summary has no successful candidate validation result");
+  }
+  if (!/^sha256:[0-9a-f]{64}$/.test(summary.candidate_sha256)) {
+    throw new Error("refresh summary has no valid candidate_sha256");
+  }
+  if (typeof candidateText !== "string") {
+    throw new Error(`refresh bundle has no readable ${CANDIDATE_ELECTIONS_FILE}`);
+  }
+  const actual = candidateDigest(candidateText);
+  if (actual !== summary.candidate_sha256) {
+    throw new Error(
+      `candidate file digest is ${actual}, but this refresh summary records ${summary.candidate_sha256}`,
+    );
+  }
+  return summary;
+}
+
 /**
  * Gates every job in a refresh summary.
  *
@@ -43,15 +80,13 @@ export function formatSettlement(counties) {
  * edited in that window moved the stamp, and the job fails rather than
  * publishing data nobody watched settle.
  */
-export function gateRefresh(log, summary, { quietHours = DEFAULT_QUIET_HOURS } = {}) {
-  if (!Array.isArray(summary?.jobs) || summary.jobs.length === 0) {
-    throw new Error("refresh summary has no jobs to gate");
-  }
-  // refreshVtrapp writes summary.json only after every job succeeded, so a
-  // readable summary is already evidence of a complete bundle. What is worth
-  // checking is that each job carries the four fields this gate reads: a
-  // missing one would otherwise surface as the county being "unsettled",
-  // which reads as a finding about a board rather than a malformed bundle.
+export function gateRefresh(log, summary, { quietHours = DEFAULT_QUIET_HOURS, candidateText } = {}) {
+  assertRefreshBundle(summary, candidateText);
+  // The artifact-level checks above prove this is a complete bundle and that
+  // its summary describes the exact candidate file beside it. Each job must
+  // also carry the four fields the settlement decision reads: a missing one
+  // would otherwise surface as the county being "unsettled", which reads as a
+  // finding about a board rather than a malformed bundle.
   //
   // The election key is the one whose absence is not merely confusing. A stamp
   // is only comparable to another stamp for the same election, and nothing
@@ -117,8 +152,19 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
         `${log.observations.length} observation(s) in the log; a county needs two agreeing ${quietHours}h apart to publish.`,
       );
     } else {
-      const summaryPath = join(resolve(args.refresh), "summary.json");
-      const results = gateRefresh(log, JSON.parse(await readFile(summaryPath, "utf8")), { quietHours });
+      const refreshDirectory = resolve(args.refresh);
+      const summaryPath = join(refreshDirectory, "summary.json");
+      const summary = JSON.parse(await readFile(summaryPath, "utf8"));
+      let candidateText;
+      try {
+        candidateText = await readFile(join(refreshDirectory, CANDIDATE_ELECTIONS_FILE), "utf8");
+      } catch (error) {
+        if (error.code === "ENOENT") {
+          throw new Error(`refresh bundle is missing ${CANDIDATE_ELECTIONS_FILE}`);
+        }
+        throw error;
+      }
+      const results = gateRefresh(log, summary, { quietHours, candidateText });
       for (const result of results) {
         console.log(`${result.passed ? "ok     " : "BLOCKED"} ${result.county_id.padEnd(12)} ${result.detail}`);
       }

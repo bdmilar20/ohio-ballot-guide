@@ -466,8 +466,11 @@ or `complete`, so artifacts from an interrupted multi-county run cannot be
 mistaken for a finished refresh. Successful county snapshots and projections
 are retained even if a later job fails, but `elections.candidate.json` is
 written only after every job succeeds and the normal data validator accepts
-the candidate file. Review its diff against `data/elections.json`; applying
-that diff remains a separate publishing decision. A county refresh preserves
+the candidate file. `summary.json` binds that exact validated file by SHA-256;
+`gate:vtrapp` refuses a missing file, a changed byte, an incomplete summary, or
+a summary that points anywhere outside the fixed candidate filename. Review
+its diff against `data/elections.json`; applying that diff remains a separate
+publishing decision. A county refresh preserves
 the root `meta.last_reviewed` and `meta.coverage_note` values: changing either
 would make a dataset-wide claim that the manifest's county jobs did not
 establish.
