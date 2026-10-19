@@ -630,6 +630,16 @@ for (const [countyId, record] of Object.entries(contestSurvey.counties)) {
     `${countyId} read ${record.contests_read} contests but classified ${classified}; every contest gets exactly one class`,
   );
   assert.ok(record.contests_read > 0, `${countyId} surveyed a ballot with no contests on it`);
+  // The local office titles are what a pattern set is measured against, so
+  // they have to account for every contest classified as a local office. A
+  // title index short of its own class count makes the pattern coverage figure
+  // read higher than the ballot it describes.
+  const titledLocalOffices = Object.values(record.local_office_titles).reduce((total, count) => total + count, 0);
+  assert.equal(
+    titledLocalOffices,
+    record.classes.local_office ?? 0,
+    `${countyId} classified ${record.classes.local_office ?? 0} local office contest(s) but its titles account for ${titledLocalOffices}`,
+  );
   assert.ok(
     record.precincts_listed >= 1,
     `${countyId} must record how many precincts its county listed, to show what one ballot leaves out`,

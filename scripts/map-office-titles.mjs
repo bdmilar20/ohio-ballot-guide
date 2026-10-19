@@ -44,6 +44,9 @@ export function readPatterns(artifact) {
   }
   const patterns = artifact.patterns ?? [];
   const corrections = artifact.corrections ?? [];
+  if (typeof artifact.meta.last_verified !== "string") {
+    throw new Error("office title patterns need meta.last_verified: they are curated, so someone has to own the date");
+  }
   const seen = new Set();
   for (const pattern of patterns) {
     if (!pattern.printed || !pattern.office_id || !pattern.office) {
@@ -179,11 +182,9 @@ export function measureCoverage(survey, { patterns, corrections, countyNameFor }
       });
       for (const result of results) used.add(result.matched);
     } else {
-      unlabelled.push({
-        title,
-        instances: record.instances,
-        counties: record.counties.filter((countyId, index) => results[index] === null),
-      });
+      // Only the counties that could not read the title, because those are
+      // the ones a reader has to go and look at.
+      unlabelled.push({ title, counties: record.counties.filter((countyId, index) => results[index] === null) });
     }
   }
 

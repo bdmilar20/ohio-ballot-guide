@@ -85,7 +85,12 @@ test("the labeller hands the projector only an office id and a display name", ()
 });
 
 test("reading the pattern file refuses the shapes that would mislabel an office", () => {
-  const file = (overrides) => ({ meta: { schema_version: 1 }, patterns: [], corrections: [], ...overrides });
+  const file = (overrides) => ({
+    meta: { schema_version: 1, last_verified: "2026-10-19" },
+    patterns: [],
+    corrections: [],
+    ...overrides,
+  });
   assert.throws(() => readPatterns({ meta: { schema_version: 99 }, patterns: [] }), /schema 1/);
   assert.throws(
     () => readPatterns(file({ patterns: [{ printed: "Sheriff", office_id: "sheriff" }] })),
@@ -106,6 +111,10 @@ test("reading the pattern file refuses the shapes that would mislabel an office"
   assert.throws(
     () => readPatterns(file({ corrections: [{ printed: "For Sheriff", read_as: "For Sheriff" }] })),
     /corrects nothing/,
+  );
+  assert.throws(
+    () => readPatterns({ meta: { schema_version: 1 }, patterns: [], corrections: [] }),
+    /need meta.last_verified/,
   );
   assert.doesNotThrow(() => readPatterns(file({ patterns: PATTERNS, corrections: CORRECTIONS })));
 });

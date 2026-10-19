@@ -150,3 +150,42 @@ test("rejects stale identities before a refresh can start", async (t) => {
     assert.throws(() => validateRefreshConfigs(input), /must be named vtrapp-20261103G\.json/);
   });
 });
+
+test("a county can be onboarded with no office table when the patterns cover what it prints", () => {
+  // This is the whole point of the pattern set: the published office is still
+  // required to be reproducible from the durable job, but a label derived from
+  // a title the survey measured this county printing reproduces it as well as
+  // a hand-written mapping does.
+  const data = fixture();
+  data.configs[0].manifest.jobs[0].projection.office_mappings = {};
+  data.contestSurvey = {
+    local_office_titles: { "For County Commissioner": { county_count: 1, instances: 1, counties: ["adams"] } },
+  };
+  data.officeTitlePatterns = {
+    patterns: [{ printed: "County Commissioner", office_id: "county-commissioner", office: "County Commissioner" }],
+    corrections: [],
+  };
+
+  assert.deepEqual(validateRefreshConfigs(data), { configs: 1, jobs: 1, generated_counties: 1 });
+});
+
+test("a derived label only covers the county the survey saw print the title", () => {
+  const data = fixture();
+  data.configs[0].manifest.jobs[0].projection.office_mappings = {};
+  data.contestSurvey = {
+    local_office_titles: { "For County Commissioner": { county_count: 1, instances: 1, counties: ["brown"] } },
+  };
+  data.officeTitlePatterns = {
+    patterns: [{ printed: "County Commissioner", office_id: "county-commissioner", office: "County Commissioner" }],
+    corrections: [],
+  };
+
+  assert.throws(() => validateRefreshConfigs(data), /cannot reproduce that mapping/);
+});
+
+test("with no survey at all an empty office table still cannot reproduce a published office", () => {
+  const data = fixture();
+  data.configs[0].manifest.jobs[0].projection.office_mappings = {};
+
+  assert.throws(() => validateRefreshConfigs(data), /cannot reproduce that mapping/);
+});

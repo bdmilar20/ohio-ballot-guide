@@ -932,3 +932,20 @@ test("validator rejects a correction that names the wrong counties", async (t) =
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /names the wrong counties/);
 });
+
+test("validator rejects a survey whose local office titles do not account for its own contests", async (t) => {
+  // The pattern coverage figure is a fraction of these counts. A title index
+  // short of its class count would make it read higher than the ballot it
+  // describes.
+  const result = await validateFixture(t, {
+    contestSurvey: (data) => {
+      const [countyId] = Object.entries(data.counties).find(([, record]) => record.classes.local_office > 0);
+      const [title] = Object.keys(data.counties[countyId].local_office_titles);
+      data.counties[countyId].local_office_titles[title] += 1;
+      data.local_office_titles = localOfficeTitleIndex(data.counties);
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /but its titles account for/);
+});
