@@ -21,6 +21,7 @@ import {
   PRECINCT_TABLE_ID,
   SCHEMA_VERSION,
   vendorSlug,
+  walkBallot,
 } from "../scripts/ingest/vtrapp.mjs";
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -695,6 +696,52 @@ test("refuses a ballot walk that ends before the reported contest total", async 
       client: createVendorClient({ fetchImpl: truncating, delayMs: 0 }),
     }),
     /precinct 01____1 ballot walk ended at 2 of 3 contests/,
+  );
+});
+
+test("refuses an invalid starting position or contest total", async () => {
+  const page = (index, total) => `<html><form><input type="hidden" name="__VIEWSTATE" value="pos:${index}" />
+    <p>You are viewing contest ${index} of ${total}</p>
+    <div id="span_data">${panel("For Mayor", "Ada Lovelace")}</div></form></html>`;
+  const client = (body) => ({
+    request: async () => ({ status: 200, body }),
+    post: async () => ({ status: 200, body }),
+    pause: async () => {},
+  });
+
+  await assert.rejects(
+    walkBallot({
+      client: client(page(2, 2)),
+      url: "https://example.test/ballot",
+      countyId: "adams",
+      precinct: { id: "01____1" },
+    }),
+    /precinct 01____1 ballot walk started at contest 2 of 2, not contest 1/,
+  );
+  await assert.rejects(
+    walkBallot({
+      client: client(page(1, 0)),
+      url: "https://example.test/ballot",
+      countyId: "adams",
+      precinct: { id: "01____1" },
+    }),
+    /precinct 01____1 ballot reported an invalid total of 0 contests/,
+  );
+});
+
+test("refuses a ballot walk whose reported contest total changes", async () => {
+  const page = (index, total, title) => `<html><form><input type="hidden" name="__VIEWSTATE" value="pos:${index}" />
+    <p>You are viewing contest ${index} of ${total}</p>
+    <div id="span_data">${panel(title, "Ada Lovelace")}</div></form></html>`;
+  const client = {
+    request: async () => ({ status: 200, body: page(1, 2, "For Mayor") }),
+    post: async () => ({ status: 200, body: page(2, 3, "For County Auditor") }),
+    pause: async () => {},
+  };
+
+  await assert.rejects(
+    walkBallot({ client, url: "https://example.test/ballot", countyId: "adams", precinct: { id: "01____1" } }),
+    /precinct 01____1 ballot contest total changed from 2 to 3 at contest 2/,
   );
 });
 

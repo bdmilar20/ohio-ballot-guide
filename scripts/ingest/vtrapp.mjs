@@ -822,6 +822,14 @@ export async function walkBallot({ client, url, countyId, precinct }) {
     throw new Error(`${countyId}: precinct ${precinct.id} accessible ballot returned HTTP ${first.status}`);
   }
   const start = parseContestPage(first.body, { sourceUrl: url });
+  if (start.index !== 1) {
+    throw new Error(
+      `${countyId}: precinct ${precinct.id} ballot walk started at contest ${start.index} of ${start.total}, not contest 1`,
+    );
+  }
+  if (start.total < 1) {
+    throw new Error(`${countyId}: precinct ${precinct.id} ballot reported an invalid total of ${start.total} contests`);
+  }
   const contests = [start.contest];
   let page = first.body;
   for (let expected = 2; expected <= start.total; expected += 1) {
@@ -845,6 +853,11 @@ export async function walkBallot({ client, url, countyId, precinct }) {
     if (parsed.index !== expected) {
       throw new Error(
         `${countyId}: precinct ${precinct.id} ballot walk reached contest ${parsed.index} when ${expected} was next`,
+      );
+    }
+    if (parsed.total !== start.total) {
+      throw new Error(
+        `${countyId}: precinct ${precinct.id} ballot contest total changed from ${start.total} to ${parsed.total} at contest ${expected}`,
       );
     }
     contests.push(parsed.contest);
