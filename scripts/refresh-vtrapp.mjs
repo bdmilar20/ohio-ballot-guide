@@ -77,6 +77,31 @@ function invariant(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function projectionFailure(job, electionId, error) {
+  return {
+    county_id: job.county,
+    election_id: electionId,
+    vendor_election_key: job.election,
+    stage: "projection",
+    error: errorMessage(error),
+  };
+}
+
+export class RefreshProjectionFailuresError extends Error {
+  constructor(failures, jobCount) {
+    super(
+      `${failures.length} of ${jobCount} refresh job(s) failed projection: ` +
+        failures.map((failure) => `${failure.county_id}: ${failure.error}`).join("; "),
+    );
+    this.name = "RefreshProjectionFailuresError";
+    this.failures = failures;
+  }
+}
+
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -182,12 +207,14 @@ export async function refreshVtrapp({
   now = () => new Date(),
   onSnapshot = async () => {},
   onProjection = async () => {},
+  onProjectionFailure = async () => {},
 }) {
   validateRefreshManifest(manifest);
   invariant(Array.isArray(electionData?.elections), "elections data needs an elections array");
 
   const candidate = structuredClone(electionData);
   const jobs = [];
+  const projectionFailures = [];
 
   for (const job of manifest.jobs) {
     const electionId = electionIdFromKey(job.election);
@@ -206,11 +233,19 @@ export async function refreshVtrapp({
     const reviewedAtValue = now();
     const reviewedAt = reviewedAtValue instanceof Date ? reviewedAtValue : new Date(reviewedAtValue);
     invariant(Number.isFinite(reviewedAt.getTime()), `${job.county}: refresh clock returned an invalid time`);
-    const projection = projectCounty(
-      snapshot,
-      election,
-      projectionOptions(job, electionId, reviewedAt, statewideIssueText, officeTitlePatterns, contestSurvey),
-    );
+    let projection;
+    try {
+      projection = projectCounty(
+        snapshot,
+        election,
+        projectionOptions(job, electionId, reviewedAt, statewideIssueText, officeTitlePatterns, contestSurvey),
+      );
+    } catch (error) {
+      const failure = projectionFailure(job, electionId, error);
+      projectionFailures.push(failure);
+      await onProjectionFailure({ job, failure });
+      continue;
+    }
     const before = structuredClone(election.counties?.[job.county] ?? { races: [], issues: [] });
     election.counties ??= {};
     election.counties[job.county] = structuredClone(projection.county);
@@ -233,6 +268,10 @@ export async function refreshVtrapp({
       after: countCounty(projection.county),
       reviewed_at: reviewedAt.toISOString(),
     });
+  }
+
+  if (projectionFailures.length > 0) {
+    throw new RefreshProjectionFailuresError(projectionFailures, manifest.jobs.length);
   }
 
   return {
@@ -334,6 +373,7 @@ async function prepareOutputDirectory(outputDirectory, manifest) {
     schema_version: REFRESH_BUNDLE_SCHEMA_VERSION,
     status: "running",
     completed_jobs: [],
+    failed_jobs: [],
   });
 }
 
@@ -341,6 +381,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
   let outputDirectory = null;
   let outputPrepared = false;
   const completedJobs = [];
+  const failedJobs = [];
   try {
     const args = parseArgs(process.argv.slice(2));
     if (!args.manifest) throw new Error("--manifest is required");
@@ -487,6 +528,16 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
           schema_version: REFRESH_BUNDLE_SCHEMA_VERSION,
           status: "running",
           completed_jobs: completedJobs,
+          failed_jobs: failedJobs,
+        });
+      },
+      onProjectionFailure: async ({ failure }) => {
+        failedJobs.push(failure);
+        await writeJson(join(outputDirectory, "status.json"), {
+          schema_version: REFRESH_BUNDLE_SCHEMA_VERSION,
+          status: "running",
+          completed_jobs: completedJobs,
+          failed_jobs: failedJobs,
         });
       },
     });
@@ -505,6 +556,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
       schema_version: REFRESH_BUNDLE_SCHEMA_VERSION,
       status: "complete",
       completed_jobs: completedJobs,
+      failed_jobs: failedJobs,
       summary_file: "summary.json",
       candidate_elections_file: CANDIDATE_ELECTIONS_FILE,
     });
@@ -517,6 +569,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
           schema_version: REFRESH_BUNDLE_SCHEMA_VERSION,
           status: "failed",
           completed_jobs: completedJobs,
+          failed_jobs: failedJobs,
           error: error.message,
         });
       } catch {
