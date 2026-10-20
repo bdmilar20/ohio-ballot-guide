@@ -11,6 +11,7 @@ import {
   candidateDigest,
   jsonText,
   manifestDigest,
+  projectionFilename,
   refreshVtrapp,
   snapshotFilename,
   validateRefreshManifest,
@@ -161,12 +162,15 @@ test("rejects duplicate jobs before starting an ingest", async () => {
   assert.equal(called, false);
 });
 
-test("keeps the production input unchanged when a later projection fails", async () => {
+test("continues after a county projection fails, but returns no partial candidate", async () => {
   const input = electionData();
+  input.elections[0].counties.carroll = { races: [], issues: [] };
   const original = structuredClone(input);
-  const broken = manifest();
+  const broken = manifest(["adams", "brown", "carroll"]);
   broken.jobs[1].projection.office_mappings = {};
   const completed = [];
+  const saved = [];
+  const failed = [];
 
   await assert.rejects(
     refreshVtrapp({
@@ -174,12 +178,51 @@ test("keeps the production input unchanged when a later projection fails", async
       electionData: input,
       now: () => new Date("2026-10-16T18:00:00.000Z"),
       ingest: async ({ countyId }) => snapshot(countyId),
+      onSnapshot: async ({ job }) => saved.push(job.county),
       onProjection: async ({ job }) => completed.push(job.county),
+      onProjectionFailure: async ({ failure }) => failed.push(failure),
     }),
-    /common office contests need mappings: For County Commissioner/,
+    (error) => {
+      assert.match(error.message, /1 of 3 refresh job\(s\) failed projection/);
+      assert.match(error.message, /brown: common office contests need mappings: For County Commissioner/);
+      assert.deepEqual(error.failures, failed);
+      return true;
+    },
   );
-  assert.deepEqual(completed, ["adams"]);
+  assert.deepEqual(saved, ["adams", "brown", "carroll"]);
+  assert.deepEqual(completed, ["adams", "carroll"]);
+  assert.deepEqual(failed, [{
+    county_id: "brown",
+    election_id: "2026-11-03-general",
+    vendor_election_key: "20261103G",
+    stage: "projection",
+    error: "common office contests need mappings: For County Commissioner",
+  }]);
   assert.deepEqual(input, original);
+});
+
+test("an adapter failure still stops before later counties", async () => {
+  const input = electionData();
+  input.elections[0].counties.carroll = { races: [], issues: [] };
+  const called = [];
+  const projectionFailures = [];
+
+  await assert.rejects(
+    refreshVtrapp({
+      manifest: manifest(["adams", "brown", "carroll"]),
+      electionData: input,
+      now: () => new Date("2026-10-16T18:00:00.000Z"),
+      ingest: async ({ countyId }) => {
+        called.push(countyId);
+        if (countyId === "brown") throw new Error("vendor maintenance");
+        return snapshot(countyId);
+      },
+      onProjectionFailure: async ({ failure }) => projectionFailures.push(failure),
+    }),
+    /vendor maintenance/,
+  );
+  assert.deepEqual(called, ["adams", "brown"]);
+  assert.deepEqual(projectionFailures, []);
 });
 
 test("CLI replays saved snapshots and emits a validated review bundle", async (t) => {
@@ -217,6 +260,7 @@ test("CLI replays saved snapshots and emits a validated review bundle", async (t
   const candidate = JSON.parse(savedCandidateText);
   const summary = JSON.parse(await readFile(join(outputDirectory, "summary.json"), "utf8"));
   assert.equal(status.status, "complete");
+  assert.deepEqual(status.failed_jobs, []);
   assert.equal(summary.candidate_elections_file, CANDIDATE_ELECTIONS_FILE);
   assert.equal(summary.candidate_sha256, candidateDigest(savedCandidateText));
   assert.match(summary.validation, /Validated 4 elections/);
@@ -234,20 +278,24 @@ test("CLI preserves artifacts but withholds the candidate when projection fails"
 
   const projectRoot = new URL("..", import.meta.url).pathname;
   const fetchedAt = new Date();
-  // An unmapped title is no longer enough on its own: the curated patterns
-  // label "For County Commissioner" from the title the survey measured Adams
-  // printing, so emptying office_mappings alone now succeeds. The refusal
-  // this test is about needs an office nothing can label --- no mapping, no
-  // pattern, and no measurement behind it.
-  const saved = snapshot("adams", fetchedAt.toISOString(), "For County Dogcatcher");
-  saved.source.source_updated_at = new Date(fetchedAt.getTime() - 3_600_000).toISOString();
-  saved.source.source_age_hours = 1;
-  await writeFile(
-    join(snapshotDirectory, snapshotFilename({ county: "adams", election: "20261103G" })),
-    JSON.stringify(saved),
-  );
-  const brokenManifest = manifest(["adams"]);
-  brokenManifest.jobs[0].projection.office_mappings = {};
+  // Brown's unmapped title is between two clean jobs. The curated patterns
+  // label "For County Commissioner", so the refusal needs an office nothing
+  // can label --- no mapping, no pattern, and no measurement behind it.
+  const saved = [
+    snapshot("adams", fetchedAt.toISOString()),
+    snapshot("brown", fetchedAt.toISOString(), "For County Dogcatcher"),
+    snapshot("carroll", fetchedAt.toISOString()),
+  ];
+  for (const county of saved) {
+    county.source.source_updated_at = new Date(fetchedAt.getTime() - 3_600_000).toISOString();
+    county.source.source_age_hours = 1;
+    await writeFile(
+      join(snapshotDirectory, snapshotFilename({ county: county.county.id, election: "20261103G" })),
+      JSON.stringify(county),
+    );
+  }
+  const brokenManifest = manifest(["adams", "brown", "carroll"]);
+  brokenManifest.jobs[1].projection.office_mappings = {};
   const manifestPath = join(directory, "manifest.json");
   await writeFile(manifestPath, JSON.stringify(brokenManifest));
 
@@ -259,11 +307,29 @@ test("CLI preserves artifacts but withholds the candidate when projection fails"
   ], { encoding: "utf8" });
 
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /common office contests need mappings/);
+  assert.match(result.stderr, /1 of 3 refresh job\(s\) failed projection/);
+  assert.match(result.stderr, /brown: common office contests need mappings/);
   const status = JSON.parse(await readFile(join(outputDirectory, "status.json"), "utf8"));
   assert.equal(status.status, "failed");
   assert.match(status.error, /common office contests need mappings/);
-  await access(join(outputDirectory, snapshotFilename({ county: "adams", election: "20261103G" })));
+  assert.deepEqual(status.completed_jobs, ["adams:20261103G", "carroll:20261103G"]);
+  assert.deepEqual(status.failed_jobs, [{
+    county_id: "brown",
+    election_id: "2026-11-03-general",
+    vendor_election_key: "20261103G",
+    stage: "projection",
+    error: "common office contests need mappings: For County Dogcatcher",
+  }]);
+  for (const county of ["adams", "brown", "carroll"]) {
+    await access(join(outputDirectory, snapshotFilename({ county, election: "20261103G" })));
+  }
+  for (const county of ["adams", "carroll"]) {
+    await access(join(outputDirectory, projectionFilename({ county, election: "20261103G" })));
+  }
+  await assert.rejects(
+    access(join(outputDirectory, projectionFilename({ county: "brown", election: "20261103G" }))),
+    { code: "ENOENT" },
+  );
   await assert.rejects(access(join(outputDirectory, "elections.candidate.json")), { code: "ENOENT" });
 });
 

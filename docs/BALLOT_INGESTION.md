@@ -284,6 +284,15 @@ marks a complete refresh ready for diff review. Dataset-wide metadata stays as
 reviewed in the input: refreshing some counties cannot advance the whole
 dataset's review date or replace its coverage description.
 
+A county projection refusal is isolated to that job after its snapshot is
+saved. The refresh records the refusal, continues projecting the remaining
+counties, and ends failed with no candidate file if any projection refused.
+This keeps one previously unseen title or contest from hiding the results for
+every county after it while preserving the rule that only an entirely complete
+run can produce a publication candidate. Adapter and artifact-write failures
+still stop immediately because they can indicate a source-wide or storage-wide
+failure rather than one county's projection decision.
+
 The completed summary records the SHA-256 of the exact validated candidate
 file. The publication gate re-hashes that file and re-runs the canonical data
 validator before checking any county stamp, so settlement evidence cannot be
