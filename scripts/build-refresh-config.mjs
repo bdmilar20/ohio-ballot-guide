@@ -58,6 +58,11 @@ export const GENERATED_BY = "scripts/build-refresh-config.mjs";
 const MAPPING_FIELDS = ["office_mappings", "statewide_race_mappings", "statewide_issue_mappings"];
 const DECISIONS_FIELDS = ["schema_version", "note", "election", "counties"];
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+// The shape validate-data.mjs already requires of a published coverage stamp.
+// A surveyed stamp is the same evidence and is compared against a cycle
+// boundary, so without an offset the instant it names --- and therefore which
+// side of the boundary it falls on --- depends on the machine reading it.
+const SOURCE_STAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$/;
 
 /**
  * The election whose day begins this one's cycle, per the schedule rules the
@@ -345,6 +350,11 @@ export function buildRefreshJobs({
       invariant(
         typeof sourceUpdatedAt === "string" && Number.isFinite(instant),
         `surveyed county ${countyId} needs a valid source_updated_at timestamp, not ${JSON.stringify(sourceUpdatedAt)}`,
+      );
+      invariant(
+        SOURCE_STAMP.test(sourceUpdatedAt),
+        `surveyed county ${countyId} records source_updated_at ${JSON.stringify(sourceUpdatedAt)} without an ` +
+          "exact timezone, so which side of the cycle boundary it falls on depends on the machine reading it",
       );
       return { countyId, sourceUpdatedAt, instant };
     });

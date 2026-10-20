@@ -398,8 +398,23 @@ test("accepts the config its own inputs generate", () => {
   }));
 });
 
+// A stamp nothing can place is not evidence of age, and NaN loses every
+// comparison: before this guard, `Date.parse(stamp) < cycleStart` read a
+// county with no usable stamp as one inside the cycle, so the check built to
+// prove the backstop admits its population passed by skipping the county it
+// could not measure.
+//
+// The array is here because it is the case the string check alone admits:
+// Date.parse stringifies its argument, so a one-element array of a valid stamp
+// parses to a finite instant. Without `typeof === "string"` it is accepted.
 test("the generated-config gate refuses a missing or invalid surveyed source stamp", () => {
-  for (const sourceUpdatedAt of [undefined, "not-a-date"]) {
+  for (const sourceUpdatedAt of [
+    undefined,
+    "not-a-date",
+    "2026-13-01T00:00:00Z",
+    "2026-10-01T09:00:00-04",
+    ["2026-10-01T09:00:00-04:00"],
+  ]) {
     const input = fixture();
     const config = generated(input);
     if (sourceUpdatedAt === undefined) delete input.survey.counties.adams.source_updated_at;
@@ -407,6 +422,23 @@ test("the generated-config gate refuses a missing or invalid surveyed source sta
     assert.throws(
       () => assertGeneratedRefreshConfig({ name: "vtrapp-20261103G.json", config, ...input }),
       /surveyed county adams needs a valid source_updated_at timestamp/,
+    );
+  }
+});
+
+// Parseable, and still not the stamp the vendor prints. The offsetless form is
+// read as local time, so a stamp near the boundary lands inside the cycle on an
+// Ohio machine and before it on a UTC one; the date-only form parses as UTC
+// midnight, unambiguous but with the time of day thrown away. Neither is age
+// evidence this gate should date a backstop from.
+test("the generated-config gate refuses a surveyed source stamp without an exact timezone", () => {
+  for (const sourceUpdatedAt of ["2026-10-01T09:00:00", "2026-10-01"]) {
+    const input = fixture();
+    const config = generated(input);
+    input.survey.counties.adams.source_updated_at = sourceUpdatedAt;
+    assert.throws(
+      () => assertGeneratedRefreshConfig({ name: "vtrapp-20261103G.json", config, ...input }),
+      /without an exact timezone, so which side of the cycle boundary it falls on depends on the machine/,
     );
   }
 });
