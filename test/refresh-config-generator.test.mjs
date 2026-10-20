@@ -533,9 +533,10 @@ test("the committed config is exactly what the committed artifacts generate", as
     publishedCounties: election.counties ?? {},
   });
 
-  // The committed backlog, named rather than counted: Harrison surveys one
-  // statewide race no candidate match resolves, so it is the one county of
-  // seventy this config leaves out, and every other one gets a job.
+  // The retained Harrison survey ballot was reviewed against the canonical
+  // statewide races. Its Attorney General contest omits John J. Kulewicz's
+  // middle initial, so the exact contest fingerprint carries the hand-owned
+  // decision and every surveyed county gets a job.
   const built = buildRefreshJobs({
     survey,
     patterns,
@@ -545,12 +546,12 @@ test("the committed config is exactly what the committed artifacts generate", as
     election,
     publishedCounties: election.counties ?? {},
   });
-  assert.deepEqual(built.backlog, [{
-    county: "harrison",
-    reason: "1 surveyed contest(s) need a reviewed statewide_race_mappings entry; the decisions file has 0",
-  }]);
-  assert.equal(built.jobs.length, Object.keys(survey.counties).length - 1);
-  assert.deepEqual(config.jobs.map((job) => job.county).filter((county) => county === "harrison"), []);
+  assert.deepEqual(built.backlog, []);
+  assert.equal(built.jobs.length, Object.keys(survey.counties).length);
+  const harrison = built.jobs.find((job) => job.county === "harrison");
+  assert.deepEqual(harrison.projection.statewide_race_mappings, {
+    "sha256:79f65ef39efa08c7200d7595d6c9da58bc926673485655b6c9bec8d30beb06a6": "attorney-general",
+  });
   assert.equal(built.cycleStart, "2026-05-05");
   assert.equal(built.maxSourceAgeHours, 4368);
   assert.ok(
