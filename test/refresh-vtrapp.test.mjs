@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -9,6 +9,8 @@ import { ballotId, SCHEMA_VERSION as SNAPSHOT_SCHEMA_VERSION } from "../scripts/
 import {
   CANDIDATE_ELECTIONS_FILE,
   candidateDigest,
+  jsonText,
+  manifestDigest,
   refreshVtrapp,
   snapshotFilename,
   validateRefreshManifest,
@@ -37,7 +39,11 @@ function office(title, order, choices) {
   };
 }
 
-function snapshot(countyId, fetchedAt = "2026-10-16T18:00:00.000Z") {
+// The local office title is a parameter because the ballot id is a digest of
+// the ballot's normalized content: retitling a contest after the fact
+// invalidates it, so a fixture that needs a different office has to be built
+// with it rather than edited.
+function snapshot(countyId, fetchedAt = "2026-10-16T18:00:00.000Z", localOfficeTitle = "For County Commissioner") {
   const contests = [
     office("For Governor and Lieutenant Governor", 1, [
       ["Amy Acton and David Pepper", "Democratic"],
@@ -45,7 +51,7 @@ function snapshot(countyId, fetchedAt = "2026-10-16T18:00:00.000Z") {
       ["Vivek Ramaswamy and Robert A. McColley", "Republican"],
       ["Write-in", null, true],
     ]),
-    office("For County Commissioner", 2, [["Ada Lovelace", "Democratic"]]),
+    office(localOfficeTitle, 2, [["Ada Lovelace", "Democratic"]]),
   ];
   const id = ballotId(contests);
   return {
@@ -228,7 +234,12 @@ test("CLI preserves artifacts but withholds the candidate when projection fails"
 
   const projectRoot = new URL("..", import.meta.url).pathname;
   const fetchedAt = new Date();
-  const saved = snapshot("adams", fetchedAt.toISOString());
+  // An unmapped title is no longer enough on its own: the curated patterns
+  // label "For County Commissioner" from the title the survey measured Adams
+  // printing, so emptying office_mappings alone now succeeds. The refusal
+  // this test is about needs an office nothing can label --- no mapping, no
+  // pattern, and no measurement behind it.
+  const saved = snapshot("adams", fetchedAt.toISOString(), "For County Dogcatcher");
   saved.source.source_updated_at = new Date(fetchedAt.getTime() - 3_600_000).toISOString();
   saved.source.source_age_hours = 1;
   await writeFile(
@@ -335,4 +346,257 @@ test("a refresh resolves a retitled statewide issue from the certified text it i
   });
   assert.deepEqual(result.candidate.elections[0].counties.adams.issues, []);
   assert.deepEqual(result.summary.jobs[0].removed_statewide_duplicates, ["governor", "state-issue-3"]);
+});
+
+test("a bundle carries every input a projection decision depended on, and a replay reads the bundle's copy", async (t) => {
+  // Found in review: before this, a bundle held only the manifest, so the same
+  // saved snapshot replayed differently after anyone edited the certified
+  // issue text, the office patterns, or the survey that bounds them.
+  const directory = await mkdtemp(join(tmpdir(), "vtrapp-refresh-inputs-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const snapshotDirectory = join(directory, "snapshots");
+  const firstOutput = join(directory, "first");
+  const secondOutput = join(directory, "second");
+  await mkdir(snapshotDirectory);
+
+  const projectRoot = new URL("..", import.meta.url).pathname;
+  const fetchedAt = new Date();
+  const saved = snapshot("adams", fetchedAt.toISOString());
+  saved.source.source_updated_at = new Date(fetchedAt.getTime() - 3_600_000).toISOString();
+  saved.source.source_age_hours = 1;
+  await writeFile(
+    join(snapshotDirectory, snapshotFilename({ county: "adams", election: "20261103G" })),
+    JSON.stringify(saved),
+  );
+  const manifestPath = join(directory, "manifest.json");
+  await writeFile(manifestPath, JSON.stringify(manifest(["adams"])));
+
+  const run = (snapshots, out) =>
+    spawnSync(process.execPath, [
+      join(projectRoot, "scripts", "refresh-vtrapp.mjs"),
+      "--manifest", manifestPath,
+      "--snapshots", snapshots,
+      "--out", out,
+    ], { encoding: "utf8" });
+
+  const first = run(snapshotDirectory, firstOutput);
+  assert.equal(first.status, 0, first.stderr);
+  const firstSummary = JSON.parse(await readFile(join(firstOutput, "summary.json"), "utf8"));
+  assert.deepEqual(
+    firstSummary.inputs.map(({ file }) => file).sort(),
+    ["office-title-patterns.json", "statewide-issue-text.json", "vtrapp-contest-survey.json"],
+  );
+  for (const input of firstSummary.inputs) {
+    const copied = await readFile(join(firstOutput, input.file), "utf8");
+    assert.equal(candidateDigest(copied), input.sha256, `${input.file} digest must describe the copy in the bundle`);
+    assert.equal(input.source, "repository");
+  }
+  // The manifest is the fourth input, recorded by the decisions it makes
+  // rather than beside the three data files, because it is compared against a
+  // caller-supplied file whose formatting is not ours to dictate.
+  assert.equal(
+    firstSummary.manifest_sha256,
+    manifestDigest(manifest(["adams"])),
+    "a bundle records the manifest it projected under",
+  );
+  assert.equal(
+    manifestDigest(JSON.parse(await readFile(join(firstOutput, "manifest.json"), "utf8"))),
+    firstSummary.manifest_sha256,
+    "that digest must describe the manifest copy in the bundle",
+  );
+
+  // Replaying the first bundle must use the first bundle's inputs, not the
+  // working tree's, and reach the same candidate.
+  const second = run(firstOutput, secondOutput);
+  assert.equal(second.status, 0, second.stderr);
+  const secondSummary = JSON.parse(await readFile(join(secondOutput, "summary.json"), "utf8"));
+  assert.deepEqual(
+    secondSummary.inputs.map(({ file, sha256 }) => ({ file, sha256 })).sort((a, b) => a.file.localeCompare(b.file)),
+    firstSummary.inputs.map(({ file, sha256 }) => ({ file, sha256 })).sort((a, b) => a.file.localeCompare(b.file)),
+  );
+  assert.ok(
+    secondSummary.inputs.every(({ source }) => source === "bundle"),
+    "a replay reads the bundle it is replaying",
+  );
+
+  // Every projection decision has to be the same. The candidate digest is not
+  // the measure of that: freshness is recalculated at replay time, so
+  // `coverage.reviewed_at` legitimately advances and the digest legitimately
+  // changes. Asserting digest equality was asserting an invariant the system
+  // does not have --- so compare the decisions, and name the one field
+  // allowed to differ.
+  const withoutReviewClock = (value) => {
+    if (Array.isArray(value)) return value.map(withoutReviewClock);
+    if (value === null || typeof value !== "object") return value;
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => key !== "reviewed_at")
+        .map(([key, nested]) => [key, withoutReviewClock(nested)]),
+    );
+  };
+  const firstCandidate = JSON.parse(await readFile(join(firstOutput, CANDIDATE_ELECTIONS_FILE), "utf8"));
+  const secondCandidate = JSON.parse(await readFile(join(secondOutput, CANDIDATE_ELECTIONS_FILE), "utf8"));
+  assert.deepEqual(withoutReviewClock(secondCandidate), withoutReviewClock(firstCandidate));
+  const reviewClock = (candidate) => candidate.elections[0].counties.adams.coverage.reviewed_at;
+  assert.notEqual(reviewClock(secondCandidate), undefined, "the replay still records when it reviewed");
+  assert.ok(
+    Date.parse(reviewClock(secondCandidate)) >= Date.parse(reviewClock(firstCandidate)),
+    "the replay's review clock cannot run backwards",
+  );
+
+  // Carrying a digest is not the same as checking one. Before this, a replay
+  // computed a fresh digest from whatever now sat in the snapshot directory,
+  // so an edited bundled input produced a new digest and a different
+  // candidate instead of a refusal.
+  await t.test("an edited bundled input refuses rather than replaying differently", async () => {
+    const edited = join(directory, "edited");
+    await cp(firstOutput, edited, { recursive: true });
+    const patternsPath = join(edited, "office-title-patterns.json");
+    const patterns = JSON.parse(await readFile(patternsPath, "utf8"));
+    patterns.patterns.push({ printed: "Dogcatcher", office_id: "county-auditor", office: "Dogcatcher" });
+    await writeFile(patternsPath, jsonText(patterns));
+
+    const replay = run(edited, join(directory, "edited-replay"));
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /office-title-patterns\.json is sha256:.* but that bundle's summary records/);
+  });
+
+  await t.test("a recorded input the bundle no longer holds refuses", async () => {
+    const stripped = join(directory, "stripped");
+    await cp(firstOutput, stripped, { recursive: true });
+    await rm(join(stripped, "vtrapp-contest-survey.json"));
+
+    const replay = run(stripped, join(directory, "stripped-replay"));
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /records vtrapp-contest-survey\.json, but the bundle holds no copy/);
+  });
+
+  await t.test("a flag cannot stand in for a recorded input", async () => {
+    const replay = spawnSync(process.execPath, [
+      join(projectRoot, "scripts", "refresh-vtrapp.mjs"),
+      "--manifest", manifestPath,
+      "--snapshots", firstOutput,
+      "--office-title-patterns", join(projectRoot, "data", "office-title-patterns.json"),
+      "--out", join(directory, "override-replay"),
+    ], { encoding: "utf8" });
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /--office-title-patterns conflicts with the office-title-patterns\.json recorded in/);
+  });
+
+  // Found in review: the refresh invoked the canonical validator with only the
+  // candidate, locations, offices and county boards, so the validator re-read
+  // the repository's patterns and survey no matter which copies the
+  // projection had used. A malformed-but-shaped bundled input could drive a
+  // publication while the good repository copy was what got checked.
+  await t.test("validation reads the same inputs the projection did", async () => {
+    const patterns = JSON.parse(await readFile(join(projectRoot, "data", "office-title-patterns.json"), "utf8"));
+    // Shaped well enough for readPatterns and harmless to projection, but the
+    // validator refuses a pattern no surveyed title reaches.
+    patterns.patterns.push({ printed: "Dogcatcher", office_id: "county-auditor", office: "County Dogcatcher" });
+    const patternsPath = join(directory, "unused-pattern.json");
+    await writeFile(patternsPath, jsonText(patterns));
+
+    const result = spawnSync(process.execPath, [
+      join(projectRoot, "scripts", "refresh-vtrapp.mjs"),
+      "--manifest", manifestPath,
+      "--snapshots", snapshotDirectory,
+      "--office-title-patterns", patternsPath,
+      "--out", join(directory, "unused-pattern-out"),
+    ], { encoding: "utf8" });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /every office title pattern must match at least one title the survey found/);
+  });
+
+  // Found in review: the three data inputs were verified and the manifest was
+  // not, so a complete bundle replayed under a different --manifest
+  // republished the same snapshot under a different office. Both runs exited
+  // 0, both recorded successful validation, and all three data inputs read
+  // `source: bundle` --- none of them is where an office mapping lives. The
+  // visible name stayed "County Commissioner" while office_id became
+  // county-auditor, so the published race would have read correctly and
+  // linked a voter to the wrong office.
+  await t.test("a replay under a different manifest refuses rather than republishing a different office", async () => {
+    const otherManifest = manifest(["adams"]);
+    otherManifest.jobs[0].projection.office_mappings = { "For County Commissioner": "county-auditor" };
+    const otherManifestPath = join(directory, "other-manifest.json");
+    await writeFile(otherManifestPath, JSON.stringify(otherManifest));
+
+    const out = join(directory, "other-manifest-replay");
+    const replay = spawnSync(process.execPath, [
+      join(projectRoot, "scripts", "refresh-vtrapp.mjs"),
+      "--manifest", otherManifestPath,
+      "--snapshots", firstOutput,
+      "--out", out,
+    ], { encoding: "utf8" });
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /--manifest is sha256:.* but .*summary\.json records sha256:/);
+    await assert.rejects(access(join(out, CANDIDATE_ELECTIONS_FILE)), "a refused replay publishes no candidate");
+  });
+
+  await t.test("an edited bundled manifest refuses", async () => {
+    const edited = join(directory, "edited-manifest");
+    await cp(firstOutput, edited, { recursive: true });
+    const manifestFile = join(edited, "manifest.json");
+    const bundled = JSON.parse(await readFile(manifestFile, "utf8"));
+    bundled.jobs[0].projection.office_mappings = { "For County Commissioner": "county-auditor" };
+    await writeFile(manifestFile, jsonText(bundled));
+
+    const replay = run(edited, join(directory, "edited-manifest-replay"));
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /manifest\.json is sha256:.* but that bundle's summary records/);
+  });
+
+  await t.test("a bundle that records no manifest digest cannot be replayed", async () => {
+    const unrecorded = join(directory, "unrecorded-manifest");
+    await cp(firstOutput, unrecorded, { recursive: true });
+    const summary = JSON.parse(await readFile(join(unrecorded, "summary.json"), "utf8"));
+    delete summary.manifest_sha256;
+    await writeFile(join(unrecorded, "summary.json"), jsonText(summary));
+
+    const replay = run(unrecorded, join(directory, "unrecorded-manifest-replay"));
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /records no manifest_sha256/);
+  });
+
+  await t.test("a recorded manifest the bundle no longer holds refuses", async () => {
+    const stripped = join(directory, "stripped-manifest");
+    await cp(firstOutput, stripped, { recursive: true });
+    await rm(join(stripped, "manifest.json"));
+
+    const replay = run(stripped, join(directory, "stripped-manifest-replay"));
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /holds no manifest\.json to replay/);
+  });
+
+  // The decisions are what must match, not the bytes. A manifest kept in a
+  // repository with different formatting is still that manifest, and refusing
+  // it would make the check cost more than it is worth.
+  await t.test("a reformatted manifest carrying the same decisions still replays", async () => {
+    const reformattedPath = join(directory, "reformatted-manifest.json");
+    const original = JSON.parse(await readFile(manifestPath, "utf8"));
+    const reordered = { jobs: original.jobs, schema_version: original.schema_version };
+    assert.notEqual(JSON.stringify(reordered), JSON.stringify(original));
+    await writeFile(reformattedPath, JSON.stringify(reordered, null, 4));
+
+    const out = join(directory, "reformatted-manifest-replay");
+    const replay = spawnSync(process.execPath, [
+      join(projectRoot, "scripts", "refresh-vtrapp.mjs"),
+      "--manifest", reformattedPath,
+      "--snapshots", firstOutput,
+      "--out", out,
+    ], { encoding: "utf8" });
+    assert.equal(replay.status, 0, replay.stderr);
+  });
+
+  await t.test("a bundle whose summary records no inputs cannot be replayed", async () => {
+    const unverifiable = join(directory, "unverifiable");
+    await cp(firstOutput, unverifiable, { recursive: true });
+    const summary = JSON.parse(await readFile(join(unverifiable, "summary.json"), "utf8"));
+    delete summary.inputs;
+    await writeFile(join(unverifiable, "summary.json"), jsonText(summary));
+
+    const replay = run(unverifiable, join(directory, "unverifiable-replay"));
+    assert.equal(replay.status, 1);
+    assert.match(replay.stderr, /has no inputs to verify/);
+  });
 });

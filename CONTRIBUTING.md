@@ -520,6 +520,46 @@ Like the adapter, live refresh is manual and must never run in CI. Replaying
 saved snapshots is offline, but freshness is recalculated at replay time and
 the manifest's maximum source age still applies.
 
+A projection decision depends on more than the manifest: the certified
+statewide issue text, the curated office title patterns, and the contest survey
+that bounds which titles a pattern may label. Each run copies all three into
+its bundle byte for byte and records their `sha256` in `summary.inputs`, and a
+replay reads them **from the bundle it is replaying** rather than from the
+working tree. Without that, editing any of the three made the same saved
+snapshot replay differently.
+
+Carrying a digest is not the same as checking one. A replay loads the source
+bundle's own `summary.json` first and refuses before any walk when a recorded
+input is missing from the bundle, its bytes no longer match the recorded
+digest, or a flag such as `--office-title-patterns` names a different file than
+the one the bundle recorded. If you want to try an edited pattern set against
+saved snapshots, that is a new refresh and not a replay: point `--snapshots` at
+a directory holding only the `*-snapshot.json` files. Refresh bundles are
+schema 3 for this reason — a schema 2 bundle recorded no input digests, so
+there is nothing to verify it against and `gate:vtrapp` refuses it by version.
+
+**The manifest is a projection input too, and is held to the same rule.** It is
+where an office mapping and a maximum source age live, so replaying a complete
+bundle under a different `--manifest` would republish the same snapshot under a
+different office with every other check still passing. Each run records
+`summary.manifest_sha256`, and a replay refuses unless both the bundle's own
+`manifest.json` and the `--manifest` it was passed carry the same decisions.
+That digest is taken over a key-sorted form of the manifest, so reformatting it
+or reordering its keys changes nothing — only a changed decision refuses. To
+project saved snapshots under different decisions, use a snapshot-only
+directory, the same distinction that applies to an edited pattern set.
+
+Projection and validation read the same input bytes. The refresh and the gate
+both hand the selected issue text, patterns, and survey to
+`scripts/validate-data.mjs` rather than letting it re-read the repository's
+copies, so a malformed bundled input cannot drive a projection while the good
+repository copy is what gets checked.
+
+An office label derived from a surveyed title is scoped to the **county and the
+election** the survey measured. A primary and a general print different
+offices, so one election's survey authorizes nothing on another's ballot; the
+projector falls through to its "needs mappings" refusal instead.
+
 ## Design changes
 
 Read [`docs/DESIGN.md`](docs/DESIGN.md) before changing `styles.css` or the page

@@ -21,7 +21,10 @@ import { parseArgs } from "./ingest/vtrapp.mjs";
 import {
   CANDIDATE_ELECTIONS_FILE,
   candidateDigest,
+  manifestDigest,
   REFRESH_BUNDLE_SCHEMA_VERSION,
+  REFRESH_INPUT_FILES,
+  REFRESH_MANIFEST_FILE,
   validateCandidateText,
 } from "./refresh-vtrapp.mjs";
 import { assertSettled, assertStampLog, DEFAULT_QUIET_HOURS, settlement } from "./vtrapp-stamp-log.mjs";
@@ -42,7 +45,18 @@ export function formatSettlement(counties) {
   return lines;
 }
 
-export function assertRefreshBundle(summary, candidateText) {
+/**
+ * Checks a refresh bundle's artifact-level claims before any publication
+ * decision reads it.
+ *
+ * `inputTexts` is the bundle's own copies of the projection inputs, keyed by
+ * filename. When given, each recorded digest is verified against the bytes
+ * beside it: without that, `summary.inputs` is a claim about a file nobody
+ * compared, and an edited bundled input would pass the gate. `manifest.json`
+ * is accepted in the same map and checked the same way, by the semantic digest
+ * the refresh records.
+ */
+export function assertRefreshBundle(summary, candidateText, inputTexts = null) {
   if (summary?.schema_version !== REFRESH_BUNDLE_SCHEMA_VERSION) {
     throw new Error(`refresh summary must be schema ${REFRESH_BUNDLE_SCHEMA_VERSION}`);
   }
@@ -71,7 +85,56 @@ export function assertRefreshBundle(summary, candidateText) {
       `candidate file digest is ${actual}, but this refresh summary records ${summary.candidate_sha256}`,
     );
   }
+  assertRefreshManifest(summary, inputTexts);
+  assertRefreshInputs(summary, inputTexts);
   return summary;
+}
+
+/**
+ * The manifest holds the office mappings and age limits the run projected
+ * under. It is verified by semantic digest rather than bytes, for the reason
+ * canonicalJson gives: reformatting changes no decision, and a changed
+ * decision is what must fail.
+ */
+function assertRefreshManifest(summary, inputTexts) {
+  if (!/^sha256:[0-9a-f]{64}$/.test(summary.manifest_sha256)) {
+    throw new Error("refresh summary has no valid manifest_sha256, so its projection decisions are unrecorded");
+  }
+  if (!inputTexts) return;
+  const text = inputTexts[REFRESH_MANIFEST_FILE];
+  if (typeof text !== "string") throw new Error(`refresh bundle has no readable ${REFRESH_MANIFEST_FILE}`);
+  let digest;
+  try {
+    digest = manifestDigest(JSON.parse(text));
+  } catch (error) {
+    throw new Error(`refresh bundle has an unreadable ${REFRESH_MANIFEST_FILE}: ${error.message}`);
+  }
+  if (digest !== summary.manifest_sha256) {
+    throw new Error(
+      `${REFRESH_MANIFEST_FILE} in this refresh bundle is ${digest}, but its summary records ${summary.manifest_sha256}`,
+    );
+  }
+}
+
+function assertRefreshInputs(summary, inputTexts) {
+  if (!Array.isArray(summary.inputs)) {
+    throw new Error("refresh summary records no inputs; it cannot be replayed or verified");
+  }
+  const recorded = new Map(summary.inputs.map((entry) => [entry?.file, entry]));
+  for (const file of REFRESH_INPUT_FILES) {
+    const entry = recorded.get(file);
+    if (!entry) throw new Error(`refresh summary records no digest for ${file}`);
+    if (!/^sha256:[0-9a-f]{64}$/.test(entry.sha256)) {
+      throw new Error(`refresh summary has no valid sha256 for ${file}`);
+    }
+    if (!inputTexts) continue;
+    const text = inputTexts[file];
+    if (typeof text !== "string") throw new Error(`refresh bundle has no readable ${file}`);
+    const digest = candidateDigest(text);
+    if (digest !== entry.sha256) {
+      throw new Error(`${file} in this refresh bundle is ${digest}, but its summary records ${entry.sha256}`);
+    }
+  }
 }
 
 /**
@@ -171,8 +234,26 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
       // a hand-built summary could still claim that invalid data was checked.
       // Re-run the canonical offline validator against the exact file before
       // any source-stamp evidence is allowed to approve it.
-      assertRefreshBundle(summary, candidateText);
-      await validateCandidateText(candidateText, fileURLToPath(new URL("..", import.meta.url)));
+      // The bundle's own input copies, so the digests in its summary are
+      // compared against bytes rather than taken on trust, and so the
+      // validator below reads the same files the projection did.
+      const inputTexts = {};
+      const inputPaths = {};
+      for (const file of [...REFRESH_INPUT_FILES, REFRESH_MANIFEST_FILE]) {
+        const path = join(refreshDirectory, file);
+        // The manifest is verified here but is not one of the validator's
+        // positional data files, so it is deliberately absent from inputPaths.
+        if (file !== REFRESH_MANIFEST_FILE) inputPaths[file] = path;
+        inputTexts[file] = await readFile(path, "utf8").then(
+          (text) => text,
+          (error) => {
+            if (error.code === "ENOENT") return null;
+            throw error;
+          },
+        );
+      }
+      assertRefreshBundle(summary, candidateText, inputTexts);
+      await validateCandidateText(candidateText, fileURLToPath(new URL("..", import.meta.url)), inputPaths);
       const results = gateRefresh(log, summary, { quietHours, candidateText });
       for (const result of results) {
         console.log(`${result.passed ? "ok     " : "BLOCKED"} ${result.county_id.padEnd(12)} ${result.detail}`);

@@ -1,0 +1,159 @@
+{
+  "meta": {
+    "schema_version": 1,
+    "note": "Curated file, maintained by hand. The office a county's ballot prints, mapped to a published office description. Not generated: an office and the words a board prints for it change at most yearly, while which counties print which titles changes every election. The population this is measured against is generated --- data/vtrapp-contest-survey.json --- and npm run check fails when a surveyed title matches nothing here.",
+    "last_verified": "2026-10-19"
+  },
+  "corrections": [
+    {
+      "printed": "For County Comissioner",
+      "read_as": "For County Commissioner",
+      "counties": [
+        "portage"
+      ],
+      "note": "Misspelling in the county's own ballot data. Listed whole rather than as a rule, so the exception stays auditable and so fixing it upstream shows up here as a dead correction."
+    },
+    {
+      "printed": "FOR MAYOR OF THE CITY OF URBANA",
+      "read_as": "For Mayor of the City of Urbana",
+      "counties": [
+        "champaign"
+      ],
+      "note": "Champaign prints this one title in capitals. Listed whole rather than case-folded: case-folding every title would also accept a title whose capitalisation is the only thing distinguishing it, and this is the only capitalised title in all seventy counties."
+    },
+    {
+      "printed": "For Judge of the Court of Appeals (4th Distrit)",
+      "read_as": "For Judge of the Court of Appeals (4th District)",
+      "counties": [
+        "gallia"
+      ],
+      "note": "Misspelling of \"District\" in the county's own ballot data."
+    }
+  ],
+  "patterns": [
+    {
+      "printed": "Auditor",
+      "office_id": "county-auditor",
+      "office": "County Auditor"
+    },
+    {
+      "printed": "Clerk of the Court of Common Pleas",
+      "office_id": "clerk-of-courts",
+      "office": "Clerk of the Court of Common Pleas"
+    },
+    {
+      "printed": "Coroner",
+      "office_id": "coroner",
+      "office": "County Coroner"
+    },
+    {
+      "printed": "County Auditor",
+      "office_id": "county-auditor",
+      "office": "County Auditor"
+    },
+    {
+      "printed": "County Commissioner",
+      "office_id": "county-commissioner",
+      "office": "County Commissioner"
+    },
+    {
+      "printed": "County Coroner",
+      "office_id": "coroner",
+      "office": "County Coroner"
+    },
+    {
+      "printed": "County Engineer",
+      "office_id": "county-engineer",
+      "office": "County Engineer"
+    },
+    {
+      "printed": "County Recorder",
+      "office_id": "county-recorder",
+      "office": "County Recorder"
+    },
+    {
+      "printed": "County Treasurer",
+      "office_id": "county-treasurer",
+      "office": "County Treasurer"
+    },
+    {
+      "printed": "Judge of Court of Common Pleas",
+      "office_id": "common-pleas-judge",
+      "office": "Judge of the Court of Common Pleas"
+    },
+    {
+      "printed": "Judge of Court of Common Pleas Juvenile Probate Division",
+      "office_id": "common-pleas-judge",
+      "office": "Judge of the Court of Common Pleas (Juvenile Probate Division)"
+    },
+    {
+      "printed": "Judge of the Court of Appeals",
+      "office_id": "court-of-appeals-judge",
+      "office": "Judge of the Court of Appeals"
+    },
+    {
+      "printed": "Judge of the Court of Common Pleas",
+      "office_id": "common-pleas-judge",
+      "office": "Judge of the Court of Common Pleas"
+    },
+    {
+      "printed": "Judge of the Court of Common Pleas - Juvenile/Probate",
+      "office_id": "common-pleas-judge",
+      "office": "Judge of the Court of Common Pleas (Juvenile/Probate)",
+      "counties": [
+        "miami"
+      ],
+      "note": "Miami separates the division with a dash and does not print the word \"Division\". Listed whole, like the other bare-division common pleas variants: the qualifier shape rule only accepts a parenthesised qualifier, and parenthesising this one here would be writing words the ballot does not print."
+    },
+    {
+      "printed": "Judge of the Court of Common Pleas FTC 2-9",
+      "office_id": "common-pleas-judge",
+      "office": "Judge of the Court of Common Pleas (Full term commencing 2-9)"
+    },
+    {
+      "printed": "Judge of the Court of Common Pleas Probate/Juvenile Division",
+      "office_id": "common-pleas-judge",
+      "office": "Judge of the Court of Common Pleas (Probate/Juvenile Division)"
+    },
+    {
+      "printed": "Mayor of the City of Urbana",
+      "office_id": "mayor",
+      "office": "Mayor of the City of Urbana"
+    },
+    {
+      "printed": "Member of County Council at Large",
+      "office_id": "summit-county-council",
+      "office": "Member of County Council at Large"
+    },
+    {
+      "printed": "Members of Charter Commission",
+      "office_id": "charter-commission",
+      "office": "Members of Charter Commission"
+    },
+    {
+      "printed": "Prosecuting Attorney",
+      "office_id": "county-prosecutor",
+      "office": "County Prosecuting Attorney"
+    },
+    {
+      "printed": "Representative to Congress",
+      "office_id": "us-representative",
+      "office": "U.S. Representative"
+    },
+    {
+      "printed": "Sheriff",
+      "office_id": "sheriff",
+      "office": "County Sheriff"
+    },
+    {
+      "printed": "State Representative",
+      "office_id": "state-representative",
+      "office": "State Representative"
+    },
+    {
+      "printed": "State Senator",
+      "office_id": "state-senator",
+      "office": "State Senator"
+    }
+  ]
+}

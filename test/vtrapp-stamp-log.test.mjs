@@ -11,7 +11,10 @@ import {
   CANDIDATE_ELECTIONS_FILE,
   candidateDigest,
   jsonText,
+  manifestDigest,
   REFRESH_BUNDLE_SCHEMA_VERSION,
+  REFRESH_INPUT_FILES,
+  REFRESH_MANIFEST_FILE,
 } from "../scripts/refresh-vtrapp.mjs";
 import {
   appendObservation,
@@ -49,6 +52,27 @@ function logOf(...entries) {
  * compares against the log.
  */
 const job = (fields) => ({ vendor_election_key: ELECTION.vendor_key, ...fields });
+// The projection inputs a real bundle records a digest for. A summary without
+// them is not replayable, so the gate refuses it and fixtures carry them.
+const inputTexts = Object.fromEntries(REFRESH_INPUT_FILES.map((file) => [file, `{"fixture":"${file}"}\n`]));
+const summaryInputs = REFRESH_INPUT_FILES.map((file) => ({
+  file,
+  sha256: candidateDigest(inputTexts[file]),
+  source: "repository",
+}));
+// The manifest is the fourth projection input: it carries the office mappings
+// and age limits. It is recorded by semantic digest, so the fixture text and
+// the recorded digest have to be derived from the same value.
+const manifestFixture = {
+  schema_version: 1,
+  jobs: [{
+    county: "adams",
+    election: ELECTION.vendor_key,
+    projection: { max_source_age_hours: 24, office_mappings: { "For County Commissioner": "county-commissioner" } },
+  }],
+};
+inputTexts[REFRESH_MANIFEST_FILE] = jsonText(manifestFixture);
+
 function summaryOf(jobs, fields = {}) {
   return {
     schema_version: REFRESH_BUNDLE_SCHEMA_VERSION,
@@ -57,6 +81,8 @@ function summaryOf(jobs, fields = {}) {
     candidate_elections_file: CANDIDATE_ELECTIONS_FILE,
     candidate_sha256: candidateDigest(candidateText),
     validation: "Validated fixture candidate.",
+    inputs: summaryInputs,
+    manifest_sha256: manifestDigest(manifestFixture),
     jobs,
     ...fields,
   };
@@ -270,7 +296,7 @@ test("gateRefresh blocks the unsettled jobs in a bundle and names them", () => {
 test("gateRefresh rejects a bundle with nothing in it rather than passing it", () => {
   const log = logOf(["2026-10-18T12:00:00Z", { adams: "2026-10-12T14:32:40-04:00" }]);
   assert.throws(() => gateRefresh(log, summaryOf([]), { candidateText }), /no jobs to gate/);
-  assert.throws(() => gateRefresh(log, {}, { candidateText }), /must be schema 2/);
+  assert.throws(() => gateRefresh(log, {}, { candidateText }), /must be schema 3/);
 });
 
 test("the publication gate is bound to one complete, validated candidate artifact", async (t) => {
@@ -314,6 +340,78 @@ test("the publication gate is bound to one complete, validated candidate artifac
       /candidate file digest is .* but this refresh summary records/,
     );
   });
+
+  // A projection decision depends on three data files beside the manifest. A
+  // summary that does not record them describes a bundle nobody can replay,
+  // and a recorded digest nobody compares is a claim about bytes rather than a
+  // check of them.
+  await t.test("every projection input is recorded", () => {
+    assert.throws(() => assertRefreshBundle({ ...valid, inputs: undefined }, candidateText), /records no inputs/);
+    for (const file of REFRESH_INPUT_FILES) {
+      assert.throws(
+        () => assertRefreshBundle({ ...valid, inputs: summaryInputs.filter((entry) => entry.file !== file) }, candidateText),
+        new RegExp(`records no digest for ${file.replace(".", "\\.")}`),
+      );
+      assert.throws(
+        () => assertRefreshBundle(
+          { ...valid, inputs: summaryInputs.map((entry) => (entry.file === file ? { ...entry, sha256: "sha256:nope" } : entry)) },
+          candidateText,
+        ),
+        new RegExp(`no valid sha256 for ${file.replace(".", "\\.")}`),
+      );
+    }
+  });
+
+  // Found in review: the three data files were verified and the manifest was
+  // not, so the one input that actually names an office could be swapped with
+  // every other check still passing.
+  await t.test("the manifest the run projected under is recorded and verified", () => {
+    assert.throws(
+      () => assertRefreshBundle({ ...valid, manifest_sha256: undefined }, candidateText),
+      /no valid manifest_sha256/,
+    );
+    assert.throws(
+      () => assertRefreshBundle({ ...valid, manifest_sha256: "sha256:nope" }, candidateText),
+      /no valid manifest_sha256/,
+    );
+    assert.throws(
+      () => assertRefreshBundle(valid, candidateText, { ...inputTexts, [REFRESH_MANIFEST_FILE]: null }),
+      /has no readable manifest\.json/,
+    );
+    assert.throws(
+      () => assertRefreshBundle(valid, candidateText, { ...inputTexts, [REFRESH_MANIFEST_FILE]: "{" }),
+      /unreadable manifest\.json/,
+    );
+    assert.throws(
+      () => assertRefreshBundle(valid, candidateText, { ...inputTexts, [REFRESH_MANIFEST_FILE]: '{"edited":true}\n' }),
+      /manifest\.json in this refresh bundle is .* but its summary records/,
+    );
+  });
+
+  // Reformatting a manifest changes no decision, so it must not refuse: the
+  // digest is over a key-sorted form for exactly this reason.
+  await t.test("a reformatted manifest carrying the same decisions still verifies", () => {
+    const reordered = { jobs: manifestFixture.jobs, schema_version: manifestFixture.schema_version };
+    assert.notEqual(JSON.stringify(reordered), JSON.stringify(manifestFixture));
+    assert.equal(
+      assertRefreshBundle(valid, candidateText, { ...inputTexts, [REFRESH_MANIFEST_FILE]: JSON.stringify(reordered) }),
+      valid,
+    );
+  });
+
+  await t.test("a recorded input digest is verified against the bundle's bytes", () => {
+    assert.equal(assertRefreshBundle(valid, candidateText, inputTexts), valid);
+    for (const file of REFRESH_INPUT_FILES) {
+      assert.throws(
+        () => assertRefreshBundle(valid, candidateText, { ...inputTexts, [file]: null }),
+        new RegExp(`has no readable ${file.replace(".", "\\.")}`),
+      );
+      assert.throws(
+        () => assertRefreshBundle(valid, candidateText, { ...inputTexts, [file]: '{"edited":true}\n' }),
+        /in this refresh bundle is .* but its summary records/,
+      );
+    }
+  });
 });
 
 test("a zero quiet window still requires two independent sightings", () => {
@@ -353,11 +451,32 @@ test("the CLI exits nonzero on an unsettled bundle and zero on a settled one", a
     JSON.stringify(logOf(["2026-10-18T12:00:00Z", { adams: stamp, huron: "2026-09-02T09:00:00-04:00" }])),
   );
 
+  // The gate verifies each recorded input digest against the bundle's own copy
+  // and hands those copies to the canonical validator, so a bundle fixture
+  // carries the repository's real input files rather than placeholders.
+  const repositoryInputs = Object.fromEntries(
+    await Promise.all(REFRESH_INPUT_FILES.map(async (file) => [
+      file,
+      await readFile(join(projectRoot, "data", file), "utf8"),
+    ])),
+  );
+  const repositoryInputDigests = REFRESH_INPUT_FILES.map((file) => ({
+    file,
+    sha256: candidateDigest(repositoryInputs[file]),
+    source: "repository",
+  }));
+  const writeInputs = async (path, inputs = repositoryInputs) => {
+    for (const [file, text] of Object.entries(inputs)) await writeFile(join(path, file), text);
+    if (!(REFRESH_MANIFEST_FILE in inputs)) {
+      await writeFile(join(path, REFRESH_MANIFEST_FILE), inputTexts[REFRESH_MANIFEST_FILE]);
+    }
+  };
   const bundle = async (jobs) => {
     const path = join(directory, `refresh-${jobs[0].county_id}-${jobs.length}`);
     await mkdir(path);
     await writeFile(join(path, CANDIDATE_ELECTIONS_FILE), candidateText);
-    await writeFile(join(path, "summary.json"), JSON.stringify(summaryOf(jobs)));
+    await writeInputs(path);
+    await writeFile(join(path, "summary.json"), JSON.stringify(summaryOf(jobs, { inputs: repositoryInputDigests })));
     return path;
   };
   const gate = (args) =>
@@ -376,16 +495,62 @@ test("the CLI exits nonzero on an unsettled bundle and zero on a settled one", a
   const forged = join(directory, "refresh-forged-validation");
   await mkdir(forged);
   await writeFile(join(forged, CANDIDATE_ELECTIONS_FILE), invalidCandidateText);
+  await writeInputs(forged);
   await writeFile(
     join(forged, "summary.json"),
     JSON.stringify(summaryOf(
       [job({ county_id: "adams", source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" })],
-      { validation: "lgtm", candidate_sha256: candidateDigest(invalidCandidateText) },
+      { validation: "lgtm", candidate_sha256: candidateDigest(invalidCandidateText), inputs: repositoryInputDigests },
     )),
   );
   const unvalidated = gate(["--refresh", forged]);
   assert.equal(unvalidated.status, 1);
   assert.match(unvalidated.stderr, /candidate elections data failed validation/);
+
+  // The office a county publishes is derived from the bundled patterns and
+  // bounded by the bundled survey, so editing one of those after the refresh
+  // changes what a replay would publish. The gate reads the bundle's own
+  // copies and must refuse when they no longer match the recorded digest.
+  const editedInput = join(directory, "refresh-edited-input");
+  await mkdir(editedInput);
+  await writeFile(join(editedInput, CANDIDATE_ELECTIONS_FILE), candidateText);
+  await writeInputs(editedInput, { ...repositoryInputs, "office-title-patterns.json": '{"edited":true}\n' });
+  await writeFile(
+    join(editedInput, "summary.json"),
+    JSON.stringify(summaryOf(
+      [job({ county_id: "adams", source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" })],
+      { inputs: repositoryInputDigests },
+    )),
+  );
+  const tampered = gate(["--refresh", editedInput]);
+  assert.equal(tampered.status, 1);
+  assert.match(tampered.stderr, /office-title-patterns\.json in this refresh bundle is .* but its summary records/);
+
+  // The gate re-runs the canonical validator, and it has to run it over the
+  // bundle's own inputs. Before this it passed only the candidate, locations,
+  // offices and county boards, so a bundled pattern file the validator would
+  // refuse was never read: the repository's good copy was checked instead.
+  const unusedPattern = JSON.parse(await readFile(join(projectRoot, "data", "office-title-patterns.json"), "utf8"));
+  unusedPattern.patterns.push({ printed: "Dogcatcher", office_id: "county-auditor", office: "County Dogcatcher" });
+  const unusedPatternText = `${JSON.stringify(unusedPattern, null, 2)}\n`;
+  const badInput = join(directory, "refresh-bad-input");
+  await mkdir(badInput);
+  await writeFile(join(badInput, CANDIDATE_ELECTIONS_FILE), candidateText);
+  await writeInputs(badInput, { ...repositoryInputs, "office-title-patterns.json": unusedPatternText });
+  await writeFile(
+    join(badInput, "summary.json"),
+    JSON.stringify(summaryOf(
+      [job({ county_id: "adams", source_updated_at: stamp, fetched_at: "2026-10-20T13:00:00Z" })],
+      {
+        inputs: repositoryInputDigests.map((entry) => (entry.file === "office-title-patterns.json"
+          ? { ...entry, sha256: candidateDigest(unusedPatternText) }
+          : entry)),
+      },
+    )),
+  );
+  const badBundledInput = gate(["--refresh", badInput]);
+  assert.equal(badBundledInput.status, 1);
+  assert.match(badBundledInput.stderr, /every office title pattern must match at least one title the survey found/);
 
   // The stamp evidence belongs to the exact validated candidate. Editing the
   // candidate after refresh must invalidate the bundle before county

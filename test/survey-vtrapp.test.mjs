@@ -40,7 +40,12 @@ const table = (rows, stamp = STAMP) => `<html>
  * that started walking ballots would fail here rather than quietly cost 500
  * requests per county.
  */
-function fakeVendor({ listingBody = LISTING, listingStatus = 200, precinctBody = table(precinctRow("01____1")) } = {}) {
+function fakeVendor({
+  listingBody = LISTING,
+  selectedBody = listingBody,
+  listingStatus = 200,
+  precinctBody = table(precinctRow("01____1")),
+} = {}) {
   const calls = [];
   const fetchImpl = async (url, init = {}) => {
     calls.push(`${init.method ?? "GET"} ${url}`);
@@ -48,7 +53,7 @@ function fakeVendor({ listingBody = LISTING, listingStatus = 200, precinctBody =
     if (!url.includes("ballotlist.aspx")) throw new Error(`a survey must not request ${url}`);
     if (!body) return respond(listingStatus, listingBody);
     if (body.has("btnsubmit")) return respond(200, precinctBody);
-    return respond(200, listingBody);
+    return respond(200, selectedBody);
   };
   return { fetchImpl, calls };
 }
@@ -69,6 +74,22 @@ test("records an enumerable county with the evidence that it was enumerable", as
   assert.equal(record.source_updated_at, "2026-10-12T14:32:40-04:00");
   assert.deepEqual(record.skipped_row_reasons, {});
   assert.deepEqual(record.unexplained_row_reasons, {});
+});
+
+test("records the requested election stamp when the opening page defaults elsewhere", async () => {
+  const requestedStamp = "09/30/26 08:14:14 AM";
+  const vendor = fakeVendor({
+    listingBody: LISTING.replace(STAMP, "10/19/26 09:49:23 AM").replace(
+      '<option value="20261103G">',
+      '<option selected value="20261103S">11/3/2026 Special Election</option><option value="20261103G">',
+    ),
+    selectedBody: LISTING.replace(STAMP, requestedStamp),
+    precinctBody: table(precinctRow("01____1"), requestedStamp),
+  });
+  const record = await surveyCounty({ client: clientFor(vendor), countyId: "miami", electionKey: "20261103G" });
+
+  assert.equal(record.enumerable, true);
+  assert.equal(record.source_updated_at, "2026-09-30T08:14:14-04:00");
 });
 
 test("uses the vendor slug, not the county id, so van-wert is surveyed at all", async () => {
