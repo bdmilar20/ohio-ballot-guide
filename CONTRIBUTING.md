@@ -439,44 +439,92 @@ application; precinct-specific content remains only in the report.
 
 ## Refreshing reviewed counties
 
-After the mappings for one or more counties have been reviewed, record them in
-the tracked `config/vtrapp-<vendor-election>.json` manifest and run the adapter
-and projector together. Do not leave this file in `.cache` or `.scratch`: the
-mapping decisions are inputs to every future refresh, and losing them turns a
-repeatable source adapter back into a manual reconstruction. The offline config
-gate requires every generated county already in `data/elections.json` to have
-one durable job, and checks its county name, election, office mappings,
-statewide mappings, and accepted source-age limit against the published data.
+`config/vtrapp-<vendor-election>.json` holds the decisions a county refresh has
+to reproduce, and it is a **generated** artifact. Do not hand-edit it.
+
+```bash
+npm run generate:refresh-config -- --election 20261103G
+```
+
+The generator emits one job per enumerable county that owes no outstanding
+decision, deriving each office label from the titles
+`data/vtrapp-contest-survey.json` measured that county printing and the
+patterns in `data/office-title-patterns.json`. For the November 2026 general
+that is 69 jobs with no hand-written office mappings at all — every one of the
+575 local-office instances the survey found labels without a refusal, so
+onboarding a county no longer means writing its office table out.
+
+A county still owing a decision is **left out and named**, not given a job. Its
+job would project its statewide races and then throw on the contest nobody
+mapped, and because a refresh has no per-job recovery that aborts the whole run
+and withholds the candidate file for every county in it. The backlog is counted
+from every survey class `CONTEST_CLASSES` marks `needs_hand_entry`, not from
+office titles alone: the one county this leaves out of the November 2026 config
+is Harrison, which prints one statewide race no candidate match resolves and no
+office title reports. Record the decision and its job returns. A county whose
+generated coverage is already published cannot be left out — the generator
+refuses, because its published record would have no job to reproduce it.
+
+The decisions a person still owns live in `config/decisions-<vendor-election>.json`,
+which is the only part of the config a human writes:
+
+- per-county `office_mappings` for a title no curated pattern covers;
+- per-county `statewide_race_mappings` and `statewide_issue_mappings`.
+
+`max_source_age_hours` is **not** among them. It is generated from the
+election's own cycle — for the November 2026 general, the 4368 hours from the
+May primary — and the generator refuses a surveyed source stamp that predates
+it. A typed limit is a number nothing measures against the source population it
+has to admit, and the 168 hours this replaced, inherited from a one-county
+config, admitted one of the surveyed seventy. See "Deciding a county is settled
+enough to publish" in `docs/BALLOT_INGESTION.md` for why stamp age is a
+backstop rather than the freshness decision.
+
+They are kept in a separate file deliberately. If the generator read its own
+output back as input, a hand edit to a job would be carried forward and
+reproduce itself, and the recomputation gate below would pass on an edited
+file. A decision the patterns already derive is **refused** rather than kept:
+two sources of truth for one office label is how they drift, and the stale hand
+copy would keep publishing after the pattern that should own the title changed.
+
+Two offline gates run over the tracked configs, in `npm run check` and in
+`npm test`:
 
 ```bash
 npm run check:refresh-config
 ```
 
-The same gate runs against the tracked configs in `npm test`; the direct
-command prints the config, job, and generated-county counts for review.
+The first requires every generated county already in `data/elections.json` to
+have one durable job, and checks its county name, election, office mappings,
+statewide mappings, and accepted source-age limit against the published data.
+The second requires the config to be exactly what the generator produces from
+the committed artifacts plus the decisions file. That second gate exists
+because the edit worth catching is the one that stays valid — a raised
+`max_source_age_hours`, an injected `office_mappings` entry, or a restored job
+for a county that still owes a decision passes every check in the first gate
+and reads as a reviewed decision when nothing reviewed it.
 
 Jobs run serially so the stateful vendor application is not flooded with
-concurrent ballot walks. The entry below shows the manifest shape; its mapping
-list is shortened, so use the county's complete review report rather than
-treating it as a ready-to-run Adams configuration. The complete Adams job is
-tracked in `config/vtrapp-20261103G.json`.
+concurrent ballot walks. The entry below shows the generated manifest shape,
+shortened to one job.
 
 ```json
 {
   "schema_version": 1,
+  "meta": {
+    "generated_by": "scripts/build-refresh-config.mjs",
+    "generated_on": "2026-10-20",
+    "note": "Generated file. Do not hand-edit; re-run npm run generate:refresh-config -- --election 20261103G. Decisions a human owns go in config/decisions-20261103G.json.",
+    "election": { "id": "2026-11-03-general", "vendor_key": "20261103G" }
+  },
   "jobs": [
     {
       "county": "adams",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 72,
+        "max_source_age_hours": 4368,
         "county_name": "Adams",
-        "office_mappings": {
-          "For County Commissioner": {
-            "office_id": "county-commissioner",
-            "office": "County Commissioner"
-          }
-        },
+        "office_mappings": {},
         "statewide_race_mappings": {},
         "statewide_issue_mappings": {}
       }

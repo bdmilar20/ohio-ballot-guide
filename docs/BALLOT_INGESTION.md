@@ -302,6 +302,18 @@ and any limit tight enough to catch a genuinely stale county rejects most of
 the state. `max_source_age_hours` remains a projection input, but it is a
 backstop against a wildly old snapshot, not the freshness decision.
 
+Because that is what it is for, it is no longer a number anybody types. The
+refresh-config generator derives it from the election's own cycle — the span
+from the election that precedes this one under the schedule rules in
+`scripts/build-election-schedule.mjs`, which for the November 2026 general is
+the 4368 hours since the May primary — and refuses any surveyed source stamp
+that predates the cycle. A board's "Election data last updated" stamp cannot
+precede the listing it describes, so a stamp from before the cycle is a
+snapshot of a different ballot, and that is the only thing age can decide. The
+hand-written 168-hour limit this replaced was inherited from a config with one
+county in it; measured against the surveyed seventy it admitted one, so a
+statewide refresh under it would have stopped on its first job.
+
 What does distinguish finished from behind is **movement**. The stamp only ever
 advances, so seeing the same value twice proves no edit happened in between.
 That makes the decision evidential rather than a judgment call:
