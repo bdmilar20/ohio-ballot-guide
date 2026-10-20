@@ -553,3 +553,22 @@ test("refuses a survey whose shared title index disagrees with its county record
     /records 1 office title\(s\) for brown but its shared title index names 2/,
   );
 });
+
+// electionCycleStart is exported and called directly by maxSourceAgeHoursFor,
+// so its own refusals have to be measured against it rather than through
+// buildRefreshJobs, which refuses a wrong election record before reaching it.
+test("the cycle refusals hold when electionCycleStart is called directly", () => {
+  assert.throws(() => electionCycleStart(undefined), /needs the election record it refreshes/);
+  assert.throws(() => electionCycleStart([]), /needs the election record it refreshes/);
+  assert.throws(
+    () => electionCycleStart({ id: "2026-11-03-general", date: "November 3", schedule_rule: "ohio-general" }),
+    /needs a YYYY-MM-DD date to place its cycle/,
+  );
+  // A date that disagrees with its own rule: the primary's date under the
+  // general's rule puts the cycle's start on the election day it dates from,
+  // which would make the backstop zero hours and admit nothing.
+  assert.throws(
+    () => electionCycleStart({ id: "2026-05-05-primary", date: "2026-05-05", schedule_rule: "ohio-general" }),
+    /would begin its own cycle on 2026-05-05/,
+  );
+});
