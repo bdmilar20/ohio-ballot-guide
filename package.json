@@ -6,6 +6,7 @@
   "scripts": {
     "generate:schedule": "node scripts/build-election-schedule.mjs",
     "generate:statewide-issues": "node scripts/build-statewide-issues.mjs",
+    "generate:refresh-config": "node scripts/build-refresh-config.mjs",
     "check": "node scripts/validate-data.mjs && node scripts/check-refresh-config.mjs",
     "check:refresh-config": "node scripts/check-refresh-config.mjs",
     "check:links": "node scripts/check-links.mjs",

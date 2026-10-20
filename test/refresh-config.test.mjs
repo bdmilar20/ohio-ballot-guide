@@ -4,6 +4,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { loadRefreshConfigs, validateRefreshConfigs } from "../scripts/check-refresh-config.mjs";
+import { readPatterns } from "../scripts/map-office-titles.mjs";
 
 async function readJson(url) {
   return JSON.parse(await readFile(url, "utf8"));
@@ -74,6 +75,15 @@ test("tracked configs cover the published generated counties", async () => {
     locations: await readJson(new URL("../data/locations.json", import.meta.url)),
     offices: await readJson(new URL("../data/offices.json", import.meta.url)),
     statewideIssueText: await readJson(new URL("../data/statewide-issue-text.json", import.meta.url)),
+    // Every input the CLI passes. Omitting the survey and the patterns is not a
+    // laxer version of this check, it is a different one: derivableOfficeLabels
+    // then sees no patterns, so every published office has to come from a hand
+    // mapping, which is the shape the committed config deliberately no longer
+    // has. This read as a real failure the first time the config was generated.
+    contestSurvey: await readJson(new URL("../data/vtrapp-contest-survey.json", import.meta.url)),
+    officeTitlePatterns: readPatterns(
+      await readJson(new URL("../data/office-title-patterns.json", import.meta.url)),
+    ),
   });
   assert.ok(result.generated_counties > 0, "the integration gate must exercise published generated coverage");
   assert.ok(result.jobs >= result.generated_counties);

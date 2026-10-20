@@ -6,6 +6,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { buildRefreshJobs, GENERATED_BY, readDecisions } from "./build-refresh-config.mjs";
 import { electionIdFromKey } from "./ingest/vtrapp.mjs";
 import { derivableOfficeLabels, readPatterns } from "./map-office-titles.mjs";
 import { validateRefreshManifest } from "./refresh-vtrapp.mjs";
@@ -167,6 +168,58 @@ export function validateRefreshConfigs({
   return { configs: configs.length, jobs: jobs.size, generated_counties: generatedCounties };
 }
 
+/**
+ * Requires a refresh config to be exactly what the generator produces from the
+ * committed artifacts, so a hand edit to it is a failing build.
+ *
+ * Separate from validateRefreshConfigs because the two answer different
+ * questions. That one asks whether a config is internally valid and can
+ * reproduce the data already published; this one asks whether anybody typed in
+ * it. A config can be entirely valid and still be hand-edited, and the edit
+ * that matters is the one that stays valid --- a changed office_mappings entry
+ * or a raised max_source_age_hours reads as a reviewed decision when nothing
+ * reviewed it.
+ */
+export function assertGeneratedRefreshConfig({
+  name,
+  config,
+  survey,
+  patterns,
+  corrections,
+  locations,
+  decisions,
+  publishedCounties = {},
+}) {
+  invariant(
+    config?.meta?.generated_by === GENERATED_BY,
+    `${name} must name ${GENERATED_BY} in meta.generated_by, so a hand-written config cannot pass as generated`,
+  );
+  invariant(
+    typeof config.meta.generated_on === "string" && /^\d{4}-\d{2}-\d{2}$/.test(config.meta.generated_on),
+    `${name} needs meta.generated_on as YYYY-MM-DD`,
+  );
+  const { jobs, vendorKey, electionId } = buildRefreshJobs({
+    survey,
+    patterns,
+    corrections,
+    locations,
+    decisions,
+    publishedCounties,
+  });
+  invariant(
+    config.meta.election?.vendor_key === vendorKey && config.meta.election?.id === electionId,
+    `${name} records election ${config.meta.election?.id} / ${config.meta.election?.vendor_key}, ` +
+      `but its inputs generate ${electionId} / ${vendorKey}`,
+  );
+  // Deep-equal rather than a count or a digest of the file: a digest would also
+  // refuse a reformatted copy, and a count cannot see a changed mapping.
+  invariant(
+    JSON.stringify(config.jobs) === JSON.stringify(jobs),
+    `${name} is not what its inputs generate (${config.jobs?.length ?? 0} job(s) committed, ${jobs.length} generated); ` +
+      `re-run npm run generate:refresh-config -- --election ${vendorKey}`,
+  );
+}
+
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
@@ -183,23 +236,63 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
     const projectRoot = fileURLToPath(new URL("..", import.meta.url));
     const [configDirectory, electionsPath, locationsPath, officesPath, statewideIssuePath, contestSurveyPath, officeTitlePatternPath] =
       process.argv.slice(2);
+    const directory = resolve(configDirectory ?? join(projectRoot, "config"));
+    const configs = await loadRefreshConfigs(directory);
+    const electionData = await readJson(resolve(electionsPath ?? join(projectRoot, "data", "elections.json")));
+    const locations = await readJson(resolve(locationsPath ?? join(projectRoot, "data", "locations.json")));
+    const contestSurvey = await readJson(
+      resolve(contestSurveyPath ?? join(projectRoot, "data", "vtrapp-contest-survey.json")),
+    );
+    const officeTitlePatterns = readPatterns(
+      await readJson(resolve(officeTitlePatternPath ?? join(projectRoot, "data", "office-title-patterns.json"))),
+    );
     const result = validateRefreshConfigs({
-      configs: await loadRefreshConfigs(resolve(configDirectory ?? join(projectRoot, "config"))),
-      electionData: await readJson(resolve(electionsPath ?? join(projectRoot, "data", "elections.json"))),
-      locations: await readJson(resolve(locationsPath ?? join(projectRoot, "data", "locations.json"))),
+      configs,
+      electionData,
+      locations,
       offices: await readJson(resolve(officesPath ?? join(projectRoot, "data", "offices.json"))),
       statewideIssueText: await readJson(
         resolve(statewideIssuePath ?? join(projectRoot, "data", "statewide-issue-text.json")),
       ),
-      contestSurvey: await readJson(
-        resolve(contestSurveyPath ?? join(projectRoot, "data", "vtrapp-contest-survey.json")),
-      ),
-      officeTitlePatterns: readPatterns(
-        await readJson(resolve(officeTitlePatternPath ?? join(projectRoot, "data", "office-title-patterns.json"))),
-      ),
+      contestSurvey,
+      officeTitlePatterns,
     });
+
+    // Every committed config has to be the generator's output. A config whose
+    // election has no committed survey cannot be checked that way, and a config
+    // nothing can check is the one worth refusing -- it is where a hand-written
+    // job would survive.
+    for (const { name, manifest } of configs) {
+      const vendorKey = name.replace(/^vtrapp-|\.json$/g, "");
+      const electionId = electionIdFromKey(vendorKey);
+      invariant(
+        contestSurvey.meta?.election?.vendor_key === vendorKey,
+        `${name} cannot be proven generated: the committed contest survey measured ` +
+          `${contestSurvey.meta?.election?.vendor_key}, not ${vendorKey}`,
+      );
+      const decisionsPath = join(directory, `decisions-${vendorKey}.json`);
+      const decisions = readDecisions(
+        await readJson(decisionsPath).catch((error) => {
+          if (error.code === "ENOENT") {
+            throw new Error(`${name} has no ${decisionsPath} recording the decisions a human owns`);
+          }
+          throw error;
+        }),
+        { electionId, vendorKey },
+      );
+      assertGeneratedRefreshConfig({
+        name,
+        config: manifest,
+        survey: contestSurvey,
+        patterns: officeTitlePatterns.patterns,
+        corrections: officeTitlePatterns.corrections,
+        locations,
+        decisions,
+        publishedCounties: electionData.elections.find((election) => election.id === electionId)?.counties ?? {},
+      });
+    }
     console.log(
-      `Refresh configs valid: ${result.configs} config(s), ${result.jobs} job(s), ` +
+      `Refresh configs valid: ${result.configs} generated config(s), ${result.jobs} job(s), ` +
       `${result.generated_counties} generated county record(s) reproducible.`,
     );
   } catch (error) {
