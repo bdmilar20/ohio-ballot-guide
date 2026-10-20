@@ -1,10 +1,9 @@
 {
   "schema_version": 1,
-  "note": "Hand-owned projection decisions for this election. Everything else in config/vtrapp-20261103G.json is generated from the committed survey and office-title patterns; this file is the only part a person writes. A mapping the patterns already derive is refused, so an entry here means a title no curated pattern covers.",
+  "note": "Hand-owned projection decisions for this election. Everything else in config/vtrapp-20261103G.json is generated from the committed survey and office-title patterns; this file is the only part a person writes. A mapping the patterns already derive is refused, so an entry here means a title or contest no curated rule covers. The staleness backstop is not here: it is generated from the election's own cycle, because a typed limit is a number nothing measures against the source population it has to admit.",
   "election": {
     "id": "2026-11-03-general",
     "vendor_key": "20261103G"
   },
-  "max_source_age_hours": 168,
   "counties": {}
 }

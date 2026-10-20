@@ -179,6 +179,12 @@ export function validateRefreshConfigs({
  * that matters is the one that stays valid --- a changed office_mappings entry
  * or a raised max_source_age_hours reads as a reviewed decision when nothing
  * reviewed it.
+ *
+ * Recomputation is also what holds the generated staleness backstop and the
+ * set of counties left out for owing a decision. Both are derived rather than
+ * typed, so the edit that matters for them is an edit to the generator's
+ * output: a raised max_source_age_hours in a job, or the restored job of a
+ * county whose contest nobody mapped.
  */
 export function assertGeneratedRefreshConfig({
   name,
@@ -188,6 +194,7 @@ export function assertGeneratedRefreshConfig({
   corrections,
   locations,
   decisions,
+  election,
   publishedCounties = {},
 }) {
   invariant(
@@ -204,6 +211,7 @@ export function assertGeneratedRefreshConfig({
     corrections,
     locations,
     decisions,
+    election,
     publishedCounties,
   });
   invariant(
@@ -280,6 +288,8 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
         }),
         { electionId, vendorKey },
       );
+      const election = electionData.elections.find((candidate) => candidate.id === electionId);
+      invariant(election, `${name} refreshes ${electionId}, which is absent from elections data`);
       assertGeneratedRefreshConfig({
         name,
         config: manifest,
@@ -288,7 +298,8 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
         corrections: officeTitlePatterns.corrections,
         locations,
         decisions,
-        publishedCounties: electionData.elections.find((election) => election.id === electionId)?.counties ?? {},
+        election,
+        publishedCounties: election.counties ?? {},
       });
     }
     console.log(

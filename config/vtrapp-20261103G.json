@@ -14,7 +14,7 @@
       "county": "adams",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Adams",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -25,7 +25,7 @@
       "county": "allen",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Allen",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -36,7 +36,7 @@
       "county": "ashland",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Ashland",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -47,7 +47,7 @@
       "county": "ashtabula",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Ashtabula",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -58,7 +58,7 @@
       "county": "athens",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Athens",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -69,7 +69,7 @@
       "county": "auglaize",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Auglaize",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -80,7 +80,7 @@
       "county": "belmont",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Belmont",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -91,7 +91,7 @@
       "county": "brown",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Brown",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -102,7 +102,7 @@
       "county": "carroll",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Carroll",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -113,7 +113,7 @@
       "county": "champaign",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Champaign",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -124,7 +124,7 @@
       "county": "clark",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Clark",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -135,7 +135,7 @@
       "county": "clinton",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Clinton",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -146,7 +146,7 @@
       "county": "columbiana",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Columbiana",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -157,7 +157,7 @@
       "county": "coshocton",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Coshocton",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -168,7 +168,7 @@
       "county": "darke",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Darke",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -179,7 +179,7 @@
       "county": "defiance",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Defiance",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -190,7 +190,7 @@
       "county": "delaware",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Delaware",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -201,7 +201,7 @@
       "county": "erie",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Erie",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -212,7 +212,7 @@
       "county": "fairfield",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Fairfield",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -223,7 +223,7 @@
       "county": "fayette",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Fayette",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -234,7 +234,7 @@
       "county": "fulton",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Fulton",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -245,7 +245,7 @@
       "county": "gallia",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Gallia",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -256,7 +256,7 @@
       "county": "geauga",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Geauga",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -267,7 +267,7 @@
       "county": "greene",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Greene",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -278,7 +278,7 @@
       "county": "guernsey",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Guernsey",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -289,19 +289,8 @@
       "county": "hardin",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Hardin",
-        "office_mappings": {},
-        "statewide_race_mappings": {},
-        "statewide_issue_mappings": {}
-      }
-    },
-    {
-      "county": "harrison",
-      "election": "20261103G",
-      "projection": {
-        "max_source_age_hours": 168,
-        "county_name": "Harrison",
         "office_mappings": {},
         "statewide_race_mappings": {},
         "statewide_issue_mappings": {}
@@ -311,7 +300,7 @@
       "county": "highland",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Highland",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -322,7 +311,7 @@
       "county": "hocking",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Hocking",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -333,7 +322,7 @@
       "county": "holmes",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Holmes",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -344,7 +333,7 @@
       "county": "huron",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Huron",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -355,7 +344,7 @@
       "county": "jackson",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Jackson",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -366,7 +355,7 @@
       "county": "jefferson",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Jefferson",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -377,7 +366,7 @@
       "county": "knox",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Knox",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -388,7 +377,7 @@
       "county": "lawrence",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Lawrence",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -399,7 +388,7 @@
       "county": "licking",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Licking",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -410,7 +399,7 @@
       "county": "logan",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Logan",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -421,7 +410,7 @@
       "county": "lorain",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Lorain",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -432,7 +421,7 @@
       "county": "lucas",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Lucas",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -443,7 +432,7 @@
       "county": "madison",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Madison",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -454,7 +443,7 @@
       "county": "mahoning",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Mahoning",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -465,7 +454,7 @@
       "county": "marion",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Marion",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -476,7 +465,7 @@
       "county": "medina",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Medina",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -487,7 +476,7 @@
       "county": "meigs",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Meigs",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -498,7 +487,7 @@
       "county": "miami",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Miami",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -509,7 +498,7 @@
       "county": "monroe",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Monroe",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -520,7 +509,7 @@
       "county": "montgomery",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Montgomery",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -531,7 +520,7 @@
       "county": "morgan",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Morgan",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -542,7 +531,7 @@
       "county": "muskingum",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Muskingum",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -553,7 +542,7 @@
       "county": "noble",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Noble",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -564,7 +553,7 @@
       "county": "paulding",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Paulding",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -575,7 +564,7 @@
       "county": "perry",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Perry",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -586,7 +575,7 @@
       "county": "pickaway",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Pickaway",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -597,7 +586,7 @@
       "county": "pike",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Pike",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -608,7 +597,7 @@
       "county": "portage",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Portage",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -619,7 +608,7 @@
       "county": "preble",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Preble",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -630,7 +619,7 @@
       "county": "putnam",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Putnam",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -641,7 +630,7 @@
       "county": "richland",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Richland",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -652,7 +641,7 @@
       "county": "ross",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Ross",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -663,7 +652,7 @@
       "county": "scioto",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Scioto",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -674,7 +663,7 @@
       "county": "seneca",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Seneca",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -685,7 +674,7 @@
       "county": "shelby",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Shelby",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -696,7 +685,7 @@
       "county": "summit",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Summit",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -707,7 +696,7 @@
       "county": "tuscarawas",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Tuscarawas",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -718,7 +707,7 @@
       "county": "union",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Union",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -729,7 +718,7 @@
       "county": "van-wert",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Van Wert",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -740,7 +729,7 @@
       "county": "vinton",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Vinton",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -751,7 +740,7 @@
       "county": "warren",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Warren",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -762,7 +751,7 @@
       "county": "washington",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Washington",
         "office_mappings": {},
         "statewide_race_mappings": {},
@@ -773,7 +762,7 @@
       "county": "williams",
       "election": "20261103G",
       "projection": {
-        "max_source_age_hours": 168,
+        "max_source_age_hours": 4368,
         "county_name": "Williams",
         "office_mappings": {},
         "statewide_race_mappings": {},

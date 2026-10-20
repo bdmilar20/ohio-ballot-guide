@@ -3,21 +3,29 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  assertDecisionClassesAccountedFor,
   buildRefreshJobs,
+  DECISION_FIELD_BY_CLASS,
+  electionCycleStart,
   GENERATED_BY,
+  maxSourceAgeHoursFor,
+  outstandingDecisions,
   readDecisions,
   refreshConfigArtifact,
-  unlabelledTitles,
 } from "../scripts/build-refresh-config.mjs";
 import { assertGeneratedRefreshConfig } from "../scripts/check-refresh-config.mjs";
 import { readPatterns } from "../scripts/map-office-titles.mjs";
+import { CONTEST_CLASSES } from "../scripts/survey-contests.mjs";
 
 async function readJson(name) {
   return JSON.parse(await readFile(new URL(name, new URL("..", import.meta.url)), "utf8"));
 }
 
 // Two counties, so "one job per surveyed county, in county order" is a claim a
-// fixture can actually fail. One of them prints a title no pattern covers.
+// fixture can actually fail. Both are clean; each way a county can owe a
+// decision is added by the test that measures it, because the generator's
+// answer differs per class and a fixture that owed everything could not show
+// which refusal fired.
 function fixture() {
   return {
     survey: {
@@ -28,11 +36,18 @@ function fixture() {
       },
       local_office_titles: {
         "For County Commissioner": { counties: ["adams", "brown"], instances: 2 },
-        "For Dogcatcher of the Hollow": { counties: ["brown"], instances: 1 },
       },
       counties: {
-        brown: { local_office_titles: { "For County Commissioner": 1, "For Dogcatcher of the Hollow": 1 } },
-        adams: { local_office_titles: { "For County Commissioner": 1 } },
+        brown: {
+          source_updated_at: "2026-09-15T09:00:00-04:00",
+          classes: { statewide_race_resolved: 3, local_office: 1 },
+          local_office_titles: { "For County Commissioner": 1 },
+        },
+        adams: {
+          source_updated_at: "2026-10-01T09:00:00-04:00",
+          classes: { statewide_race_resolved: 3, local_office: 1 },
+          local_office_titles: { "For County Commissioner": 1 },
+        },
       },
     },
     patterns: [{ printed: "County Commissioner", office_id: "county-commissioner", office: "County Commissioner" }],
@@ -41,23 +56,34 @@ function fixture() {
     decisions: {
       schema_version: 1,
       election: { id: "2026-11-03-general", vendor_key: "20261103G" },
-      max_source_age_hours: 168,
       counties: {},
     },
+    election: { id: "2026-11-03-general", date: "2026-11-03", schedule_rule: "ohio-general" },
     publishedCounties: {},
   };
 }
 
+/** Adds the unlabelled office title the fixture deliberately leaves out. */
+function printsUnlabelledTitle(input, county = "brown") {
+  const index = input.survey.local_office_titles["For Dogcatcher of the Hollow"] ??= { counties: [], instances: 0 };
+  index.counties.push(county);
+  index.instances += 1;
+  input.survey.counties[county].classes.local_office += 1;
+  input.survey.counties[county].local_office_titles["For Dogcatcher of the Hollow"] = 1;
+  return input;
+}
+
 test("generates one job per surveyed county, in county order, with no hand mappings", () => {
-  const { jobs, vendorKey, electionId } = buildRefreshJobs(fixture());
+  const { jobs, vendorKey, electionId, backlog } = buildRefreshJobs(fixture());
   assert.equal(vendorKey, "20261103G");
   assert.equal(electionId, "2026-11-03-general");
+  assert.deepEqual(backlog, []);
   assert.deepEqual(jobs.map((job) => job.county), ["adams", "brown"]);
   assert.deepEqual(jobs[0], {
     county: "adams",
     election: "20261103G",
     projection: {
-      max_source_age_hours: 168,
+      max_source_age_hours: 4368,
       county_name: "Adams",
       office_mappings: {},
       statewide_race_mappings: {},
@@ -66,9 +92,170 @@ test("generates one job per surveyed county, in county order, with no hand mappi
   });
 });
 
-test("reports the surveyed titles no pattern labels, rather than leaving them to a passing build", () => {
+// The backstop this replaced was a typed 168 hours, inherited from a config
+// that only had to admit one county on the day somebody wrote it. Across the
+// surveyed seventy it admitted one. docs/BALLOT_INGESTION.md settles what the
+// field is for: not the freshness decision, which two unchanged sightings
+// make, but a backstop against a snapshot of a different ballot.
+test("dates the staleness backstop from the election's own cycle", () => {
+  assert.equal(electionCycleStart({ id: "2026-11-03-general", date: "2026-11-03", schedule_rule: "ohio-general" }), "2026-05-05");
+  assert.equal(maxSourceAgeHoursFor({ id: "2026-11-03-general", date: "2026-11-03", schedule_rule: "ohio-general" }), 4368);
+  // A primary's cycle begins at the previous general, not its own year's.
+  assert.equal(electionCycleStart({ id: "2026-05-05-primary", date: "2026-05-05", schedule_rule: "ohio-primary" }), "2025-11-04");
+  assert.equal(electionCycleStart({ id: "2026-08-04-special", date: "2026-08-04", schedule_rule: "ohio-august-special" }), "2026-05-05");
+});
+
+test("refuses a schedule rule it cannot date a cycle from, rather than guessing a backstop", () => {
   const input = fixture();
-  assert.deepEqual(unlabelledTitles(input), [{ county: "brown", title: "For Dogcatcher of the Hollow" }]);
+  input.election = { id: "2026-11-03-general", date: "2026-11-03", schedule_rule: "ohio-december-special" };
+  assert.throws(() => buildRefreshJobs(input), /cannot date a cycle from; add it to CYCLE_START_RULE/);
+});
+
+test("refuses an election record that is not the one the survey measured", () => {
+  const input = fixture();
+  input.election = { id: "2027-11-02-general", date: "2027-11-02", schedule_rule: "ohio-general" };
+  assert.throws(() => buildRefreshJobs(input), /the election record is "2027-11-02-general", not the 2026-11-03-general/);
+});
+
+// The check the typed limit never had: measured against the population the
+// config claims to run, naming the counties it would not admit.
+test("refuses a surveyed source stamp from before this election's cycle", () => {
+  const input = fixture();
+  input.survey.counties.brown.source_updated_at = "2026-04-20T09:00:00-04:00";
+  assert.throws(
+    () => buildRefreshJobs(input),
+    /1 surveyed county source stamp\(s\) predate this election's cycle, which began 2026-05-05: brown at 2026-04-20/,
+  );
+});
+
+test("admits a stamp from the whole span of this election's cycle", () => {
+  const input = fixture();
+  input.survey.counties.brown.source_updated_at = "2026-05-06T09:00:00-04:00";
+  assert.deepEqual(buildRefreshJobs(input).jobs.map((job) => job.county), ["adams", "brown"]);
+});
+
+test("refuses decisions that type a staleness limit the election already dates", () => {
+  const decisions = { ...fixture().decisions, max_source_age_hours: 168 };
+  assert.throws(
+    () => readDecisions(decisions, { electionId: "2026-11-03-general", vendorKey: "20261103G" }),
+    /must not set max_source_age_hours: the backstop is generated/,
+  );
+});
+
+test("refuses a top-level decisions field it does not understand, instead of dropping it", () => {
+  const decisions = { ...fixture().decisions, max_age_hours: 4368 };
+  assert.throws(
+    () => readDecisions(decisions, { electionId: "2026-11-03-general", vendorKey: "20261103G" }),
+    /unknown field "max_age_hours"/,
+  );
+});
+
+test("leaves out a county whose office title no pattern labels, and names it", () => {
+  const input = printsUnlabelledTitle(fixture());
+  const { jobs, backlog } = buildRefreshJobs(input);
+  assert.deepEqual(jobs.map((job) => job.county), ["adams"]);
+  assert.deepEqual(backlog, [{
+    county: "brown",
+    reason: 'office title "For Dogcatcher of the Hollow" has no pattern label and no reviewed mapping',
+  }]);
+});
+
+// The class the office-title count could not see, and the reason the backlog
+// is driven off CONTEST_CLASSES instead. Harrison surveys one of these, its
+// generated job carried no mapping for it, and because refreshElections has no
+// per-job recovery that one contest aborts the whole statewide run.
+test("leaves out a county owing a statewide race mapping, which no office title reports", () => {
+  const input = fixture();
+  input.survey.counties.brown.classes.statewide_race_needs_mapping = 1;
+  const { jobs, backlog } = buildRefreshJobs(input);
+  assert.deepEqual(jobs.map((job) => job.county), ["adams"]);
+  assert.deepEqual(backlog, [{
+    county: "brown",
+    reason: "1 surveyed contest(s) need a reviewed statewide_race_mappings entry; the decisions file has 0",
+  }]);
+});
+
+test("leaves out a county owing a statewide issue mapping, or a statewide race decision", () => {
+  for (const [name, field] of [
+    ["statewide_issue_needs_mapping", "statewide_issue_mappings"],
+    ["statewide_race_needs_decision", "statewide_race_mappings"],
+  ]) {
+    const input = fixture();
+    input.survey.counties.brown.classes[name] = 2;
+    const { jobs, backlog } = buildRefreshJobs(input);
+    assert.deepEqual(jobs.map((job) => job.county), ["adams"]);
+    assert.deepEqual(backlog, [{
+      county: "brown",
+      reason: `2 surveyed contest(s) need a reviewed ${field} entry; the decisions file has 0`,
+    }]);
+  }
+});
+
+test("counts both statewide race classes against the one field that pays for them", () => {
+  const input = fixture();
+  input.survey.counties.brown.classes.statewide_race_needs_mapping = 1;
+  input.survey.counties.brown.classes.statewide_race_needs_decision = 1;
+  input.decisions.counties.brown = { statewide_race_mappings: { "one fingerprint": "governor" } };
+  assert.deepEqual(buildRefreshJobs(input).backlog, [{
+    county: "brown",
+    reason: "2 surveyed contest(s) need a reviewed statewide_race_mappings entry; the decisions file has 1",
+  }]);
+});
+
+test("restores the job once the reviewed statewide race mapping is recorded", () => {
+  const input = fixture();
+  input.survey.counties.brown.classes.statewide_race_needs_mapping = 1;
+  input.decisions.counties.brown = { statewide_race_mappings: { "a contest fingerprint": "governor" } };
+  const { jobs, backlog } = buildRefreshJobs(input);
+  assert.deepEqual(backlog, []);
+  assert.deepEqual(jobs.map((job) => job.county), ["adams", "brown"]);
+  assert.deepEqual(jobs[1].projection.statewide_race_mappings, { "a contest fingerprint": "governor" });
+});
+
+// A survey class that costs a decision and that nothing here accounts for is
+// the exact hole this PR's review found: zero backlog reported for a county
+// whose job could not project. It has to be a failing build, not a default.
+test("refuses a survey class that costs a decision no field is declared to pay", () => {
+  assert.throws(
+    () => assertDecisionClassesAccountedFor({
+      ...CONTEST_CLASSES,
+      local_judicial_retention: { needs_hand_entry: true },
+    }),
+    /"local_judicial_retention" costs a hand decision, but this generator does not know which decision field/,
+  );
+});
+
+test("accounts for every class the committed survey code can reach", () => {
+  assert.doesNotThrow(() => assertDecisionClassesAccountedFor());
+  for (const [name, { needs_hand_entry: needsHandEntry }] of Object.entries(CONTEST_CLASSES)) {
+    if (!needsHandEntry) continue;
+    assert.ok(name in DECISION_FIELD_BY_CLASS, `${name} needs a declared decision field`);
+  }
+});
+
+test("refuses a survey verdict that is not a known contest class", () => {
+  const input = fixture();
+  input.survey.counties.brown.classes.statewide_race_probably_fine = 1;
+  assert.throws(() => buildRefreshJobs(input), /"statewide_race_probably_fine", which is not a known contest class/);
+});
+
+test("refuses a config with no jobs when every surveyed county owes a decision", () => {
+  const input = printsUnlabelledTitle(printsUnlabelledTitle(fixture(), "adams"), "brown");
+  assert.throws(() => buildRefreshJobs(input), /every one of the 2 surveyed counties owes a decision/);
+});
+
+// Leaving a county out is the right answer for a county nothing publishes yet.
+// For one already in published data it is the wrong one: its record would have
+// no job to reproduce it, which is what check-refresh-config exists to refuse.
+test("refuses to leave out a county whose generated coverage is already published", () => {
+  const input = printsUnlabelledTitle(fixture());
+  input.publishedCounties = {
+    brown: { coverage: { method: "common_to_all_precincts", source_age_hours_at_review: 143 } },
+  };
+  assert.throws(
+    () => buildRefreshJobs(input),
+    /brown publishes generated coverage but still owes a decision/,
+  );
 });
 
 test("refuses a survey of the wrong schema, which would read an absent title index as empty", () => {
@@ -132,29 +319,44 @@ test("refuses a hand mapping the curated patterns already derive", () => {
   );
 });
 
-test("keeps a hand mapping for a title no pattern derives", () => {
-  const input = fixture();
+// Checked for every surveyed county, not only the ones that get a job: a
+// county left out for owing a decision would otherwise carry its redundant
+// copy until the decision it waits on is recorded.
+test("refuses a redundant hand mapping inside a county left out of the config", () => {
+  const input = printsUnlabelledTitle(fixture());
+  input.decisions.counties.brown = {
+    office_mappings: { "For County Commissioner": { office_id: "county-auditor", office: "County Auditor" } },
+  };
+  assert.throws(
+    () => buildRefreshJobs(input),
+    /curated patterns already derive "County Commissioner"; drop the decision/,
+  );
+});
+
+test("keeps a hand mapping for a title no pattern derives, and that mapping pays for the title", () => {
+  const input = printsUnlabelledTitle(fixture());
   const mapping = { "For Dogcatcher of the Hollow": { office_id: "dogcatcher", office: "Dogcatcher of the Hollow" } };
   input.decisions.counties.brown = { office_mappings: mapping };
-  const { jobs } = buildRefreshJobs(input);
+  const { jobs, backlog } = buildRefreshJobs(input);
+  assert.deepEqual(backlog, []);
   assert.deepEqual(jobs.find((job) => job.county === "brown").projection.office_mappings, mapping);
   assert.deepEqual(jobs.find((job) => job.county === "adams").projection.office_mappings, {});
 });
 
 // Silently raising the limit to fit is the failure mode: it republishes from a
 // source staler than anybody reviewed, and the build stays green.
-test("refuses to generate a limit below a published county's reviewed source age", () => {
+test("refuses to generate a backstop below a published county's reviewed source age", () => {
   const input = fixture();
   input.publishedCounties = {
-    adams: { coverage: { method: "common_to_all_precincts", source_age_hours_at_review: 200 } },
+    adams: { coverage: { method: "common_to_all_precincts", source_age_hours_at_review: 5000 } },
   };
-  assert.throws(() => buildRefreshJobs(input), /reviewed at 200h, above the 168h limit/);
+  assert.throws(() => buildRefreshJobs(input), /reviewed at 5000h, above the generated 4368h backstop/);
 });
 
 test("ignores the reviewed age of a county whose coverage was not generated", () => {
   const input = fixture();
   input.publishedCounties = {
-    adams: { coverage: { method: "hand_reviewed", source_age_hours_at_review: 200 } },
+    adams: { coverage: { method: "hand_reviewed", source_age_hours_at_review: 5000 } },
   };
   assert.doesNotThrow(() => buildRefreshJobs(input));
 });
@@ -167,16 +369,13 @@ test("refuses decisions for another election, whose mappings describe another ba
   );
 });
 
-test("refuses decisions of an unknown schema, or without the staleness limit it owns", () => {
+test("refuses decisions of an unknown schema", () => {
   const scope = { electionId: "2026-11-03-general", vendorKey: "20261103G" };
   const wrongSchema = { ...fixture().decisions, schema_version: 2 };
   assert.throws(() => readDecisions(wrongSchema, scope), /must be schema 1, not 2/);
-  const noLimit = { ...fixture().decisions };
-  delete noLimit.max_source_age_hours;
-  assert.throws(() => readDecisions(noLimit, scope), /nonnegative max_source_age_hours/);
 });
 
-test("refuses a decision field it does not understand, instead of dropping it", () => {
+test("refuses a per-county decision field it does not understand, instead of dropping it", () => {
   const decisions = fixture().decisions;
   decisions.counties.adams = { office_mapings: {} };
   assert.throws(
@@ -219,12 +418,13 @@ test("refuses a config without a generated_on date", () => {
   );
 });
 
-// The edit worth catching is the one that stays valid. A raised staleness limit
-// and an injected office mapping both pass every other check in this file's
-// sibling; only recomputation sees them.
+// The edit worth catching is the one that stays valid. A raised staleness
+// limit, an injected office mapping, and a restored job for a county that owes
+// a decision all pass every other check in this file's sibling; only
+// recomputation sees them.
 test("refuses a hand edit to a job that leaves the config otherwise valid", () => {
   for (const edit of [
-    (config) => { config.jobs[0].projection.max_source_age_hours = 4000; },
+    (config) => { config.jobs[0].projection.max_source_age_hours = 8000; },
     (config) => { config.jobs[0].projection.office_mappings = { "For County Auditor": { office_id: "x", office: "X" } }; },
     (config) => { config.jobs[0].projection.county_name = "Adams County"; },
     (config) => { config.jobs.pop(); },
@@ -238,6 +438,16 @@ test("refuses a hand edit to a job that leaves the config otherwise valid", () =
       /is not what its inputs generate/,
     );
   }
+});
+
+test("refuses a restored job for a county the generator leaves out", () => {
+  const clean = fixture();
+  const config = generated(clean);
+  const input = printsUnlabelledTitle(fixture());
+  assert.throws(
+    () => assertGeneratedRefreshConfig({ name: "vtrapp-20261103G.json", config, ...input }),
+    /is not what its inputs generate \(2 job\(s\) committed, 1 generated\)/,
+  );
 });
 
 test("refuses a config whose recorded election is not the one its inputs generate", () => {
@@ -264,7 +474,7 @@ test("the committed config is exactly what the committed artifacts generate", as
     vendorKey,
   });
   const config = await readJson(`config/vtrapp-${vendorKey}.json`);
-  const published = elections.elections.find((e) => e.id === survey.meta.election.id)?.counties ?? {};
+  const election = elections.elections.find((candidate) => candidate.id === survey.meta.election.id);
 
   assertGeneratedRefreshConfig({
     name: `vtrapp-${vendorKey}.json`,
@@ -274,8 +484,52 @@ test("the committed config is exactly what the committed artifacts generate", as
     corrections,
     locations,
     decisions,
-    publishedCounties: published,
+    election,
+    publishedCounties: election.counties ?? {},
   });
-  assert.equal(config.jobs.length, Object.keys(survey.counties).length);
-  assert.deepEqual(unlabelledTitles({ survey, patterns, corrections, locations }), []);
+
+  // The committed backlog, named rather than counted: Harrison surveys one
+  // statewide race no candidate match resolves, so it is the one county of
+  // seventy this config leaves out, and every other one gets a job.
+  const built = buildRefreshJobs({
+    survey,
+    patterns,
+    corrections,
+    locations,
+    decisions,
+    election,
+    publishedCounties: election.counties ?? {},
+  });
+  assert.deepEqual(built.backlog, [{
+    county: "harrison",
+    reason: "1 surveyed contest(s) need a reviewed statewide_race_mappings entry; the decisions file has 0",
+  }]);
+  assert.equal(built.jobs.length, Object.keys(survey.counties).length - 1);
+  assert.deepEqual(config.jobs.map((job) => job.county).filter((county) => county === "harrison"), []);
+  assert.equal(built.cycleStart, "2026-05-05");
+  assert.equal(built.maxSourceAgeHours, 4368);
+  assert.ok(
+    built.jobs.every((job) => job.projection.max_source_age_hours === 4368),
+    "every generated job carries the generated backstop",
+  );
+});
+
+// The committed survey, held to the backstop it generates under. This is the
+// claim the 168-hour limit failed: it admitted one county of seventy, so an
+// overnight statewide run would have stopped on its first job.
+test("the generated backstop admits every county the committed survey measured", async () => {
+  const survey = await readJson("data/vtrapp-contest-survey.json");
+  const elections = await readJson("data/elections.json");
+  const election = elections.elections.find((candidate) => candidate.id === survey.meta.election.id);
+  const cycleStart = Date.parse(`${electionCycleStart(election)}T00:00:00Z`);
+  const electionDay = Date.parse(`${election.date}T00:00:00Z`);
+  const limit = maxSourceAgeHoursFor(election);
+
+  const rejected = Object.entries(survey.counties).filter(([, county]) => {
+    const stamp = Date.parse(county.source_updated_at);
+    // Reviewed at the latest moment a refresh for this election could run.
+    return stamp < cycleStart || (electionDay - stamp) / 3_600_000 > limit;
+  });
+  assert.deepEqual(rejected.map(([countyId]) => countyId), []);
+  assert.equal(Object.keys(survey.counties).length, 70);
 });
