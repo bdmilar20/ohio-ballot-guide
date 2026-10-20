@@ -398,6 +398,19 @@ test("accepts the config its own inputs generate", () => {
   }));
 });
 
+test("the generated-config gate refuses a missing or invalid surveyed source stamp", () => {
+  for (const sourceUpdatedAt of [undefined, "not-a-date"]) {
+    const input = fixture();
+    const config = generated(input);
+    if (sourceUpdatedAt === undefined) delete input.survey.counties.adams.source_updated_at;
+    else input.survey.counties.adams.source_updated_at = sourceUpdatedAt;
+    assert.throws(
+      () => assertGeneratedRefreshConfig({ name: "vtrapp-20261103G.json", config, ...input }),
+      /surveyed county adams needs a valid source_updated_at timestamp/,
+    );
+  }
+});
+
 test("refuses a config that does not name the generator", () => {
   const input = fixture();
   const config = generated(input);

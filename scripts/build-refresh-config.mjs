@@ -337,13 +337,22 @@ export function buildRefreshJobs({
   // a snapshot of a different election's ballot; nothing here can relabel it,
   // so name the counties rather than generate jobs that project from it.
   const cycleStartInstant = Date.parse(`${cycleStart}T00:00:00Z`);
-  const preCycle = [...surveyed]
+  const surveyedSourceStamps = [...surveyed]
     .sort()
-    .filter((countyId) => Date.parse(survey.counties[countyId].source_updated_at) < cycleStartInstant);
+    .map((countyId) => {
+      const sourceUpdatedAt = survey.counties[countyId].source_updated_at;
+      const instant = Date.parse(sourceUpdatedAt);
+      invariant(
+        typeof sourceUpdatedAt === "string" && Number.isFinite(instant),
+        `surveyed county ${countyId} needs a valid source_updated_at timestamp, not ${JSON.stringify(sourceUpdatedAt)}`,
+      );
+      return { countyId, sourceUpdatedAt, instant };
+    });
+  const preCycle = surveyedSourceStamps.filter(({ instant }) => instant < cycleStartInstant);
   invariant(
     preCycle.length === 0,
     `${preCycle.length} surveyed county source stamp(s) predate this election's cycle, which began ${cycleStart}: ` +
-      `${preCycle.map((countyId) => `${countyId} at ${survey.counties[countyId].source_updated_at}`).join(", ")}`,
+      `${preCycle.map(({ countyId, sourceUpdatedAt }) => `${countyId} at ${sourceUpdatedAt}`).join(", ")}`,
   );
 
   // Published coverage this config has to stay able to reproduce. A county
