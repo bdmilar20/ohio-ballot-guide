@@ -533,3 +533,23 @@ test("the generated backstop admits every county the committed survey measured",
   assert.deepEqual(rejected.map(([countyId]) => countyId), []);
   assert.equal(Object.keys(survey.counties).length, 70);
 });
+
+// The backlog counts titles from the survey's shared index, so an index that
+// dropped a county would report that county as owing nothing and its job would
+// abort the run. Held to the per-county record, which is written in the same
+// pass.
+test("refuses a survey whose shared title index disagrees with its county record", () => {
+  const dropped = fixture();
+  dropped.survey.local_office_titles["For County Commissioner"].counties = ["adams"];
+  assert.throws(
+    () => buildRefreshJobs(dropped),
+    /records 1 office title\(s\) for brown but its shared title index names 0/,
+  );
+
+  const extra = fixture();
+  extra.survey.local_office_titles["For County Engineer"] = { counties: ["brown"], instances: 1 };
+  assert.throws(
+    () => buildRefreshJobs(extra),
+    /records 1 office title\(s\) for brown but its shared title index names 2/,
+  );
+});

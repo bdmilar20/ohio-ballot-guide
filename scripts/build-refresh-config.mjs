@@ -237,7 +237,19 @@ export function outstandingDecisions({ survey, patterns, corrections, locations,
     const countyName = countyNameFor(locations, countyId);
     const decision = decisions.counties[countyId] ?? {};
 
-    for (const title of surveyedTitlesFor(survey, countyId, survey.meta.election.id)) {
+    // The two places the survey records a county's office titles, held to each
+    // other. The backlog is counted from the shared index, so an index missing
+    // a county reads as a county with no titles to label --- clean, and its job
+    // aborts the run on the contest nothing mapped.
+    const titles = surveyedTitlesFor(survey, countyId, survey.meta.election.id);
+    const countyTitles = Object.keys(survey.counties[countyId].local_office_titles ?? {});
+    invariant(
+      countyTitles.length === titles.size && countyTitles.every((title) => titles.has(title)),
+      `the contest survey records ${countyTitles.length} office title(s) for ${countyId} but its shared title ` +
+        `index names ${titles.size}; re-run npm run survey:contests rather than counting the backlog from one of them`,
+    );
+
+    for (const title of titles) {
       if (officeFromTitle(title, { patterns, corrections, countyName })) continue;
       if (Object.hasOwn(decision.office_mappings ?? {}, title)) continue;
       pending.push({
