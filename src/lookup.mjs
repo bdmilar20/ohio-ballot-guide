@@ -122,6 +122,32 @@ export function issueSourceLabel(issue, label, sequenceLabel = null) {
   return [label, issue.label, sequenceLabel, issue.title].filter(Boolean).join(" — ");
 }
 
+// A later-election row carries a date long before anyone files for it. Rendering
+// name and date alone read as if the contests were known and there were none,
+// so the row says which of the two it is.
+export function scheduleOnlyNote(election) {
+  if (hasPublishedBallotDetails(election)) return null;
+  return "Date only — contests are not published yet, and an election is held only where one is scheduled.";
+}
+
+// Shareable result links. A guide with no URL state cannot be bookmarked, sent
+// to someone, or cited in a bug report: every reader had to retype the search.
+export function guideSearch({ query, countyId = null }) {
+  const trimmed = query.trim();
+  if (!trimmed) return "";
+  const params = new URLSearchParams({ q: trimmed });
+  if (countyId) params.set("county", countyId);
+  return `?${params.toString()}`;
+}
+
+export function parseGuideSearch(search) {
+  const params = new URLSearchParams(search);
+  const query = (params.get("q") ?? "").trim();
+  if (!query) return null;
+  const countyId = (params.get("county") ?? "").trim();
+  return { query, countyId: countyId || null };
+}
+
 export function hasPublishedBallotDetails(election) {
   return (
     election.statewide_races.length > 0 ||

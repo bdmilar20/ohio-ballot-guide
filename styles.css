@@ -366,6 +366,13 @@ h2 {
   color: var(--muted);
 }
 
+.results-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
 .text-button,
 .quiet-button {
   align-self: flex-start;
@@ -719,14 +726,6 @@ h2 {
   font-size: 0.75rem;
 }
 
-.race-card[data-secondary="true"] {
-  display: none;
-}
-
-.race-list.show-all .race-card[data-secondary="true"] {
-  display: block;
-}
-
 .local-issue-section {
   margin-top: 2rem;
 }
@@ -833,16 +832,20 @@ h2 {
 }
 
 .later-elections li {
-  display: flex;
-  justify-content: space-between;
-  gap: 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.3rem 1.5rem;
   border-top: 1px solid var(--line);
   padding: 0.9rem 0;
 }
 
 .later-elections li span {
-  flex: none;
   color: var(--muted);
+}
+
+.later-elections li .later-election-note {
+  grid-column: 1 / -1;
+  font-size: 0.8125rem;
 }
 
 .exact-ballot {
