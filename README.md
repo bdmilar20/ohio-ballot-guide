@@ -10,6 +10,8 @@ That gap has consequences. In CIRCLE's post-2024 survey of young people, 14% of 
 
 This project is my attempt to make the first step easier: enter a city or ZIP code, get a concise nonpartisan overview, and follow every claim back to an official source. It is free, open source, and requires no account. The goal is not to tell anyone how to vote. It is to help more people feel ready to vote.
 
+I built this project entirely using [Buzz.xyz](https://buzz.xyz).
+
 ## What it covers today
 
 The first populated election is the November 3, 2026 general election. Statewide contest data is available throughout Ohio, and every Ohio location resolves to a county: 1,416 ZIP codes and 1,063 place names across all 88 counties. Adams County has ballot content verified across every enumerated precinct, while selected, explicitly partial countywide data is available for Franklin, Cuyahoga, Hamilton, Montgomery, and Summit counties. The official 2027 primary/special, special, and general election dates are also included as schedule-only records while their ballots are not yet certified. A city or ZIP cannot determine an exact precinct ballot, so cross-county matches require the voter to choose a county and every result links to Ohio's official sample-ballot directory.
