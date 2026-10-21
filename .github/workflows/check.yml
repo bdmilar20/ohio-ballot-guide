@@ -1,0 +1,25 @@
+# The same gate the repository uses locally: `npm run check` then `npm test`.
+# There is no install step because this project has no dependencies and no
+# lockfile — adding `npm ci` here would fail, not protect anything.
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # Called by pages.yml so a deploy cannot publish data the gate rejects.
+  workflow_call:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate the data and the generated refresh config
+        run: npm run check
+      - name: Run the test suite
+        run: npm test

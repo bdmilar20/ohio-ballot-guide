@@ -1,0 +1,42 @@
+# Publishes the repository root to GitHub Pages. The site is static with no
+# build step, so the artifact is the checkout itself.
+#
+# This needs Pages turned on once, by hand, with Settings -> Pages -> Build and
+# deployment -> Source: GitHub Actions. Until then this workflow fails at the
+# deploy step and nothing is published.
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; let an in-flight one finish rather than
+# cancelling it, so a half-published site is not a possible state.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  check:
+    uses: ./.github/workflows/check.yml
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deploy
+        uses: actions/deploy-pages@v4
