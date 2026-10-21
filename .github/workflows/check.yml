@@ -11,6 +11,12 @@ on:
   # Called by pages.yml so a deploy cannot publish data the gate rejects.
   workflow_call:
 
+# Reading the checkout is all the gate needs, whether it runs on a push, on a
+# pull request, or as pages.yml's called workflow. Declaring it here means a
+# later change to the repository's default token permissions cannot widen it.
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest

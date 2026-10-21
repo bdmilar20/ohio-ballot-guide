@@ -49,6 +49,15 @@ test("index.html cites no absolute href that only works in review", () => {
   }
 });
 
+// The canonical public mirror. Pinned rather than matched as "some GitHub
+// repository": a shape-only pattern accepts `github.com/example/other-project`
+// just as happily, so it would pass while the About section pointed voters at
+// somebody else's code.
+const SOURCE_URL = "https://github.com/bdmilar20/ohio-ballot-guide";
+
 test("the published page links its own source", () => {
-  assert.match(markup, /href="https:\/\/github\.com\/[\w.-]+\/[\w.-]+"/);
+  assert.ok(
+    absoluteHrefs(markup).includes(SOURCE_URL),
+    `index.html does not link ${SOURCE_URL}, so the published page does not point at its own source`,
+  );
 });
