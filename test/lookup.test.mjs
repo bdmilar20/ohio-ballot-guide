@@ -259,7 +259,7 @@ test("publishes sourced, explicitly partial coverage for each covered county", (
   const expectedRaceCounts = {
     franklin: 2,
     cuyahoga: 2,
-    hamilton: 2,
+    hamilton: 17,
     montgomery: 9,
     summit: 3,
   };
@@ -301,6 +301,127 @@ test("publishes Adams content common to every enumerated precinct ballot", () =>
   assert.deepEqual(
     issueSequenceLabels(county.issues),
     ["Separate measure 1 of 2", "Separate measure 2 of 2"],
+  );
+});
+
+test("publishes every Hamilton County judicial contest in the certified candidate list", () => {
+  const judicialRaces = racesForCounty("hamilton", election.counties).slice(0, 15);
+
+  assert.deepEqual(
+    judicialRaces.map(({ id, scope, candidates }) => ({
+      id,
+      scope,
+      candidates: candidates.map(({ name, party }) => ({ name, party })),
+    })),
+    [
+      {
+        id: "hamilton-court-of-appeals-1st-2027-02-09",
+        scope: "Hamilton County · Term beginning February 9, 2027 · Vote for one",
+        candidates: [{ name: "Ginger S. Bock", party: "Democratic" }],
+      },
+      {
+        id: "hamilton-common-pleas-general-2027-01-01",
+        scope: "Hamilton County · Term beginning January 1, 2027 · Vote for one",
+        candidates: [
+          { name: "Katie Casch", party: "Republican" },
+          { name: "Donte Johnson", party: "Democratic" },
+        ],
+      },
+      {
+        id: "hamilton-common-pleas-general-2027-01-02",
+        scope: "Hamilton County · Term beginning January 2, 2027 · Vote for one",
+        candidates: [
+          { name: "Christian A. Jenkins", party: "Democratic" },
+          { name: "Betsy Sundermann", party: "Republican" },
+        ],
+      },
+      {
+        id: "hamilton-common-pleas-general-2027-01-04",
+        scope: "Hamilton County · Term beginning January 4, 2027 · Vote for one",
+        candidates: [{ name: "Chris Wagner", party: "Democratic" }],
+      },
+      {
+        id: "hamilton-common-pleas-general-2027-02-09",
+        scope: "Hamilton County · Term beginning February 9, 2027 · Vote for one",
+        candidates: [
+          { name: "Roger Bouchard", party: "Republican" },
+          { name: "Jennifer Branch", party: "Democratic" },
+        ],
+      },
+      {
+        id: "hamilton-common-pleas-general-2027-02-10",
+        scope: "Hamilton County · Term beginning February 10, 2027 · Vote for one",
+        candidates: [
+          { name: "Dennis Charles Mahoney", party: "Republican" },
+          { name: "Alan C. Triggs", party: "Democratic" },
+        ],
+      },
+      {
+        id: "hamilton-common-pleas-general-2027-02-11",
+        scope: "Hamilton County · Term beginning February 11, 2027 · Vote for one",
+        candidates: [
+          { name: "Robert A. Goering", party: "Republican" },
+          { name: "Latoya S. Maley", party: "Democratic" },
+        ],
+      },
+      {
+        id: "hamilton-common-pleas-general-2027-02-12",
+        scope: "Hamilton County · Term beginning February 12, 2027 · Vote for one",
+        candidates: [{ name: "Wende C. Cross", party: "Democratic" }],
+      },
+      {
+        id: "hamilton-common-pleas-general-2027-02-13",
+        scope: "Hamilton County · Term beginning February 13, 2027 · Vote for one",
+        candidates: [{ name: "Alison Hatheway", party: "Democratic" }],
+      },
+      {
+        id: "hamilton-common-pleas-drug-court-2027-01-03",
+        scope: "Hamilton County · Term beginning January 3, 2027 · Vote for one",
+        candidates: [{ name: "Nicole L. Sanders", party: "Democratic" }],
+      },
+      {
+        id: "hamilton-common-pleas-probate-2027-02-09",
+        scope: "Hamilton County · Term beginning February 9, 2027 · Vote for one",
+        candidates: [
+          { name: "Elizabeth A. Tye", party: "Democratic" },
+          { name: "Ralph Winkler", party: "Republican" },
+        ],
+      },
+      {
+        id: "hamilton-common-pleas-juvenile-2027-02-14",
+        scope: "Hamilton County · Term beginning February 14, 2027 · Vote for one",
+        candidates: [
+          { name: "Kari L. Bloom", party: "Democratic" },
+          { name: "Susan Luken", party: "Republican" },
+        ],
+      },
+      {
+        id: "hamilton-common-pleas-domestic-relations-2027-07-01",
+        scope: "Hamilton County · Term beginning July 1, 2027 · Vote for one",
+        candidates: [{ name: "Tiffany Evans", party: "Democratic" }],
+      },
+      {
+        id: "hamilton-common-pleas-general-unexpired-2029-01-03",
+        scope: "Hamilton County · Unexpired term ending January 3, 2029 · Vote for one",
+        candidates: [
+          { name: "Sarah Henry", party: "Democratic" },
+          { name: "Chris McDowell", party: "Republican" },
+        ],
+      },
+      {
+        id: "hamilton-common-pleas-general-unexpired-2029-01-14",
+        scope: "Hamilton County · Unexpired term ending January 14, 2029 · Vote for one",
+        candidates: [
+          { name: "Leah Dinkelacker", party: "Republican" },
+          { name: "Manisha Kotian", party: "Democratic" },
+        ],
+      },
+    ],
+  );
+
+  assert.equal(
+    judicialRaces.reduce((count, race) => count + race.candidates.length, 0),
+    24,
   );
 });
 
