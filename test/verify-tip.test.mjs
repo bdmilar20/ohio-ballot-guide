@@ -210,6 +210,9 @@ async function signedFixtureRepo(t, trust) {
     shim,
     [
       "#!/bin/sh",
+      "# Git streams the payload on stdin; consume it before exiting so the",
+      "# parent never sees a timing-dependent broken pipe on a fast runner.",
+      "cat >/dev/null",
       'for a in "$@"; do case "$a" in --verify)',
       '  echo "[GNUPG:] NEWSIG"',
       ...TRUST_LINES[trust].map((line) => `  echo ${JSON.stringify(line)}`),
