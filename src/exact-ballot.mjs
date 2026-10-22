@@ -21,16 +21,6 @@ const DIRECTIONS = new Map([
   ["SW", "SW"],
   ["SOUTHWEST", "SW"],
 ]);
-const DIRECTION_NAMES = new Map([
-  ["N", "NORTH"],
-  ["S", "SOUTH"],
-  ["E", "EAST"],
-  ["W", "WEST"],
-  ["NE", "NORTHEAST"],
-  ["NW", "NORTHWEST"],
-  ["SE", "SOUTHEAST"],
-  ["SW", "SOUTHWEST"],
-]);
 const SUFFIXES = new Map([
   ["ALY", "ALLEY"], ["ANX", "ANNEX"], ["ARC", "ARCADE"], ["AVE", "AVENUE"],
   ["BYU", "BAYOU"], ["BCH", "BEACH"], ["BND", "BEND"], ["BLF", "BLUFF"],
@@ -84,6 +74,57 @@ const SUFFIXES = new Map([
   ["WALL", "WALL"], ["WAY", "WAY"], ["WAYS", "WAYS"], ["WL", "WELL"],
   ["WLS", "WELLS"],
 ].flatMap(([abbreviation, name]) => [[abbreviation, abbreviation], [name, abbreviation]]));
+
+// USPS Publication 28 Appendix C1 also lists the forms people commonly type,
+// not just the primary name and standard abbreviation above. LA and PLC are
+// retained as short legacy forms found in address datasets.
+for (const [alias, abbreviation] of [
+  ["ALLEE", "ALY"], ["ALLY", "ALY"], ["ANEX", "ANX"], ["ANNX", "ANX"],
+  ["AV", "AVE"], ["AVEN", "AVE"], ["AVENU", "AVE"], ["AVN", "AVE"], ["AVNUE", "AVE"],
+  ["BAYOO", "BYU"], ["BLUF", "BLF"], ["BOT", "BTM"], ["BOTTM", "BTM"],
+  ["BOUL", "BLVD"], ["BOULV", "BLVD"], ["BRNCH", "BR"], ["BRDGE", "BRG"],
+  ["BYPA", "BYP"], ["BYPAS", "BYP"], ["BYPS", "BYP"], ["CMP", "CP"],
+  ["CANYN", "CYN"], ["CNYN", "CYN"], ["CAUSWA", "CSWY"], ["CEN", "CTR"],
+  ["CENT", "CTR"], ["CENTR", "CTR"], ["CENTRE", "CTR"], ["CNTER", "CTR"],
+  ["CNTR", "CTR"], ["CIRC", "CIR"], ["CIRCL", "CIR"], ["CRCL", "CIR"],
+  ["CRCLE", "CIR"], ["CRSENT", "CRES"], ["CRSNT", "CRES"], ["CRSSNG", "XING"],
+  ["DIV", "DV"], ["DVD", "DV"], ["DRIV", "DR"], ["DRV", "DR"],
+  ["EXP", "EXPY"], ["EXPR", "EXPY"], ["EXPRESS", "EXPY"], ["EXPW", "EXPY"],
+  ["EXTN", "EXT"], ["EXTNSN", "EXT"], ["FRRY", "FRY"], ["FORESTS", "FRST"],
+  ["FORG", "FRG"], ["FRT", "FT"], ["FREEWY", "FWY"], ["FRWAY", "FWY"],
+  ["FRWY", "FWY"], ["GARDN", "GDN"], ["GRDEN", "GDN"], ["GRDN", "GDN"],
+  ["GRDNS", "GDNS"], ["GATEWY", "GTWY"], ["GATWAY", "GTWY"], ["GTWAY", "GTWY"],
+  ["GROV", "GRV"], ["HARB", "HBR"], ["HARBR", "HBR"], ["HRBOR", "HBR"],
+  ["HT", "HTS"], ["HIGHWY", "HWY"], ["HIWAY", "HWY"], ["HIWY", "HWY"],
+  ["HWAY", "HWY"], ["HLLW", "HOLW"], ["HOLLOWS", "HOLW"], ["HOLWS", "HOLW"],
+  ["ISLND", "IS"], ["ISLNDS", "ISS"], ["ISLES", "ISLE"], ["JCTION", "JCT"],
+  ["JCTN", "JCT"], ["JUNCTN", "JCT"], ["JUNCTON", "JCT"], ["JCTNS", "JCTS"],
+  ["KNOL", "KNL"], ["LNDNG", "LNDG"], ["LA", "LN"], ["LDGE", "LDG"],
+  ["LODG", "LDG"], ["LOOPS", "LOOP"], ["MEDOWS", "MDWS"], ["MISSN", "MSN"],
+  ["MSSN", "MSN"], ["MNT", "MT"], ["MNTAIN", "MTN"], ["MNTN", "MTN"],
+  ["MOUNTIN", "MTN"], ["MTIN", "MTN"], ["MNTNS", "MTNS"], ["ORCHRD", "ORCH"],
+  ["OVL", "OVAL"], ["PRK", "PARK"], ["PARKS", "PARK"], ["PARKWY", "PKWY"],
+  ["PARKWAYS", "PKWY"], ["PKWAY", "PKWY"], ["PKY", "PKWY"], ["PKWYS", "PKWY"],
+  ["PATHS", "PATH"],
+  ["PIKES", "PIKE"], ["PLC", "PL"], ["PLZA", "PLZ"], ["PRR", "PR"],
+  ["RAD", "RADL"], ["RADIEL", "RADL"], ["RAMP", "RAMP"], ["RANCHES", "RNCH"],
+  ["RNCHS", "RNCH"], ["RDGE", "RDG"], ["RVR", "RIV"], ["RIVR", "RIV"],
+  ["SHOAR", "SHR"], ["SHOARS", "SHRS"], ["SPNG", "SPG"], ["SPRNG", "SPG"],
+  ["SPNGS", "SPGS"], ["SPRNGS", "SPGS"], ["SPURS", "SPUR"], ["SQR", "SQ"],
+  ["SQRE", "SQ"], ["SQU", "SQ"], ["SQRS", "SQS"], ["STATN", "STA"],
+  ["STN", "STA"], ["STRAV", "STRA"], ["STRAVEN", "STRA"], ["STRAVN", "STRA"],
+  ["STRVN", "STRA"], ["STRVNUE", "STRA"], ["STREME", "STRM"], ["STRT", "ST"],
+  ["STR", "ST"], ["SUMIT", "SMT"], ["SUMITT", "SMT"], ["TERR", "TER"],
+  ["TRACES", "TRCE"], ["TRACKS", "TRAK"], ["TRK", "TRAK"], ["TRKS", "TRAK"],
+  ["TRAILS", "TRL"], ["TRLS", "TRL"], ["TRLRS", "TRLR"], ["TUNEL", "TUNL"],
+  ["TUNLS", "TUNL"], ["TUNNELS", "TUNL"], ["TUNNL", "TUNL"],
+  ["TRNPK", "TPKE"], ["TURNPK", "TPKE"], ["VALLY", "VLY"], ["VLLY", "VLY"],
+  ["VDCT", "VIA"], ["VIADCT", "VIA"], ["VILL", "VLG"], ["VILLAG", "VLG"],
+  ["VILLG", "VLG"], ["VILLIAGE", "VLG"], ["VIST", "VIS"], ["VST", "VIS"],
+  ["VSTA", "VIS"], ["WALKS", "WALK"], ["WY", "WAY"],
+]) {
+  SUFFIXES.set(alias, abbreviation);
+}
 
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -171,6 +212,13 @@ function normalizeDirection(value) {
   return direction;
 }
 
+function normalizeStreetName(value) {
+  return normalizeStreetPart(value)
+    .split(" ")
+    .map((part) => DIRECTIONS.get(part) ?? part)
+    .join(" ");
+}
+
 function normalizeSuffix(value) {
   const normalized = normalizeStreetPart(value, { allowEmpty: true });
   if (!normalized) return "";
@@ -198,7 +246,7 @@ export function normalizeAddress(address) {
   return {
     house_number: normalizeHouseNumber(record.house_number),
     pre_direction: normalizeDirection(record.pre_direction),
-    street_name: normalizeStreetPart(record.street_name),
+    street_name: normalizeStreetName(record.street_name),
     street_suffix: normalizeSuffix(record.street_suffix),
     post_direction: normalizeDirection(record.post_direction),
     zip: normalizeZip(record.zip),
@@ -216,21 +264,43 @@ function streetKey(record) {
 }
 
 function streetKeys(record) {
-  const keys = new Set([streetKey(record)]);
+  const preReadings = [record];
   if (record.pre_direction) {
-    keys.add(streetKey({
+    preReadings.push({
       ...record,
       pre_direction: "",
-      street_name: `${DIRECTION_NAMES.get(record.pre_direction)} ${record.street_name}`,
-    }));
+      street_name: `${record.pre_direction} ${record.street_name}`,
+    });
   } else {
     const [first, ...rest] = record.street_name.split(" ");
     const direction = DIRECTIONS.get(first);
     if (direction && rest.length > 0) {
-      keys.add(streetKey({ ...record, pre_direction: direction, street_name: rest.join(" ") }));
+      preReadings.push({ ...record, pre_direction: direction, street_name: rest.join(" ") });
     }
   }
-  return [...keys];
+
+  const readings = [...preReadings];
+  for (const reading of preReadings) {
+    if (reading.post_direction) {
+      readings.push({
+        ...reading,
+        post_direction: "",
+        street_name: `${reading.street_name} ${reading.post_direction}`,
+      });
+    } else {
+      const parts = reading.street_name.split(" ");
+      const last = parts.at(-1);
+      const direction = DIRECTIONS.get(last);
+      if (direction && parts.length > 1) {
+        readings.push({
+          ...reading,
+          post_direction: direction,
+          street_name: parts.slice(0, -1).join(" "),
+        });
+      }
+    }
+  }
+  return [...new Set(readings.map(streetKey))];
 }
 
 function canonicalize(value) {
@@ -258,7 +328,6 @@ function rangeContainsParity(low, high, parity) {
 }
 
 function rulesOverlap(left, right) {
-  if (streetKey(left) !== streetKey(right)) return false;
   const low = Math.max(left.from, right.from);
   const high = Math.min(left.to, right.to);
   if (low > high) return false;
@@ -342,10 +411,11 @@ function assertAddressIndex(value) {
   const rules = index.street_ranges.map(assertNormalizedRule);
   const rulesByStreet = new Map();
   for (const [position, rule] of rules.entries()) {
-    const key = streetKey(rule);
-    const group = rulesByStreet.get(key) ?? [];
-    group.push({ position, rule });
-    rulesByStreet.set(key, group);
+    for (const key of streetKeys(rule)) {
+      const group = rulesByStreet.get(key) ?? [];
+      group.push({ position, rule });
+      rulesByStreet.set(key, group);
+    }
   }
   for (const group of rulesByStreet.values()) {
     group.sort((left, right) => left.rule.from - right.rule.from || left.rule.to - right.rule.to);
@@ -518,12 +588,14 @@ export async function createExactBallotResolver({ addressIndex, ballotBundle }) 
       return { status: "invalid", reason: error.message };
     }
 
-    const matches = streetKeys(normalized).flatMap((key) => (data.rulesByStreet.get(key) ?? []).filter(
+    const matches = [...new Set(streetKeys(normalized).flatMap(
+      (key) => data.rulesByStreet.get(key) ?? [],
+    ))].filter(
       (rule) =>
         normalized.house_number >= rule.from &&
         normalized.house_number <= rule.to &&
         matchesParity(normalized.house_number, rule.parity),
-    ));
+    );
     if (matches.length === 0) return { status: "unmatched" };
     const precinctIds = new Set(matches.map(({ precinct_id: precinctId }) => precinctId));
     if (precinctIds.size !== 1) return { status: "ambiguous" };

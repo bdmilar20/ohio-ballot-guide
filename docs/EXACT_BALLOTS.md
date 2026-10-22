@@ -37,7 +37,7 @@ date. Publication refuses:
 - a partial precinct enumeration, skipped row, or unexplained source row;
 - a partial street-range enumeration, skipped row, or unexplained source row;
 - a street range that is not normalized or whose odd/even coverage overlaps
-  another range;
+  another range under any equivalent direction reading;
 - a range pointing to a precinct absent from the ballot bundle;
 - a published precinct with no address coverage;
 - a precinct pointing to a missing ballot;
@@ -53,19 +53,27 @@ incomplete result look more complete.
 
 The resolver accepts structured fields: a 1-to-5-digit house number, optional
 pre/post direction, street name, optional suffix, and five-digit ZIP. Source
-adapters normalize these fields before publication. Full USPS suffix names and
-their standard abbreviations normalize to the same value (`STREET` and `ST.` to
-`ST`, for example). A leading direction may be represented either in the
-structured pre-direction field or as the first word of the street name; the
-resolver tries both readings and returns `ambiguous` if they resolve to
-different precincts. This covers names such as North Bend Road without guessing
-which occurrence of a direction word is structural. The first contract does not
-guess at alphanumeric or fractional house numbers; it returns an invalid result
-until an official source and tests define those cases.
+adapters normalize these fields before publication. A suffix must appear in the
+resolver's accepted list, which covers the primary names, standard
+abbreviations, and common forms in USPS Publication 28 Appendix C1, plus the
+legacy short forms `LA` and `PLC` found in address datasets. All accepted forms
+normalize to the Postal Service abbreviation (`STREET`, `ST.`, and `STR` to
+`ST`, for example), and `RAMP` is preserved as its own standard suffix.
+
+Direction words normalize to their abbreviation in every structured field, so
+`NORTH BEND` and `N BEND` share one canonical street name. A leading or trailing
+direction may be represented either in the structured pre/post-direction field
+or as the first/last word of the street name. The resolver tries both readings.
+Publication rejects overlapping ranges across those readings before an
+ambiguous mapping can reach a voter. This covers names such as North Bend Road
+without guessing which occurrence of a direction word is structural. The first
+contract does not guess at alphanumeric or fractional house numbers; it returns
+an invalid result until an official source and tests define those cases.
 
 ## Sources
 
 - [Hamilton County Board of Elections sample-ballot lookup](https://votehamiltoncountyohio.gov/sample-ballot/)
 - [Hamilton County Board of Elections voter-list exports](https://votehamiltoncountyohio.gov/campaign-media/voter-lists/)
 - [Hamilton County Board of Elections precinct and district tools](https://votehamiltoncountyohio.gov/campaign-media/)
+- [USPS Publication 28 Appendix C1 street suffix abbreviations](https://pe.usps.com/text/pub28/pub28apc_002.htm)
 - [Existing per-precinct ingestion contract](./BALLOT_INGESTION.md)

@@ -129,6 +129,28 @@ test("canonicalizes full and abbreviated street suffixes", () => {
   }
 });
 
+test("canonicalizes USPS common suffix forms and RAMP", () => {
+  const cases = new Map([
+    ["AV", "AVE"],
+    ["AVEN", "AVE"],
+    ["DRV", "DR"],
+    ["TERR", "TER"],
+    ["PKY", "PKWY"],
+    ["CIRC", "CIR"],
+    ["HIWAY", "HWY"],
+    ["LA", "LN"],
+    ["STR", "ST"],
+    ["PLC", "PL"],
+    ["RAMP", "RAMP"],
+  ]);
+  for (const [street_suffix, expected] of cases) {
+    assert.equal(
+      normalizeAddress({ house_number: 11, street_name: "Main", street_suffix, zip: "45202" }).street_suffix,
+      expected,
+    );
+  }
+});
+
 test("resolves odd and even street ranges to different exact ballots", async () => {
   const resolve = await createExactBallotResolver(fixture());
   assert.deepEqual(
@@ -149,25 +171,50 @@ test("resolves odd and even street ranges to different exact ballots", async () 
 });
 
 test("resolves a direction consistently whether the source stores it in the name or direction field", async () => {
+  for (const sourceShape of [
+    { pre_direction: "", street_name: "N BEND" },
+    { pre_direction: "N", street_name: "BEND" },
+  ]) {
+    const data = fixture();
+    data.addressIndex.street_ranges = data.addressIndex.street_ranges.map((rule) => ({
+      ...rule,
+      ...sourceShape,
+    }));
+    const resolve = await createExactBallotResolver(data);
+    for (const address of [
+      { pre_direction: "North", street_name: "Bend" },
+      { pre_direction: "N", street_name: "Bend" },
+      { street_name: "North Bend" },
+      { street_name: "N Bend" },
+    ]) {
+      assert.equal(
+        resolve({ house_number: 11, street_suffix: "Street", zip: "45202", ...address }).ballot_id,
+        ODD_BALLOT,
+      );
+    }
+  }
+});
+
+test("resolves a post-direction in either the name or direction field", async () => {
   const data = fixture();
   data.addressIndex.street_ranges = data.addressIndex.street_ranges.map((rule) => ({
     ...rule,
-    street_name: "NORTH BEND",
+    street_name: "MAIN W",
   }));
   const resolve = await createExactBallotResolver(data);
   assert.equal(
-    resolve({ house_number: 11, pre_direction: "North", street_name: "Bend", street_suffix: "Street", zip: "45202" }).ballot_id,
+    resolve({ house_number: 11, street_name: "Main West", street_suffix: "Street", zip: "45202" }).ballot_id,
     ODD_BALLOT,
   );
   assert.equal(
-    resolve({ house_number: 11, street_name: "North Bend", street_suffix: "St", zip: "45202" }).ballot_id,
+    resolve({ house_number: 11, street_name: "Main", street_suffix: "St", post_direction: "W", zip: "45202" }).ballot_id,
     ODD_BALLOT,
   );
 });
 
-test("returns ambiguous when two valid direction readings disagree", async () => {
+test("rejects a collision between structurally different direction readings", async () => {
   const data = fixture();
-  data.addressIndex.street_ranges[0].street_name = "NORTH BEND";
+  data.addressIndex.street_ranges[0].street_name = "N BEND";
   data.addressIndex.street_ranges.push({
     ...data.addressIndex.street_ranges[0],
     pre_direction: "N",
@@ -176,10 +223,18 @@ test("returns ambiguous when two valid direction readings disagree", async () =>
   });
   data.addressIndex.coverage.listed_ranges = 3;
   data.addressIndex.coverage.parsed_ranges = 3;
-  const resolve = await createExactBallotResolver(data);
-  assert.deepEqual(
-    resolve({ house_number: 11, pre_direction: "North", street_name: "Bend", street_suffix: "Street", zip: "45202" }),
-    { status: "ambiguous" },
+  await assert.rejects(
+    assertExactBallotData(data.addressIndex, data.ballotBundle),
+    /street ranges 0 and 2 overlap/,
+  );
+});
+
+test("requires direction words inside published street names to use canonical abbreviations", async () => {
+  const data = fixture();
+  data.addressIndex.street_ranges[0].street_name = "NORTH BEND";
+  await assert.rejects(
+    assertExactBallotData(data.addressIndex, data.ballotBundle),
+    /street_name must be normalized/,
   );
 });
 
