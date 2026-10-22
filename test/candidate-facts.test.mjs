@@ -31,6 +31,21 @@ test("rejects a candidate-authored source labeled as official", () => {
   assert.throws(() => assertCandidateFacts(altered, elections), /campaign has the wrong source label/);
 });
 
+test("requires a content digest for candidate-controlled and questionnaire sources", () => {
+  const altered = clone(facts);
+  delete altered.profiles["colleen-odonnell"].sources["campaign-biography"].source_sha256;
+  assert.throws(
+    () => assertCandidateFacts(altered, elections),
+    /campaign-biography needs the SHA-256 of the reviewed source bytes/,
+  );
+
+  altered.profiles["colleen-odonnell"].sources["campaign-biography"].source_sha256 = "not-a-digest";
+  assert.throws(
+    () => assertCandidateFacts(altered, elections),
+    /campaign-biography needs the SHA-256 of the reviewed source bytes/,
+  );
+});
+
 test("rejects issue positions or endorsements in the facts-only schema", () => {
   const altered = clone(facts);
   altered.profiles["daniel-r-hawkins"].facts.push({

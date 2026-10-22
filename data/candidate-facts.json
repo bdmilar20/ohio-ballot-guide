@@ -18,10 +18,10 @@
           "type": "official",
           "last_checked": "2026-10-21"
         },
-        "ohio-bar-profile": {
-          "label": "Ohio State Bar Association 2022 judicial candidate profile",
-          "url": "https://www.ohiobar.org/2022-judicial-elections/Marilyn-Zayas/",
-          "type": "candidate-questionnaire",
+        "first-district-biography": {
+          "label": "Ohio First District Court of Appeals biography",
+          "url": "https://firstdistrictcoa.org/judge-marilyn-zayas/",
+          "type": "official",
           "last_checked": "2026-10-21"
         }
       },
@@ -34,12 +34,12 @@
         {
           "category": "experience",
           "text": "Before joining the appellate court in 2016, she practiced law for nearly 20 years. She has also sat by assignment on the Ohio Supreme Court and four other Ohio appellate districts.",
-          "source_ids": ["ohio-bar-profile"]
+          "source_ids": ["first-district-biography"]
         },
         {
           "category": "education",
-          "text": "B.S. in computer science from the City College of New York; J.D. from the University of Cincinnati College of Law.",
-          "source_ids": ["ohio-bar-profile"]
+          "text": "Earned a college degree in computer science; the University of Cincinnati College of Law is her law-school alma mater.",
+          "source_ids": ["first-district-biography"]
         }
       ],
       "links": [
@@ -166,13 +166,15 @@
           "label": "O’Donnell for Ohio biography",
           "url": "https://www.odonnellforohio.com/",
           "type": "candidate-authored",
-          "last_checked": "2026-10-21"
+          "last_checked": "2026-10-21",
+          "source_sha256": "fd8f02cd4de031da0ffe12821b6d9e621a74cbf91cb5da9432a2cbc6415e0ca7"
         },
         "candidate-profile": {
-          "label": "Columbus Bar Association Judge the Candidates profile",
+          "label": "Columbus Bar Association 2022 Judge the Candidates profile — Franklin County Common Pleas Court, General Division",
           "url": "https://www.judgethecandidates.org/candidate/odonnell.php",
           "type": "candidate-questionnaire",
-          "last_checked": "2026-10-21"
+          "last_checked": "2026-10-21",
+          "source_sha256": "b0c91f2fa68f639024bd1413ee25ef1e53c7170766e6a5e2552ee068870d4a22"
         }
       },
       "facts": [

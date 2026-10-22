@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 export const CANDIDATE_FACTS_SCHEMA_VERSION = 1;
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const SOURCE_TYPES = new Set(["official", "candidate-authored", "candidate-questionnaire"]);
-const FACT_CATEGORIES = new Set(["role", "experience", "education"]);
 const REQUIRED_FACT_CATEGORIES = ["role", "experience", "education"];
 const LINK_RULES = new Map([
   ["campaign", "candidate-authored"],
@@ -18,19 +18,6 @@ function assertDate(value, label) {
 
 function assertHttps(value, label) {
   assert.equal(new URL(value).protocol, "https:", `${label} must use HTTPS`);
-}
-
-function contestFor(elections, profile) {
-  const election = elections.elections.find(({ id }) => id === profile.election_id);
-  assert.ok(election, `${profile.name} references unknown election ${profile.election_id}`);
-
-  const contests = [
-    ...election.statewide_races,
-    ...Object.values(election.counties).flatMap(({ races }) => races),
-  ];
-  const contest = contests.find(({ id }) => id === profile.contest_id);
-  assert.ok(contest, `${profile.name} references unknown contest ${profile.contest_id}`);
-  return contest;
 }
 
 export function assertCandidateFacts(data, elections) {
@@ -70,12 +57,10 @@ export function assertCandidateFacts(data, elections) {
     assertDate(profile.last_reviewed, `${profileId}.last_reviewed`);
     assert.ok(profile.sources && Object.keys(profile.sources).length > 0, `${profileId} needs sources`);
 
-    const contest = contestFor(elections, profile);
     const reference = references.get(profileId);
     assert.equal(reference.election.id, profile.election_id, `${profileId} election does not match its ballot record`);
     assert.equal(reference.contest.id, profile.contest_id, `${profileId} contest does not match its ballot record`);
     assert.equal(reference.candidate.name, profile.name, `${profileId} name does not match its ballot record`);
-    assert.ok(contest.candidates.some(({ profile_id }) => profile_id === profileId), `${profileId} is absent from its contest`);
 
     for (const [sourceId, source] of Object.entries(profile.sources)) {
       assert.match(sourceId, /^[a-z0-9]+(?:-[a-z0-9]+)*$/, `${profileId} source id ${sourceId} must be a slug`);
@@ -83,6 +68,13 @@ export function assertCandidateFacts(data, elections) {
       assertHttps(source.url, `${profileId}.${sourceId}.url`);
       assert.ok(SOURCE_TYPES.has(source.type), `${profileId}.${sourceId} has an invalid source type`);
       assertDate(source.last_checked, `${profileId}.${sourceId}.last_checked`);
+      if (source.type !== "official") {
+        assert.match(
+          source.source_sha256,
+          SHA256_PATTERN,
+          `${profileId}.${sourceId} needs the SHA-256 of the reviewed source bytes`,
+        );
+      }
     }
 
     assert.ok(Array.isArray(profile.facts), `${profileId}.facts must be an array`);
@@ -90,7 +82,6 @@ export function assertCandidateFacts(data, elections) {
     assert.equal(new Set(categories).size, categories.length, `${profileId} repeats a fact category`);
     assert.deepEqual([...categories].sort(), [...REQUIRED_FACT_CATEGORIES].sort(), `${profileId} needs the same core fact categories`);
     for (const fact of profile.facts) {
-      assert.ok(FACT_CATEGORIES.has(fact.category), `${profileId} has unsupported fact category ${fact.category}`);
       assert.ok(typeof fact.text === "string" && fact.text.trim(), `${profileId}.${fact.category} needs text`);
       assert.ok(Array.isArray(fact.source_ids) && fact.source_ids.length > 0, `${profileId}.${fact.category} needs a citation`);
       assert.equal(new Set(fact.source_ids).size, fact.source_ids.length, `${profileId}.${fact.category} repeats a citation`);
