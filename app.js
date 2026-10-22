@@ -1,18 +1,22 @@
 import {
+  ballotCoverage,
   countiesWithContests,
   contestSequenceLabels,
   countyCoverageNotice,
   daysUntilElection,
+  guideSearch,
   hasPublishedBallotDetails,
   issuesForCounty,
   issueSequenceLabels,
   issueSourceLabel,
+  parseGuideSearch,
   partitionCandidates,
   racesForCounty,
   resolveLocation,
+  scheduleOnlyNote,
   sourceLabel,
   upcomingElections,
-} from "./src/lookup.mjs?v=20261018";
+} from "./src/lookup.mjs?v=20261021";
 
 const OFFICIAL_VOTING_SCHEDULE_URL =
   "https://www.ohiosos.gov/elections/voting-schedule-text-only";
@@ -27,6 +31,9 @@ const resultKicker = document.querySelector("#result-kicker");
 const resultTitle = document.querySelector("#result-title");
 const resultSummary = document.querySelector("#result-summary");
 const coverageNotice = document.querySelector("#coverage-notice");
+const ballotCoverageSection = document.querySelector("#ballot-coverage");
+const ballotCoverageCounts = document.querySelector("#ballot-coverage-counts");
+const ballotCoverageGaps = document.querySelector("#ballot-coverage-gaps");
 const statewideSection = document.querySelector("#statewide-section");
 const statewideContainer = document.querySelector("#statewide-races");
 const localContainer = document.querySelector("#local-races");
@@ -46,8 +53,8 @@ const issueSection = document.querySelector("#issue-section");
 const issueKicker = document.querySelector("#issue-kicker");
 const issuesContainer = document.querySelector("#issues");
 const raceTemplate = document.querySelector("#race-template");
-const toggleRaces = document.querySelector("#toggle-races");
 const newSearch = document.querySelector("#new-search");
+const copyLink = document.querySelector("#copy-link");
 const reviewDate = document.querySelector("#review-date");
 const coverageSummary = document.querySelector("#coverage-summary");
 const heroElectionDate = document.querySelector("#hero-election-date");
@@ -70,6 +77,16 @@ let offices;
 let countyBoards;
 let activeElection;
 let scheduledElections = [];
+let activeQuery = "";
+
+// The address bar is the only state this guide keeps. replaceState rather than
+// pushState: a voter who searches twice should still have one Back step out of
+// the page, and the link stays copyable either way.
+function setGuideUrl(query, countyId = null) {
+  const search = guideSearch({ query, countyId });
+  if (!search) return;
+  window.history.replaceState(null, "", `${window.location.pathname}${search}`);
+}
 
 function displayDate(value, options = {}) {
   return new Intl.DateTimeFormat("en-US", {
@@ -147,9 +164,8 @@ function renderOfficeNote(node, race, sequenceLabel) {
   note.hidden = false;
 }
 
-function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY, sequenceLabel = null) {
+function renderRace(race, sequenceLabel = null) {
   const node = raceTemplate.content.firstElementChild.cloneNode(true);
-  node.dataset.secondary = String(index >= collapseAfter);
   node.querySelector(".race-scope").textContent = race.scope;
   node.querySelector("h3").textContent = race.office;
   if (sequenceLabel) {
@@ -208,10 +224,13 @@ function renderRace(race, index = 0, collapseAfter = Number.POSITIVE_INFINITY, s
   return node;
 }
 
-function renderRaces(container, races, collapseAfter = Number.POSITIVE_INFINITY) {
+// Every contest renders. The statewide list used to collapse after three cards,
+// which hid both Ohio Supreme Court seats — the contests voters know least
+// about — behind a button, on the ballot where judicial races sit last.
+function renderRaces(container, races) {
   const sequenceLabels = contestSequenceLabels(races);
   container.replaceChildren(
-    ...races.map((race, index) => renderRace(race, index, collapseAfter, sequenceLabels[index])),
+    ...races.map((race, index) => renderRace(race, sequenceLabels[index])),
   );
 }
 
@@ -322,8 +341,7 @@ function renderElectionOverview() {
   setHttpsHref(registrationDeadline, activeElection.official_info_url);
 
   statewideSection.hidden = activeElection.statewide_races.length === 0;
-  toggleRaces.hidden = activeElection.statewide_races.length <= 3;
-  renderRaces(statewideContainer, activeElection.statewide_races, 3);
+  renderRaces(statewideContainer, activeElection.statewide_races);
   issueSection.hidden = activeElection.issues.length === 0;
   issueKicker.textContent = activeElection.scope === "statewide" ? "On every Ohio ballot" : "Ballot questions";
   renderIssues(issuesContainer, activeElection.issues);
@@ -338,6 +356,15 @@ function renderElectionOverview() {
       name.textContent = election.name;
       dateText.textContent = displayDate(election.date);
       item.append(name, dateText);
+
+      const note = scheduleOnlyNote(election);
+      if (note) {
+        const status = document.createElement("span");
+        status.className = "later-election-note";
+        status.textContent = note;
+        item.append(status);
+      }
+
       return item;
     }),
   );
@@ -365,6 +392,20 @@ function renderCoverageSummary() {
   ].join(" ");
 }
 
+// The headline number for a result, rendered before any contest card so the
+// count is read first. It renders again once a county is known, because the
+// county section is most of what a voter is counting.
+function renderBallotCoverage(countyId = null) {
+  const coverage = ballotCoverage(activeElection, {
+    countyId,
+    countyName: countyId ? locations.counties[countyId].name : null,
+  });
+  ballotCoverageSection.hidden = coverage === null;
+  if (!coverage) return;
+  ballotCoverageCounts.textContent = coverage.counts;
+  ballotCoverageGaps.textContent = coverage.gaps;
+}
+
 function showCountyResource(countyId) {
   const county = locations.counties[countyId];
   countyResourceLabel.textContent = `${county.name} election office`;
@@ -378,6 +419,8 @@ function showCountyResource(countyId) {
 
 function showCounty(countyId) {
   const county = locations.counties[countyId];
+  setGuideUrl(activeQuery, countyId);
+  renderBallotCoverage(countyId);
   const countyElection = activeElection.counties[countyId];
   const races = racesForCounty(countyId, activeElection.counties);
   const issues = issuesForCounty(countyId, activeElection.counties);
@@ -437,7 +480,7 @@ function renderCountyChoice(location, selectCounty = showCounty) {
   countyChoice.hidden = false;
 }
 
-function showGuide(query) {
+function showGuide(query, { scroll = true, countyId = null } = {}) {
   if (!data || !locations || !offices || !countyBoards) {
     dataStatus.hidden = false;
     dataStatus.textContent = "Election data is still loading. Please try again in a moment.";
@@ -451,7 +494,13 @@ function showGuide(query) {
   }
 
   const location = resolveLocation(query, locations);
+  activeQuery = query;
+  setGuideUrl(query);
   const hasBallotDetails = hasPublishedBallotDetails(activeElection);
+  renderBallotCoverage();
+  // A county carried in the link only counts if the match actually crosses it.
+  const linkedCounty =
+    countyId && location?.county_ids.includes(countyId) ? countyId : null;
   resultKicker.textContent = location ? `${location.display_name} match` : "Statewide guide";
   resultSummary.textContent = location
     ? hasBallotDetails
@@ -471,10 +520,12 @@ function showGuide(query) {
       "Ballot details are not published yet.",
       "This date applies only where an election is scheduled. Use the official sample-ballot link below to confirm whether you have an election and see your local contests.",
     );
-    if (location?.county_ids.length > 1) {
-      renderCountyChoice(location, (countyId) => {
+    if (linkedCounty) {
+      showCountyResource(linkedCounty);
+    } else if (location?.county_ids.length > 1) {
+      renderCountyChoice(location, (chosen) => {
         countyChoice.hidden = true;
-        showCountyResource(countyId);
+        showCountyResource(chosen);
       });
     } else if (location) {
       showCountyResource(location.county_ids[0]);
@@ -484,6 +535,8 @@ function showGuide(query) {
       "No Ohio match for that search.",
       `The guide covers ${locations.meta.counts.zips.toLocaleString("en-US")} Ohio ZIP codes and ${locations.meta.counts.places.toLocaleString("en-US")} Ohio place names, so check the spelling or try your ZIP code. Published statewide contests apply throughout Ohio.`,
     );
+  } else if (linkedCounty) {
+    showCounty(linkedCounty);
   } else if (location.county_ids.length > 1) {
     setNotice(
       "County confirmation needed.",
@@ -494,11 +547,8 @@ function showGuide(query) {
     showCounty(location.county_ids[0]);
   }
 
-  toggleRaces.setAttribute("aria-expanded", "false");
-  toggleRaces.textContent = "Show all contests";
-  statewideContainer.classList.remove("show-all");
   results.hidden = false;
-  results.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (scroll) results.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 setControlsDisabled(true);
@@ -515,11 +565,20 @@ for (const quickPick of quickPicks) {
   });
 }
 
-toggleRaces.addEventListener("click", () => {
-  const expanded = toggleRaces.getAttribute("aria-expanded") === "true";
-  toggleRaces.setAttribute("aria-expanded", String(!expanded));
-  toggleRaces.textContent = expanded ? "Show all contests" : "Show fewer contests";
-  statewideContainer.classList.toggle("show-all", !expanded);
+const COPY_LINK_LABEL = copyLink.textContent;
+
+copyLink.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(window.location.href);
+    copyLink.textContent = "Link copied";
+  } catch {
+    // Clipboard access is denied in some browsers and every insecure context.
+    // The address bar already holds the shareable link, so say so.
+    copyLink.textContent = "Copy the address bar link";
+  }
+  window.setTimeout(() => {
+    copyLink.textContent = COPY_LINK_LABEL;
+  }, 4000);
 });
 
 newSearch.addEventListener("click", () => {
@@ -564,6 +623,12 @@ try {
     renderCoverageSummary();
     dataStatus.hidden = true;
     setControlsDisabled(false);
+
+    const linked = parseGuideSearch(window.location.search);
+    if (linked) {
+      input.value = linked.query;
+      showGuide(linked.query, { scroll: false, countyId: linked.countyId });
+    }
   }
 } catch (error) {
   dataStatus.hidden = false;
