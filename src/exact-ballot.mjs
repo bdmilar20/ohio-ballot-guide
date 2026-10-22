@@ -21,6 +21,69 @@ const DIRECTIONS = new Map([
   ["SW", "SW"],
   ["SOUTHWEST", "SW"],
 ]);
+const DIRECTION_NAMES = new Map([
+  ["N", "NORTH"],
+  ["S", "SOUTH"],
+  ["E", "EAST"],
+  ["W", "WEST"],
+  ["NE", "NORTHEAST"],
+  ["NW", "NORTHWEST"],
+  ["SE", "SOUTHEAST"],
+  ["SW", "SOUTHWEST"],
+]);
+const SUFFIXES = new Map([
+  ["ALY", "ALLEY"], ["ANX", "ANNEX"], ["ARC", "ARCADE"], ["AVE", "AVENUE"],
+  ["BYU", "BAYOU"], ["BCH", "BEACH"], ["BND", "BEND"], ["BLF", "BLUFF"],
+  ["BLFS", "BLUFFS"], ["BTM", "BOTTOM"], ["BLVD", "BOULEVARD"], ["BR", "BRANCH"],
+  ["BRG", "BRIDGE"], ["BRK", "BROOK"], ["BRKS", "BROOKS"], ["BG", "BURG"],
+  ["BGS", "BURGS"], ["BYP", "BYPASS"], ["CP", "CAMP"], ["CYN", "CANYON"],
+  ["CPE", "CAPE"], ["CSWY", "CAUSEWAY"], ["CTR", "CENTER"], ["CTRS", "CENTERS"],
+  ["CIR", "CIRCLE"], ["CIRS", "CIRCLES"], ["CLF", "CLIFF"], ["CLFS", "CLIFFS"],
+  ["CLB", "CLUB"], ["CMN", "COMMON"], ["CMNS", "COMMONS"], ["COR", "CORNER"],
+  ["CORS", "CORNERS"], ["CRSE", "COURSE"], ["CT", "COURT"], ["CTS", "COURTS"],
+  ["CV", "COVE"], ["CVS", "COVES"], ["CRK", "CREEK"], ["CRES", "CRESCENT"],
+  ["CRST", "CREST"], ["XING", "CROSSING"], ["XRD", "CROSSROAD"], ["XRDS", "CROSSROADS"],
+  ["CURV", "CURVE"], ["DL", "DALE"], ["DM", "DAM"], ["DV", "DIVIDE"],
+  ["DR", "DRIVE"], ["DRS", "DRIVES"], ["EST", "ESTATE"], ["ESTS", "ESTATES"],
+  ["EXPY", "EXPRESSWAY"], ["EXT", "EXTENSION"], ["EXTS", "EXTENSIONS"], ["FALL", "FALL"],
+  ["FLS", "FALLS"], ["FRY", "FERRY"], ["FLD", "FIELD"], ["FLDS", "FIELDS"],
+  ["FLT", "FLAT"], ["FLTS", "FLATS"], ["FRD", "FORD"], ["FRDS", "FORDS"],
+  ["FRST", "FOREST"], ["FRG", "FORGE"], ["FRGS", "FORGES"], ["FRK", "FORK"],
+  ["FRKS", "FORKS"], ["FT", "FORT"], ["FWY", "FREEWAY"], ["GDN", "GARDEN"],
+  ["GDNS", "GARDENS"], ["GTWY", "GATEWAY"], ["GLN", "GLEN"], ["GLNS", "GLENS"],
+  ["GRN", "GREEN"], ["GRNS", "GREENS"], ["GRV", "GROVE"], ["GRVS", "GROVES"],
+  ["HBR", "HARBOR"], ["HBRS", "HARBORS"], ["HVN", "HAVEN"], ["HTS", "HEIGHTS"],
+  ["HWY", "HIGHWAY"], ["HL", "HILL"], ["HLS", "HILLS"], ["HOLW", "HOLLOW"],
+  ["INLT", "INLET"], ["IS", "ISLAND"], ["ISS", "ISLANDS"], ["ISLE", "ISLE"],
+  ["JCT", "JUNCTION"], ["JCTS", "JUNCTIONS"], ["KY", "KEY"], ["KYS", "KEYS"],
+  ["KNL", "KNOLL"], ["KNLS", "KNOLLS"], ["LK", "LAKE"], ["LKS", "LAKES"],
+  ["LAND", "LAND"], ["LNDG", "LANDING"], ["LN", "LANE"], ["LGT", "LIGHT"],
+  ["LGTS", "LIGHTS"], ["LF", "LOAF"], ["LCK", "LOCK"], ["LCKS", "LOCKS"],
+  ["LDG", "LODGE"], ["LOOP", "LOOP"], ["MALL", "MALL"], ["MNR", "MANOR"],
+  ["MNRS", "MANORS"], ["MDW", "MEADOW"], ["MDWS", "MEADOWS"], ["MEWS", "MEWS"],
+  ["ML", "MILL"], ["MLS", "MILLS"], ["MSN", "MISSION"], ["MTWY", "MOTORWAY"],
+  ["MT", "MOUNT"], ["MTN", "MOUNTAIN"], ["MTNS", "MOUNTAINS"], ["NCK", "NECK"],
+  ["ORCH", "ORCHARD"], ["OVAL", "OVAL"], ["OPAS", "OVERPASS"], ["PARK", "PARK"],
+  ["PKWY", "PARKWAY"], ["PASS", "PASS"], ["PSGE", "PASSAGE"], ["PATH", "PATH"],
+  ["PIKE", "PIKE"], ["PNE", "PINE"], ["PNES", "PINES"], ["PL", "PLACE"],
+  ["PLN", "PLAIN"], ["PLNS", "PLAINS"], ["PLZ", "PLAZA"], ["PT", "POINT"],
+  ["PTS", "POINTS"], ["PRT", "PORT"], ["PRTS", "PORTS"], ["PR", "PRAIRIE"],
+  ["RADL", "RADIAL"], ["RNCH", "RANCH"], ["RPD", "RAPID"], ["RPDS", "RAPIDS"],
+  ["RST", "REST"], ["RDG", "RIDGE"], ["RDGS", "RIDGES"], ["RIV", "RIVER"],
+  ["RD", "ROAD"], ["RDS", "ROADS"], ["RTE", "ROUTE"], ["ROW", "ROW"],
+  ["RUE", "RUE"], ["RUN", "RUN"], ["SHL", "SHOAL"], ["SHLS", "SHOALS"],
+  ["SHR", "SHORE"], ["SHRS", "SHORES"], ["SKWY", "SKYWAY"], ["SPG", "SPRING"],
+  ["SPGS", "SPRINGS"], ["SPUR", "SPUR"], ["SQ", "SQUARE"], ["SQS", "SQUARES"],
+  ["STA", "STATION"], ["STRA", "STRAVENUE"], ["STRM", "STREAM"], ["ST", "STREET"],
+  ["STS", "STREETS"], ["SMT", "SUMMIT"], ["TER", "TERRACE"], ["TRWY", "THROUGHWAY"],
+  ["TRCE", "TRACE"], ["TRAK", "TRACK"], ["TRFY", "TRAFFICWAY"], ["TRL", "TRAIL"],
+  ["TRLR", "TRAILER"], ["TUNL", "TUNNEL"], ["TPKE", "TURNPIKE"], ["UPAS", "UNDERPASS"],
+  ["UN", "UNION"], ["UNS", "UNIONS"], ["VLY", "VALLEY"], ["VLYS", "VALLEYS"],
+  ["VIA", "VIADUCT"], ["VW", "VIEW"], ["VWS", "VIEWS"], ["VLG", "VILLAGE"],
+  ["VLGS", "VILLAGES"], ["VL", "VILLE"], ["VIS", "VISTA"], ["WALK", "WALK"],
+  ["WALL", "WALL"], ["WAY", "WAY"], ["WAYS", "WAYS"], ["WL", "WELL"],
+  ["WLS", "WELLS"],
+].flatMap(([abbreviation, name]) => [[abbreviation, abbreviation], [name, abbreviation]]));
 
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -108,6 +171,14 @@ function normalizeDirection(value) {
   return direction;
 }
 
+function normalizeSuffix(value) {
+  const normalized = normalizeStreetPart(value, { allowEmpty: true });
+  if (!normalized) return "";
+  const suffix = SUFFIXES.get(normalized);
+  if (!suffix) throw new TypeError("street suffix is not recognized");
+  return suffix;
+}
+
 function normalizeHouseNumber(value) {
   const text = String(value ?? "").trim();
   if (!/^\d{1,5}$/.test(text)) throw new TypeError("house number must be 1 to 5 digits");
@@ -128,7 +199,7 @@ export function normalizeAddress(address) {
     house_number: normalizeHouseNumber(record.house_number),
     pre_direction: normalizeDirection(record.pre_direction),
     street_name: normalizeStreetPart(record.street_name),
-    street_suffix: normalizeStreetPart(record.street_suffix, { allowEmpty: true }),
+    street_suffix: normalizeSuffix(record.street_suffix),
     post_direction: normalizeDirection(record.post_direction),
     zip: normalizeZip(record.zip),
   };
@@ -142,6 +213,37 @@ function streetKey(record) {
     record.street_suffix,
     record.post_direction,
   ].join("|");
+}
+
+function streetKeys(record) {
+  const keys = new Set([streetKey(record)]);
+  if (record.pre_direction) {
+    keys.add(streetKey({
+      ...record,
+      pre_direction: "",
+      street_name: `${DIRECTION_NAMES.get(record.pre_direction)} ${record.street_name}`,
+    }));
+  } else {
+    const [first, ...rest] = record.street_name.split(" ");
+    const direction = DIRECTIONS.get(first);
+    if (direction && rest.length > 0) {
+      keys.add(streetKey({ ...record, pre_direction: direction, street_name: rest.join(" ") }));
+    }
+  }
+  return [...keys];
+}
+
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (!isObject(value)) return value;
+  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
+}
+
+export async function ballotContentId(ballot) {
+  const content = new TextEncoder().encode(JSON.stringify(canonicalize(ballot)));
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", content);
+  const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `sha256:${hex}`;
 }
 
 function matchesParity(number, parity) {
@@ -272,7 +374,7 @@ function assertAddressIndex(value) {
   };
 }
 
-function assertBallotBundle(value) {
+async function assertBallotBundle(value) {
   const bundle = requireObject(value, "ballot_bundle");
   if (bundle.schema_version !== SCHEMA_VERSION) {
     throw new TypeError(`ballot_bundle.schema_version must be ${SCHEMA_VERSION}`);
@@ -354,6 +456,10 @@ function assertBallotBundle(value) {
         throw new TypeError(`${label}.choices must be a non-empty list of strings`);
       }
     }
+    const contentId = await ballotContentId(ballot);
+    if (ballotId !== contentId) {
+      throw new TypeError(`ballot_bundle ballot ${ballotId} does not match its content digest ${contentId}`);
+    }
   }
 
   const precincts = new Map();
@@ -375,9 +481,9 @@ function assertBallotBundle(value) {
   return { bundle, precincts };
 }
 
-export function assertExactBallotData(addressIndex, ballotBundle) {
+export async function assertExactBallotData(addressIndex, ballotBundle) {
   const checkedIndex = assertAddressIndex(addressIndex);
-  const checkedBundle = assertBallotBundle(ballotBundle);
+  const checkedBundle = await assertBallotBundle(ballotBundle);
   if (checkedIndex.index.election_id !== checkedBundle.bundle.election_id) {
     throw new TypeError("address index and ballot bundle name different elections");
   }
@@ -401,8 +507,8 @@ export function assertExactBallotData(addressIndex, ballotBundle) {
   };
 }
 
-export function createExactBallotResolver({ addressIndex, ballotBundle }) {
-  const data = assertExactBallotData(addressIndex, ballotBundle);
+export async function createExactBallotResolver({ addressIndex, ballotBundle }) {
+  const data = await assertExactBallotData(addressIndex, ballotBundle);
 
   return (address) => {
     let normalized;
@@ -412,17 +518,17 @@ export function createExactBallotResolver({ addressIndex, ballotBundle }) {
       return { status: "invalid", reason: error.message };
     }
 
-    const key = streetKey(normalized);
-    const matches = (data.rulesByStreet.get(key) ?? []).filter(
+    const matches = streetKeys(normalized).flatMap((key) => (data.rulesByStreet.get(key) ?? []).filter(
       (rule) =>
         normalized.house_number >= rule.from &&
         normalized.house_number <= rule.to &&
         matchesParity(normalized.house_number, rule.parity),
-    );
+    ));
     if (matches.length === 0) return { status: "unmatched" };
-    if (matches.length !== 1) return { status: "ambiguous" };
+    const precinctIds = new Set(matches.map(({ precinct_id: precinctId }) => precinctId));
+    if (precinctIds.size !== 1) return { status: "ambiguous" };
 
-    const precinct = data.precincts.get(matches[0].precinct_id);
+    const precinct = data.precincts.get([...precinctIds][0]);
     return {
       status: "matched",
       election_id: data.election_id,

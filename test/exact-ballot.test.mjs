@@ -3,12 +3,11 @@ import test from "node:test";
 
 import {
   assertExactBallotData,
+  ballotContentId,
   createExactBallotResolver,
   normalizeAddress,
 } from "../src/exact-ballot.mjs";
 
-const ODD_BALLOT = `sha256:${"a".repeat(64)}`;
-const EVEN_BALLOT = `sha256:${"b".repeat(64)}`;
 const SOURCE_URL = "https://votehamiltoncountyohio.gov/sample-ballot/";
 
 function race(id) {
@@ -22,6 +21,11 @@ function race(id) {
     candidates: [{ name: "Test Candidate", party: null }],
   };
 }
+
+const ODD_BALLOT_CONTENT = { races: [race("odd-only")], issues: [] };
+const EVEN_BALLOT_CONTENT = { races: [race("even-only")], issues: [] };
+const ODD_BALLOT = await ballotContentId(ODD_BALLOT_CONTENT);
+const EVEN_BALLOT = await ballotContentId(EVEN_BALLOT_CONTENT);
 
 function fixture() {
   return {
@@ -88,8 +92,8 @@ function fixture() {
         { id: "CIN-01-B", name: "Cincinnati 01-B", ballot_id: EVEN_BALLOT },
       ],
       ballots: {
-        [ODD_BALLOT]: { races: [race("odd-only")], issues: [] },
-        [EVEN_BALLOT]: { races: [race("even-only")], issues: [] },
+        [ODD_BALLOT]: ODD_BALLOT_CONTENT,
+        [EVEN_BALLOT]: EVEN_BALLOT_CONTENT,
       },
     },
   };
@@ -109,15 +113,24 @@ test("normalizes only the structured address fields needed for a local match", (
       house_number: 11,
       pre_direction: "N",
       street_name: "O'BRYON AVENUE",
-      street_suffix: "ROAD",
+      street_suffix: "RD",
       post_direction: "",
       zip: "45202",
     },
   );
 });
 
-test("resolves odd and even street ranges to different exact ballots", () => {
-  const resolve = createExactBallotResolver(fixture());
+test("canonicalizes full and abbreviated street suffixes", () => {
+  for (const street_suffix of ["Street", "STREET", "St.", "ST"]) {
+    assert.equal(
+      normalizeAddress({ house_number: 11, street_name: "Main", street_suffix, zip: "45202" }).street_suffix,
+      "ST",
+    );
+  }
+});
+
+test("resolves odd and even street ranges to different exact ballots", async () => {
+  const resolve = await createExactBallotResolver(fixture());
   assert.deepEqual(
     resolve({ house_number: 11, street_name: "Main", street_suffix: "St.", zip: "45202" }),
     {
@@ -135,8 +148,43 @@ test("resolves odd and even street ranges to different exact ballots", () => {
   );
 });
 
-test("never repeats a voter's address in matched or failed results", () => {
-  const resolve = createExactBallotResolver(fixture());
+test("resolves a direction consistently whether the source stores it in the name or direction field", async () => {
+  const data = fixture();
+  data.addressIndex.street_ranges = data.addressIndex.street_ranges.map((rule) => ({
+    ...rule,
+    street_name: "NORTH BEND",
+  }));
+  const resolve = await createExactBallotResolver(data);
+  assert.equal(
+    resolve({ house_number: 11, pre_direction: "North", street_name: "Bend", street_suffix: "Street", zip: "45202" }).ballot_id,
+    ODD_BALLOT,
+  );
+  assert.equal(
+    resolve({ house_number: 11, street_name: "North Bend", street_suffix: "St", zip: "45202" }).ballot_id,
+    ODD_BALLOT,
+  );
+});
+
+test("returns ambiguous when two valid direction readings disagree", async () => {
+  const data = fixture();
+  data.addressIndex.street_ranges[0].street_name = "NORTH BEND";
+  data.addressIndex.street_ranges.push({
+    ...data.addressIndex.street_ranges[0],
+    pre_direction: "N",
+    street_name: "BEND",
+    precinct_id: "CIN-01-B",
+  });
+  data.addressIndex.coverage.listed_ranges = 3;
+  data.addressIndex.coverage.parsed_ranges = 3;
+  const resolve = await createExactBallotResolver(data);
+  assert.deepEqual(
+    resolve({ house_number: 11, pre_direction: "North", street_name: "Bend", street_suffix: "Street", zip: "45202" }),
+    { status: "ambiguous" },
+  );
+});
+
+test("never repeats a voter's address in matched or failed results", async () => {
+  const resolve = await createExactBallotResolver(fixture());
   const matched = JSON.stringify(
     resolve({ house_number: 11, street_name: "Main", street_suffix: "St", zip: "45202" }),
   );
@@ -149,28 +197,28 @@ test("never repeats a voter's address in matched or failed results", () => {
   assert.doesNotMatch(unmatched, /"MAIN"|"45202"|:111(?:[,}])/);
 });
 
-test("returns a bounded invalid result instead of guessing at malformed input", () => {
-  const resolve = createExactBallotResolver(fixture());
+test("returns a bounded invalid result instead of guessing at malformed input", async () => {
+  const resolve = await createExactBallotResolver(fixture());
   assert.deepEqual(
     resolve({ house_number: "12A", street_name: "Main", street_suffix: "St", zip: "45202" }),
     { status: "invalid", reason: "house number must be 1 to 5 digits" },
   );
 });
 
-test("rejects overlapping address ranges before any lookup can run", () => {
+test("rejects overlapping address ranges before any lookup can run", async () => {
   const data = fixture();
   data.addressIndex.street_ranges[1] = {
     ...data.addressIndex.street_ranges[1],
     from: 1,
     parity: "all",
   };
-  assert.throws(
-    () => assertExactBallotData(data.addressIndex, data.ballotBundle),
+  await assert.rejects(
+    assertExactBallotData(data.addressIndex, data.ballotBundle),
     /street ranges 0 and 1 overlap/,
   );
 });
 
-test("rejects an index that omits a published precinct", () => {
+test("rejects an index that omits a published precinct", async () => {
   const data = fixture();
   data.addressIndex.street_ranges.pop();
   data.addressIndex.coverage = {
@@ -180,35 +228,47 @@ test("rejects an index that omits a published precinct", () => {
     skipped: [],
     unexplained_rows: [],
   };
-  assert.throws(
-    () => assertExactBallotData(data.addressIndex, data.ballotBundle),
+  await assert.rejects(
+    assertExactBallotData(data.addressIndex, data.ballotBundle),
     /does not cover every published precinct/,
   );
 });
 
-test("rejects an incomplete precinct enumeration", () => {
+test("rejects an incomplete precinct enumeration", async () => {
   const data = fixture();
   data.ballotBundle.enumeration.parsed_precincts = 1;
-  assert.throws(
-    () => assertExactBallotData(data.addressIndex, data.ballotBundle),
+  await assert.rejects(
+    assertExactBallotData(data.addressIndex, data.ballotBundle),
     /must preserve every listed precinct/,
   );
 });
 
-test("rejects an incomplete street-range enumeration", () => {
+test("rejects an incomplete street-range enumeration", async () => {
   const data = fixture();
   data.addressIndex.coverage.parsed_ranges = 1;
-  assert.throws(
-    () => assertExactBallotData(data.addressIndex, data.ballotBundle),
+  await assert.rejects(
+    assertExactBallotData(data.addressIndex, data.ballotBundle),
     /must preserve every listed street range/,
   );
 });
 
-test("rejects an exact-ballot bundle from another election", () => {
+test("rejects an exact-ballot bundle from another election", async () => {
   const data = fixture();
   data.ballotBundle.election_id = "2027-05-04-primary";
-  assert.throws(
-    () => assertExactBallotData(data.addressIndex, data.ballotBundle),
+  await assert.rejects(
+    assertExactBallotData(data.addressIndex, data.ballotBundle),
     /name different elections/,
+  );
+});
+
+test("rejects a ballot id that does not match its canonical content", async () => {
+  const data = fixture();
+  const falseId = `sha256:${"a".repeat(64)}`;
+  data.ballotBundle.ballots[falseId] = data.ballotBundle.ballots[ODD_BALLOT];
+  delete data.ballotBundle.ballots[ODD_BALLOT];
+  data.ballotBundle.precincts[0].ballot_id = falseId;
+  await assert.rejects(
+    assertExactBallotData(data.addressIndex, data.ballotBundle),
+    /does not match its content digest/,
   );
 });

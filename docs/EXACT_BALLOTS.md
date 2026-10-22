@@ -41,6 +41,7 @@ date. Publication refuses:
 - a range pointing to a precinct absent from the ballot bundle;
 - a published precinct with no address coverage;
 - a precinct pointing to a missing ballot;
+- a ballot ID that is not the SHA-256 of its canonical ordered content;
 - a ballot no precinct uses; or
 - an index and bundle from different elections or counties.
 
@@ -52,7 +53,13 @@ incomplete result look more complete.
 
 The resolver accepts structured fields: a 1-to-5-digit house number, optional
 pre/post direction, street name, optional suffix, and five-digit ZIP. Source
-adapters normalize these fields before publication. The first contract does not
+adapters normalize these fields before publication. Full USPS suffix names and
+their standard abbreviations normalize to the same value (`STREET` and `ST.` to
+`ST`, for example). A leading direction may be represented either in the
+structured pre-direction field or as the first word of the street name; the
+resolver tries both readings and returns `ambiguous` if they resolve to
+different precincts. This covers names such as North Bend Road without guessing
+which occurrence of a direction word is structural. The first contract does not
 guess at alphanumeric or fractional house numbers; it returns an invalid result
 until an official source and tests define those cases.
 
