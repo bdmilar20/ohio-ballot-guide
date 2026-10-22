@@ -124,8 +124,8 @@
           "last_verified": "2026-10-14",
           "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
           "candidates": [
-            { "name": "Marilyn Zayas", "party": "Democratic" },
-            { "name": "Daniel R. Hawkins", "party": "Republican" }
+            { "name": "Marilyn Zayas", "party": "Democratic", "profile_id": "marilyn-zayas" },
+            { "name": "Daniel R. Hawkins", "party": "Republican", "profile_id": "daniel-r-hawkins" }
           ]
         },
         {
@@ -136,8 +136,8 @@
           "last_verified": "2026-10-14",
           "source_url": "https://www.ohiosos.gov/assets/dir2026-45-official-sample-ballot-november-3-2026.pdf",
           "candidates": [
-            { "name": "Jennifer Brunner", "party": "Democratic" },
-            { "name": "Colleen O’Donnell", "party": "Republican" }
+            { "name": "Jennifer Brunner", "party": "Democratic", "profile_id": "jennifer-brunner" },
+            { "name": "Colleen O’Donnell", "party": "Republican", "profile_id": "colleen-odonnell" }
           ]
         }
       ],

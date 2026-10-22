@@ -1,0 +1,214 @@
+{
+  "meta": {
+    "schema_version": 1,
+    "last_reviewed": "2026-10-21",
+    "scope": "Sourced biographical facts for the four 2026 Ohio Supreme Court candidates",
+    "editorial_policy": "Facts describe role, professional experience, and education. Candidate-authored sources are labeled. Positions and endorsements are outside this dataset."
+  },
+  "profiles": {
+    "marilyn-zayas": {
+      "name": "Marilyn Zayas",
+      "election_id": "2026-11-03-general",
+      "contest_id": "supreme-court-jan-1",
+      "last_reviewed": "2026-10-21",
+      "sources": {
+        "first-district-annual-report": {
+          "label": "Ohio First District Court of Appeals 2024 Annual Report",
+          "url": "https://firstdistrictcoa.org/wp-content/uploads/2025/04/2024-Annual-Report-Final-Digital.pdf",
+          "type": "official",
+          "last_checked": "2026-10-21"
+        },
+        "ohio-bar-profile": {
+          "label": "Ohio State Bar Association 2022 judicial candidate profile",
+          "url": "https://www.ohiobar.org/2022-judicial-elections/Marilyn-Zayas/",
+          "type": "candidate-questionnaire",
+          "last_checked": "2026-10-21"
+        }
+      },
+      "facts": [
+        {
+          "category": "role",
+          "text": "Judge on Ohio’s First District Court of Appeals; reelected to a six-year term in November 2024.",
+          "source_ids": ["first-district-annual-report"]
+        },
+        {
+          "category": "experience",
+          "text": "Before joining the appellate court in 2016, she practiced law for nearly 20 years. She has also sat by assignment on the Ohio Supreme Court and four other Ohio appellate districts.",
+          "source_ids": ["ohio-bar-profile"]
+        },
+        {
+          "category": "education",
+          "text": "B.S. in computer science from the City College of New York; J.D. from the University of Cincinnati College of Law.",
+          "source_ids": ["ohio-bar-profile"]
+        }
+      ],
+      "links": [
+        {
+          "kind": "campaign",
+          "label": "Campaign website",
+          "url": "https://judgemarilynzayas.com/",
+          "source_type": "candidate-authored",
+          "last_checked": "2026-10-21"
+        },
+        {
+          "kind": "campaign-finance",
+          "label": "Ohio Secretary of State campaign-finance search",
+          "url": "https://data.ohiosos.gov/portal/campaign-finance",
+          "source_type": "official",
+          "search_terms": "Community for Judge Marilyn Zayas",
+          "last_checked": "2026-10-21"
+        }
+      ]
+    },
+    "daniel-r-hawkins": {
+      "name": "Daniel R. Hawkins",
+      "election_id": "2026-11-03-general",
+      "contest_id": "supreme-court-jan-1",
+      "last_reviewed": "2026-10-21",
+      "sources": {
+        "supreme-court-bio": {
+          "label": "Supreme Court of Ohio biography",
+          "url": "https://www.supremecourt.ohio.gov/courts/judicial-system/supreme-court-of-ohio/justices-overview/daniel-hawkins/",
+          "type": "official",
+          "last_checked": "2026-10-21"
+        }
+      },
+      "facts": [
+        {
+          "category": "role",
+          "text": "Justice of the Supreme Court of Ohio since December 10, 2024.",
+          "source_ids": ["supreme-court-bio"]
+        },
+        {
+          "category": "experience",
+          "text": "Previously served on the Franklin County Court of Common Pleas and the Environmental Division of the Franklin County Municipal Court, after 13 years as a trial prosecutor.",
+          "source_ids": ["supreme-court-bio"]
+        },
+        {
+          "category": "education",
+          "text": "B.S. in criminal justice from Bowling Green State University; J.D. from the Ohio State University Moritz College of Law.",
+          "source_ids": ["supreme-court-bio"]
+        }
+      ],
+      "links": [
+        {
+          "kind": "campaign",
+          "label": "Campaign website",
+          "url": "https://hawkinsforohio.com/",
+          "source_type": "candidate-authored",
+          "last_checked": "2026-10-21"
+        },
+        {
+          "kind": "campaign-finance",
+          "label": "Ohio Secretary of State campaign-finance search",
+          "url": "https://data.ohiosos.gov/portal/campaign-finance",
+          "source_type": "official",
+          "search_terms": "Hawkins for Ohio",
+          "last_checked": "2026-10-21"
+        }
+      ]
+    },
+    "jennifer-brunner": {
+      "name": "Jennifer Brunner",
+      "election_id": "2026-11-03-general",
+      "contest_id": "supreme-court-jan-2",
+      "last_reviewed": "2026-10-21",
+      "sources": {
+        "supreme-court-bio": {
+          "label": "Supreme Court of Ohio biography",
+          "url": "https://www.supremecourt.ohio.gov/courts/judicial-system/supreme-court-of-ohio/justices-overview/jennifer-brunner",
+          "type": "official",
+          "last_checked": "2026-10-21"
+        }
+      },
+      "facts": [
+        {
+          "category": "role",
+          "text": "Justice of the Supreme Court of Ohio since January 2, 2021.",
+          "source_ids": ["supreme-court-bio"]
+        },
+        {
+          "category": "experience",
+          "text": "Previously served on the Tenth District Court of Appeals and the Franklin County Court of Common Pleas, as Ohio Secretary of State, and for 17 years in private law practice.",
+          "source_ids": ["supreme-court-bio"]
+        },
+        {
+          "category": "education",
+          "text": "Degree in sociology-gerontology from Miami University; J.D. from Capital University Law School.",
+          "source_ids": ["supreme-court-bio"]
+        }
+      ],
+      "links": [
+        {
+          "kind": "campaign",
+          "label": "Campaign website",
+          "url": "https://justicebrunner.com/",
+          "source_type": "candidate-authored",
+          "last_checked": "2026-10-21"
+        },
+        {
+          "kind": "campaign-finance",
+          "label": "Ohio Secretary of State campaign-finance search",
+          "url": "https://data.ohiosos.gov/portal/campaign-finance",
+          "source_type": "official",
+          "search_terms": "People for Justice Jennifer Brunner",
+          "last_checked": "2026-10-21"
+        }
+      ]
+    },
+    "colleen-odonnell": {
+      "name": "Colleen O’Donnell",
+      "election_id": "2026-11-03-general",
+      "contest_id": "supreme-court-jan-2",
+      "last_reviewed": "2026-10-21",
+      "sources": {
+        "campaign-biography": {
+          "label": "O’Donnell for Ohio biography",
+          "url": "https://www.odonnellforohio.com/",
+          "type": "candidate-authored",
+          "last_checked": "2026-10-21"
+        },
+        "candidate-profile": {
+          "label": "Columbus Bar Association Judge the Candidates profile",
+          "url": "https://www.judgethecandidates.org/candidate/odonnell.php",
+          "type": "candidate-questionnaire",
+          "last_checked": "2026-10-21"
+        }
+      },
+      "facts": [
+        {
+          "category": "role",
+          "text": "Most recently served as a U.S. immigration judge in Laredo, Texas; previously served on the Franklin County Court of Common Pleas.",
+          "source_ids": ["campaign-biography"]
+        },
+        {
+          "category": "experience",
+          "text": "Her candidate biography also lists service at the Public Utilities Commission of Ohio and Ohio Attorney General’s Office, a federal judicial clerkship, and private practice.",
+          "source_ids": ["campaign-biography"]
+        },
+        {
+          "category": "education",
+          "text": "B.A. in political science from Miami University; J.D. from Case Western Reserve University School of Law.",
+          "source_ids": ["candidate-profile"]
+        }
+      ],
+      "links": [
+        {
+          "kind": "campaign",
+          "label": "Campaign website",
+          "url": "https://www.odonnellforohio.com/",
+          "source_type": "candidate-authored",
+          "last_checked": "2026-10-21"
+        },
+        {
+          "kind": "campaign-finance",
+          "label": "Ohio Secretary of State campaign-finance search",
+          "url": "https://data.ohiosos.gov/portal/campaign-finance",
+          "source_type": "official",
+          "search_terms": "O’Donnell for Ohio",
+          "last_checked": "2026-10-21"
+        }
+      ]
+    }
+  }
+}
