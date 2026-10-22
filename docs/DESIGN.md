@@ -129,3 +129,25 @@ possible. Both point the same way:
 - Never add a section that does not help a voter vote.
 - Every contest carries its official source link and its `last_verified` date.
   Trust here comes from citation, not from reassuring copy.
+- A result is addressable: the search and the chosen county live in the query
+  string, so a voter can bookmark their guide or send it to someone.
+
+### Resolved: no contest is hidden behind a control
+
+"Not an overload of content" governs how many *sections* the page has. It never
+licenses hiding a contest that is on the ballot.
+
+The statewide list used to render three cards and put the rest behind a "Show
+all contests" button. On the 2026 general ballot that hid Secretary of State,
+Auditor, Treasurer and both Ohio Supreme Court seats. Judicial races are the
+ones a voter is least likely to have heard of, and they sit at the bottom of the
+printed ballot too, so the one section of the guide that could have helped most
+was the section a voter had to know to ask for. Braeden searched his own ZIP on
+launch day and reported the guide had about a tenth of his ballot; a third of
+that gap was this collapse.
+
+So: every published contest renders, in ballot order, with no expand control.
+`test/contest-visibility.test.mjs` fails if a hiding CSS rule, a collapse
+control, a `data-secondary` tag, or a cutoff argument comes back. If the list
+ever gets long enough to need navigation, add navigation — a jump list or
+anchors — never a control that makes a contest invisible by default.
