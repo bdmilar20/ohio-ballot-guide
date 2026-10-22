@@ -1,7 +1,7 @@
 {
   "meta": {
     "jurisdiction": "Ohio",
-    "last_reviewed": "2026-10-15",
+    "last_reviewed": "2026-10-21",
     "coverage_note": "Statewide contests plus Adams County content common to every enumerated precinct ballot and selected, explicitly partial countywide contests for Franklin, Cuyahoga, Hamilton, Montgomery, and Summit counties. County, ZIP, and place-name geography is generated into data/locations.json."
   },
   "elections": [
@@ -224,18 +224,192 @@
         "hamilton": {
           "coverage": {
             "status": "partial",
-            "scope": "Selected countywide contests",
-            "summary": "Other countywide contests and all district, municipal, school, and precinct contests may be omitted.",
+            "scope": "All 17 countywide candidate contests in the certified candidate list",
+            "summary": "Congressional, state legislative, municipal, school, and precinct contests vary by address and remain excluded, as do ballot issues.",
             "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
-            "last_verified": "2026-10-15"
+            "last_verified": "2026-10-21"
           },
           "races": [
+            {
+              "id": "hamilton-court-of-appeals-1st-2027-02-09",
+              "scope": "Hamilton County · Term beginning February 9, 2027 · Vote for one",
+              "office": "Judge of the Court of Appeals (1st District)",
+              "office_id": "court-of-appeals-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Ginger S. Bock", "party": "Democratic" }
+              ]
+            },
+            {
+              "id": "hamilton-common-pleas-general-2027-01-01",
+              "scope": "Hamilton County · Term beginning January 1, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, General Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Katie Casch", "party": "Republican" },
+                { "name": "Donte Johnson", "party": "Democratic" }
+              ]
+            },
+            {
+              "id": "hamilton-common-pleas-general-2027-01-02",
+              "scope": "Hamilton County · Term beginning January 2, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, General Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Christian A. Jenkins", "party": "Democratic" },
+                { "name": "Betsy Sundermann", "party": "Republican" }
+              ]
+            },
+            {
+              "id": "hamilton-common-pleas-general-2027-01-04",
+              "scope": "Hamilton County · Term beginning January 4, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, General Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Chris Wagner", "party": "Democratic" }
+              ]
+            },
+            {
+              "id": "hamilton-common-pleas-general-2027-02-09",
+              "scope": "Hamilton County · Term beginning February 9, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, General Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Roger Bouchard", "party": "Republican" },
+                { "name": "Jennifer Branch", "party": "Democratic" }
+              ]
+            },
+            {
+              "id": "hamilton-common-pleas-general-2027-02-10",
+              "scope": "Hamilton County · Term beginning February 10, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, General Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Dennis Charles Mahoney", "party": "Republican" },
+                { "name": "Alan C. Triggs", "party": "Democratic" }
+              ]
+            },
+            {
+              "id": "hamilton-common-pleas-general-2027-02-11",
+              "scope": "Hamilton County · Term beginning February 11, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, General Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Robert A. Goering", "party": "Republican" },
+                { "name": "Latoya S. Maley", "party": "Democratic" }
+              ]
+            },
+            {
+              "id": "hamilton-common-pleas-general-2027-02-12",
+              "scope": "Hamilton County · Term beginning February 12, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, General Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Wende C. Cross", "party": "Democratic" }
+              ]
+            },
+            {
+              "id": "hamilton-common-pleas-general-2027-02-13",
+              "scope": "Hamilton County · Term beginning February 13, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, General Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Alison Hatheway", "party": "Democratic" }
+              ]
+            },
+            {
+              "id": "hamilton-common-pleas-drug-court-2027-01-03",
+              "scope": "Hamilton County · Term beginning January 3, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, Drug Court Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Nicole L. Sanders", "party": "Democratic" }
+              ]
+            },
+            {
+              "id": "hamilton-common-pleas-probate-2027-02-09",
+              "scope": "Hamilton County · Term beginning February 9, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, Probate Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Elizabeth A. Tye", "party": "Democratic" },
+                { "name": "Ralph Winkler", "party": "Republican" }
+              ]
+            },
+            {
+              "id": "hamilton-common-pleas-juvenile-2027-02-14",
+              "scope": "Hamilton County · Term beginning February 14, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, Juvenile Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Kari L. Bloom", "party": "Democratic" },
+                { "name": "Susan Luken", "party": "Republican" }
+              ]
+            },
+            {
+              "id": "hamilton-common-pleas-domestic-relations-2027-07-01",
+              "scope": "Hamilton County · Term beginning July 1, 2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, Domestic Relations Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Tiffany Evans", "party": "Democratic" }
+              ]
+            },
+            {
+              "id": "hamilton-common-pleas-general-unexpired-2029-01-03",
+              "scope": "Hamilton County · Unexpired term ending January 3, 2029 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, General Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Sarah Henry", "party": "Democratic" },
+                { "name": "Chris McDowell", "party": "Republican" }
+              ]
+            },
+            {
+              "id": "hamilton-common-pleas-general-unexpired-2029-01-14",
+              "scope": "Hamilton County · Unexpired term ending January 14, 2029 · Vote for one",
+              "office": "Judge of the Court of Common Pleas, General Division",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-21",
+              "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
+              "candidates": [
+                { "name": "Leah Dinkelacker", "party": "Republican" },
+                { "name": "Manisha Kotian", "party": "Democratic" }
+              ]
+            },
             {
               "id": "hamilton-commissioner",
               "scope": "Hamilton County · Vote for one",
               "office": "County Commissioner",
               "office_id": "county-commissioner",
-              "last_verified": "2026-10-15",
+              "last_verified": "2026-10-21",
               "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
               "candidates": [
                 { "name": "Meeka Owens", "party": "Democratic" },
@@ -248,7 +422,7 @@
               "scope": "Hamilton County · Vote for one",
               "office": "County Auditor",
               "office_id": "county-auditor",
-              "last_verified": "2026-10-15",
+              "last_verified": "2026-10-21",
               "source_url": "https://votehamiltoncountyohio.gov/wp-content/uploads/2026/09/November-2026-All-Certified-Candidates-Profile-1-1.pdf",
               "candidates": [
                 { "name": "Jessica E. Miranda", "party": "Democratic" }
