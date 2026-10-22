@@ -1,4 +1,5 @@
 import {
+  ballotCoverage,
   countiesWithContests,
   contestSequenceLabels,
   countyCoverageNotice,
@@ -30,6 +31,9 @@ const resultKicker = document.querySelector("#result-kicker");
 const resultTitle = document.querySelector("#result-title");
 const resultSummary = document.querySelector("#result-summary");
 const coverageNotice = document.querySelector("#coverage-notice");
+const ballotCoverageSection = document.querySelector("#ballot-coverage");
+const ballotCoverageCounts = document.querySelector("#ballot-coverage-counts");
+const ballotCoverageGaps = document.querySelector("#ballot-coverage-gaps");
 const statewideSection = document.querySelector("#statewide-section");
 const statewideContainer = document.querySelector("#statewide-races");
 const localContainer = document.querySelector("#local-races");
@@ -388,6 +392,20 @@ function renderCoverageSummary() {
   ].join(" ");
 }
 
+// The headline number for a result, rendered before any contest card so the
+// count is read first. It renders again once a county is known, because the
+// county section is most of what a voter is counting.
+function renderBallotCoverage(countyId = null) {
+  const coverage = ballotCoverage(activeElection, {
+    countyId,
+    countyName: countyId ? locations.counties[countyId].name : null,
+  });
+  ballotCoverageSection.hidden = coverage === null;
+  if (!coverage) return;
+  ballotCoverageCounts.textContent = coverage.counts;
+  ballotCoverageGaps.textContent = coverage.gaps;
+}
+
 function showCountyResource(countyId) {
   const county = locations.counties[countyId];
   countyResourceLabel.textContent = `${county.name} election office`;
@@ -402,6 +420,7 @@ function showCountyResource(countyId) {
 function showCounty(countyId) {
   const county = locations.counties[countyId];
   setGuideUrl(activeQuery, countyId);
+  renderBallotCoverage(countyId);
   const countyElection = activeElection.counties[countyId];
   const races = racesForCounty(countyId, activeElection.counties);
   const issues = issuesForCounty(countyId, activeElection.counties);
@@ -478,6 +497,7 @@ function showGuide(query, { scroll = true, countyId = null } = {}) {
   activeQuery = query;
   setGuideUrl(query);
   const hasBallotDetails = hasPublishedBallotDetails(activeElection);
+  renderBallotCoverage();
   // A county carried in the link only counts if the match actually crosses it.
   const linkedCounty =
     countyId && location?.county_ids.includes(countyId) ? countyId : null;

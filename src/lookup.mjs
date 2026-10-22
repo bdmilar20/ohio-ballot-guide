@@ -114,6 +114,51 @@ export function countyCoverageNotice(countyName, coverage, raceCount, issueCount
   };
 }
 
+function sentenceList(parts) {
+  if (parts.length <= 2) return parts.join(" and ");
+  return `${parts.slice(0, -1).join(", ")}, and ${parts.at(-1)}`;
+}
+
+// Braeden searched his own ZIP on launch day and counted roughly a tenth of his
+// ballot. Nothing on the page told him how much it had, so what he could see
+// read as the whole election. Every result now opens with the count the data
+// can defend, and says in the same breath that a count is not a ballot.
+export function ballotCoverage(election, { countyId = null, countyName = null } = {}) {
+  const county = countyId ? election.counties[countyId] : null;
+  const statewideRaces = election.statewide_races.length;
+  const statewideIssues = election.issues.length;
+  const countyRaces = county?.races?.length ?? 0;
+  const countyIssues = county?.issues?.length ?? 0;
+  const total = statewideRaces + statewideIssues + countyRaces + countyIssues;
+
+  if (total === 0) return null;
+
+  const where = countyName ? ` in ${countyName}` : "";
+  const parts = [];
+  if (statewideRaces > 0) parts.push(countPhrase(statewideRaces, "statewide contest"));
+  if (statewideIssues > 0) parts.push(countPhrase(statewideIssues, "statewide ballot issue"));
+  if (countyRaces > 0) parts.push(`${countPhrase(countyRaces, "countywide contest")}${where}`);
+  if (countyIssues > 0) parts.push(`${countPhrase(countyIssues, "county ballot issue")}${where}`);
+
+  let gaps;
+  if (countyRaces + countyIssues > 0) {
+    gaps =
+      "That is not your whole ballot. Each section below names the official list it came from and what that list leaves out.";
+  } else if (countyId) {
+    gaps =
+      "That is not your whole ballot: no local contests are verified for your county yet, so everything here is content that appears statewide.";
+  } else {
+    gaps =
+      "That is not your whole ballot, and it holds no local contests yet — everything here appears on every Ohio ballot.";
+  }
+
+  return {
+    total,
+    counts: `This guide has ${countPhrase(total, "contest or question", "contests and questions")} for you: ${sentenceList(parts)}.`,
+    gaps,
+  };
+}
+
 export function sourceLabel(race, label, sequenceLabel = null) {
   return [label, race.office, sequenceLabel, race.scope].filter(Boolean).join(" — ");
 }
