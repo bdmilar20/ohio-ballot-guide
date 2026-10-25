@@ -22,8 +22,8 @@
 // requireSameStamp in the adapter rather than from copies here, because a
 // second copy would drift and the drift would read as coverage.
 
-import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { appendFile, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -43,6 +43,7 @@ import {
 import { appendObservation, emptyLog, observationFromCoverage } from "./vtrapp-stamp-log.mjs";
 
 export const SURVEY_SCHEMA_VERSION = 2;
+export const PARTIAL_SCHEMA_VERSION = 1;
 
 /**
  * Surveys one county with the same requests the adapter opens with.
@@ -155,12 +156,108 @@ export function summarize(counties) {
   };
 }
 
+/**
+ * Reads whole county records left by earlier attempts at the same survey.
+ *
+ * The journal is scoped to one election and records the start time of the run
+ * that actually observed each county. A resumed survey can therefore append
+ * truthful, per-attempt stamp observations instead of pretending counties
+ * read hours or days apart were all seen at the final restart time.
+ */
+export async function readPartial(path, electionKey) {
+  let text;
+  try {
+    text = await readFile(path, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return { counties: {}, observations: [] };
+    throw error;
+  }
+
+  const counties = {};
+  const observations = [];
+  let current = null;
+  let previousObservedAt = null;
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    let entry;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      throw new Error(`${path}: a partial survey line is not valid JSON; delete the file to start the survey over`);
+    }
+    if (entry.schema_version !== PARTIAL_SCHEMA_VERSION) {
+      throw new Error(`${path}: partial survey must be schema ${PARTIAL_SCHEMA_VERSION}`);
+    }
+    if (entry.election !== electionKey) {
+      throw new Error(`${path}: holds election ${entry.election}, not ${electionKey}`);
+    }
+    if (typeof entry.county !== "string" || !entry.county) {
+      throw new Error(`${path}: a partial survey line does not name a county`);
+    }
+    if (!entry.record || typeof entry.record !== "object" || Array.isArray(entry.record)) {
+      throw new Error(`${path}: ${entry.county} has no county record`);
+    }
+    if (entry.record.transport_error) {
+      throw new Error(`${path}: ${entry.county} records a transport error; unanswered requests must be retried`);
+    }
+    if (counties[entry.county]) {
+      throw new Error(`${path}: records ${entry.county} more than once`);
+    }
+    const observedAt = Date.parse(entry.observed_at);
+    if (!Number.isFinite(observedAt)) {
+      throw new Error(`${path}: ${entry.county} has an invalid observed_at timestamp`);
+    }
+    if (previousObservedAt !== null && observedAt < previousObservedAt) {
+      throw new Error(`${path}: observations are not in chronological order`);
+    }
+    previousObservedAt = observedAt;
+
+    counties[entry.county] = entry.record;
+    if (!current || current.observed_at !== entry.observed_at) {
+      current = {
+        observed_at: entry.observed_at,
+        election: electionKey,
+        source: "scripts/survey-vtrapp.mjs",
+        surveyed: [],
+        stamps: {},
+      };
+      observations.push(current);
+    }
+    current.surveyed.push(entry.county);
+    if (entry.record.source_updated_at) current.stamps[entry.county] = entry.record.source_updated_at;
+  }
+  return { counties, observations };
+}
+
+/**
+ * Replays observations recovered from a partial journal into the append-only
+ * stamp log. An exact observation already present means a prior finalization
+ * wrote the log but died before deleting the journal, so it is safe to skip.
+ */
+export function appendPartialObservations(log, observations) {
+  let next = log;
+  for (const observation of observations) {
+    const existing = next.observations.find((candidate) => candidate.observed_at === observation.observed_at);
+    if (existing) {
+      if (JSON.stringify(existing) !== JSON.stringify(observation)) {
+        throw new Error(
+          `the stamp log already has a different observation at ${observation.observed_at}; refusing to rewrite history`,
+        );
+      }
+      continue;
+    }
+    next = appendObservation(next, observation);
+  }
+  return next;
+}
+
 /** Surveys every county serially, because the vendor is paced and stateful. */
 export async function surveyVtrapp({
   countyIds,
   electionKey,
   client = createVendorClient(),
   survey = surveyCounty,
+  resumedCounties = {},
   now = () => new Date(),
   onCounty = () => {},
 }) {
@@ -168,8 +265,18 @@ export async function surveyVtrapp({
     throw new Error("a survey needs at least one county id");
   }
   const electionId = electionIdFromKey(electionKey);
+  const requested = new Set(countyIds);
+  for (const countyId of Object.keys(resumedCounties)) {
+    if (!requested.has(countyId)) throw new Error(`partial survey contains unrequested county ${countyId}`);
+  }
   const counties = {};
   for (const countyId of countyIds) {
+    if (resumedCounties[countyId]) {
+      const record = resumedCounties[countyId];
+      counties[countyId] = record;
+      await onCounty({ countyId, record, resumed: true });
+      continue;
+    }
     // A survey of the whole state is ~232 requests over several minutes, so one
     // slow response is expected rather than exceptional. Letting it propagate
     // cost a 30-county run in testing: the vendor timed out on one county and
@@ -198,7 +305,7 @@ export async function surveyVtrapp({
       };
     }
     counties[countyId] = record;
-    await onCounty({ countyId, record });
+    await onCounty({ countyId, record, resumed: false });
     await client.pause();
   }
   return {
@@ -244,7 +351,26 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
       if (!boards[countyId]) throw new Error(`${countyId} is not a county in data/county-boards.json`);
     }
 
+    const isWholeState = !args.counties;
+    if (!isWholeState && !args.out) {
+      throw new Error("--counties is a partial survey and requires --out so it cannot replace canonical coverage");
+    }
+    if (!isWholeState && args.log !== "none") {
+      throw new Error("--counties cannot append a statewide stamp observation; pass --log none");
+    }
     const out = args.out ? resolve(args.out) : fileURLToPath(new URL("../data/vtrapp-coverage.json", import.meta.url));
+    const partialPath =
+      args.partial === "none"
+        ? null
+        : args.partial
+          ? resolve(args.partial)
+          : isWholeState
+            ? fileURLToPath(new URL(`../.cache/vtrapp-survey-${args.election}.ndjson`, import.meta.url))
+            : null;
+    if (partialPath) await mkdir(dirname(partialPath), { recursive: true });
+    const partial = partialPath
+      ? await readPartial(partialPath, args.election)
+      : { counties: {}, observations: [] };
 
     // A NaN delay silently removes the pacing from a loop that hits a
     // government server 88 times, so it is rejected rather than coerced.
@@ -253,15 +379,56 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
       throw new Error(`--delay must be a nonnegative number of milliseconds, not ${JSON.stringify(args.delay)}`);
     }
     const client = createVendorClient({ delayMs });
+    const observedAt = new Date();
     const survey = await surveyVtrapp({
       countyIds,
       electionKey: args.election,
       client,
-      onCounty: ({ countyId, record }) => {
+      resumedCounties: partial.counties,
+      now: () => observedAt,
+      onCounty: async ({ countyId, record, resumed }) => {
+        if (resumed) {
+          console.error(`${countyId.padEnd(12)} resumed`);
+          return;
+        }
         const scale = record.enumerable ? `${record.precinct_rows_parsed} splits` : (record.blocked ?? "blocked");
         console.error(`${countyId.padEnd(12)} ${record.enumerable ? "ok     " : "BLOCKED"} ${scale}`);
+        // An unanswered request is not source evidence and must be tried again.
+        // Every other response is a whole county record worth keeping.
+        if (partialPath && !record.transport_error) {
+          await appendFile(
+            partialPath,
+            `${JSON.stringify({
+              schema_version: PARTIAL_SCHEMA_VERSION,
+              election: args.election,
+              observed_at: observedAt.toISOString(),
+              county: countyId,
+              record,
+            })}\n`,
+          );
+        }
       },
     });
+    if (survey.meta.summary.transport_errors > 0) {
+      if (!args.out) {
+        throw new Error(
+          `${survey.meta.summary.transport_errors} request(s) did not answer; canonical coverage was not replaced. ` +
+            `Re-run the same command to resume completed counties and retry only transport failures.`,
+        );
+      }
+      if (args.log !== "none") {
+        throw new Error("an incomplete diagnostic survey cannot add freshness evidence; pass --log none");
+      }
+    }
+    const completed = partialPath ? await readPartial(partialPath, args.election) : null;
+    const observations = completed?.observations.length
+      ? completed.observations
+      : [observationFromCoverage(survey, { observedAt })];
+    // A resumed artifact can span more than one process and more than one day.
+    // Naming that range prevents generated_on (the final restart's Ohio date)
+    // from reading as though every county was observed then.
+    survey.meta.observed_from = observations[0].observed_at;
+    survey.meta.observed_through = observations.at(-1).observed_at;
     await writeFile(out, `${JSON.stringify(survey, null, 2)}\n`);
     const { enumerable, counties, precinct_splits: splits } = survey.meta.summary;
     console.log(`Wrote ${out}: ${enumerable} of ${counties} counties enumerable, ${splits} precinct splits`);
@@ -285,10 +452,13 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
         if (error.code === "ENOENT") return emptyLog({ election: survey.meta.election });
         throw error;
       });
-      const log = appendObservation(existing, observationFromCoverage(survey, { observedAt: new Date() }));
+      const log = completed
+        ? appendPartialObservations(existing, observations)
+        : appendObservation(existing, observations[0]);
       await writeFile(logPath, `${JSON.stringify(log, null, 2)}\n`);
       console.log(`Appended observation ${log.observations.length} to ${logPath}; run npm run gate:vtrapp to see what it settles.`);
     }
+    if (partialPath) await unlink(partialPath);
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;

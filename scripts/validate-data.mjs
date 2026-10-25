@@ -114,6 +114,13 @@ assert.equal(
 );
 assert.equal(coverage.meta.generated_by, "scripts/survey-vtrapp.mjs");
 assertDate(coverage.meta.generated_on, "vtrapp coverage meta.generated_on");
+if (coverage.meta.observed_from !== undefined || coverage.meta.observed_through !== undefined) {
+  const observedFrom = Date.parse(coverage.meta.observed_from);
+  const observedThrough = Date.parse(coverage.meta.observed_through);
+  assert.ok(Number.isFinite(observedFrom), "vtrapp coverage meta.observed_from must be a timestamp");
+  assert.ok(Number.isFinite(observedThrough), "vtrapp coverage meta.observed_through must be a timestamp");
+  assert.ok(observedFrom <= observedThrough, "vtrapp coverage observation range cannot run backwards");
+}
 assert.deepEqual(
   Object.keys(coverage.counties).sort(),
   [...countyIds].sort(),

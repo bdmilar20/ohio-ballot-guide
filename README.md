@@ -60,6 +60,11 @@ Like the other live-source scripts it is **run by hand, never from CI**:
 npm run survey:vtrapp -- --election 20261103G
 ```
 
+The statewide command is resumable. It journals whole county responses under
+`.cache/`, retries only requests that never answered, preserves each attempt's
+actual observation time for the freshness gate, and deletes the journal after
+the canonical artifact and stamp log are safely written.
+
 The artifact records, per county, the vendor response, whether the election is
 offered, the board's own "last updated" stamp, and the precinct-row counts —
 and, for a county that cannot be enumerated, the adapter's own reason. The
