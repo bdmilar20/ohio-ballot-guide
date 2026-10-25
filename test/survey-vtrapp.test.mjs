@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -25,6 +26,59 @@ import { emptyLog } from "../scripts/vtrapp-stamp-log.mjs";
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const fixture = (name) => readFile(join(projectRoot, "test", "fixtures", "vtrapp", `${name}.html`), "utf8");
+const surveyScript = join(projectRoot, "scripts", "survey-vtrapp.mjs");
+
+async function writeFetchStub(directory) {
+  const path = join(directory, "fetch-stub.mjs");
+  await writeFile(path, `
+import { appendFileSync } from "node:fs";
+
+globalThis.fetch = async (url) => {
+  appendFileSync(process.env.OBG_REQUEST_LOG, \`\${url}\\n\`);
+  if (process.env.OBG_FETCH_MODE === "edge-and-drop") {
+    if (url.includes("/allen/")) return new Response("Attention Required", { status: 403 });
+    throw new Error("connection dropped");
+  }
+  if (process.env.OBG_FETCH_MODE === "not-a-customer") {
+    return new Response("Not a Customer", { status: 200 });
+  }
+  throw new Error(\`unknown OBG_FETCH_MODE: \${process.env.OBG_FETCH_MODE}\`);
+};
+`);
+  return path;
+}
+
+function runSurveyCli({ preload, requestLog, mode, out, partial, counties }) {
+  return spawnSync(
+    process.execPath,
+    [
+      "--import",
+      preload,
+      surveyScript,
+      "--election",
+      "20261103G",
+      "--counties",
+      counties.join(","),
+      "--out",
+      out,
+      "--log",
+      "none",
+      "--partial",
+      partial,
+      "--delay",
+      "0",
+    ],
+    {
+      cwd: projectRoot,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        OBG_FETCH_MODE: mode,
+        OBG_REQUEST_LOG: requestLog,
+      },
+    },
+  );
+}
 
 const LISTING = `<html>
   Election data last updated: 10/12/26 02:32:40 PM<br/>
@@ -317,7 +371,7 @@ test("a partial journal preserves each attempt's stamp observation", async (t) =
   assert.equal(log.observations[1].observed_at, "2026-10-24T12:00:00.000Z");
 });
 
-test("a partial journal refuses wrong-election, duplicate, transport, and truncated records", async (t) => {
+test("a partial journal refuses wrong-election, duplicate, transport, truncated, and out-of-order records", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "obg-vtrapp-partial-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const path = join(directory, "survey.ndjson");
@@ -340,6 +394,88 @@ test("a partial journal refuses wrong-election, duplicate, transport, and trunca
   await assert.rejects(() => readPartial(path, "20261103G"), /retryable response/);
   await writeFile(path, `${JSON.stringify(entry)}\n{"schema_version":1`);
   await assert.rejects(() => readPartial(path, "20261103G"), /not valid JSON/);
+
+  await writeFile(
+    path,
+    `${JSON.stringify({ ...entry, observed_at: "2026-10-22T13:00:00.000Z" })}\n` +
+      `${JSON.stringify({ ...entry, county: "allen", observed_at: "2026-10-22T12:59:59.999Z" })}\n`,
+  );
+  await assert.rejects(() => readPartial(path, "20261103G"), /not in chronological order/);
+});
+
+test("the CLI journals only durable county responses", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "obg-vtrapp-cli-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const preload = await writeFetchStub(directory);
+  const out = join(directory, "coverage.json");
+  const partial = join(directory, "survey.ndjson");
+  const requestLog = join(directory, "requests.log");
+
+  const run = runSurveyCli({
+    preload,
+    requestLog,
+    mode: "edge-and-drop",
+    out,
+    partial,
+    counties: ["allen", "wyandot"],
+  });
+
+  assert.equal(run.status, 0, run.stderr);
+  const coverage = JSON.parse(await readFile(out, "utf8"));
+  assert.equal(coverage.meta.summary.transport_errors, 2);
+  await assert.rejects(
+    () => readFile(partial, "utf8"),
+    (error) => error.code === "ENOENT",
+    "temporary HTTP and unanswered requests must not become resumable evidence",
+  );
+  const requests = (await readFile(requestLog, "utf8")).trim().split("\n");
+  assert.equal(requests.filter((url) => url.includes("/allen/")).length, 1);
+  assert.equal(requests.filter((url) => url.includes("/wyandot/")).length, 3);
+});
+
+test("the CLI preserves the full observation range across resumed batches", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "obg-vtrapp-cli-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const preload = await writeFetchStub(directory);
+  const out = join(directory, "coverage.json");
+  const partial = join(directory, "survey.ndjson");
+  const requestLog = join(directory, "requests.log");
+  const firstObservedAt = new Date(Date.now() - 3_600_000).toISOString();
+  await writeFile(
+    partial,
+    `${JSON.stringify({
+      schema_version: PARTIAL_SCHEMA_VERSION,
+      election: "20261103G",
+      observed_at: firstObservedAt,
+      county: "allen",
+      record: {
+        vendor_slug: "allen",
+        listing_url: "https://lookup.boe.ohio.gov/vtrapp/allen/ballotlist.aspx",
+        enumerable: false,
+        response: "not-a-customer",
+        blocked: "the vendor response is not-a-customer",
+      },
+    })}\n`,
+  );
+
+  const run = runSurveyCli({
+    preload,
+    requestLog,
+    mode: "not-a-customer",
+    out,
+    partial,
+    counties: ["allen", "wyandot"],
+  });
+
+  assert.equal(run.status, 0, run.stderr);
+  const coverage = JSON.parse(await readFile(out, "utf8"));
+  assert.equal(coverage.meta.observed_from, firstObservedAt);
+  assert.ok(
+    Date.parse(coverage.meta.observed_through) > Date.parse(firstObservedAt),
+    "the final observation must come from the resumed batch",
+  );
+  const requests = (await readFile(requestLog, "utf8")).trim().split("\n");
+  assert.deepEqual(requests.map((url) => new URL(url).pathname), ["/vtrapp/wyandot/ballotlist.aspx"]);
 });
 
 test("partial observation finalization is idempotent but refuses a conflicting timestamp", () => {
