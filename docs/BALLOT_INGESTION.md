@@ -23,13 +23,14 @@ document; a board can join or leave the application between elections.
 
 The statewide survey journals each complete county to
 `.cache/vtrapp-survey-<election>.ndjson`. If the vendor stops answering or the
-process is interrupted, re-running the same command resumes those records and
-retries unanswered requests; it does not spend another request on counties
-already observed. The journal also keeps the start time of each attempt, so a
-resumed survey contributes truthful batches to the append-only stamp log rather
-than claiming every county was observed at the last restart. A complete run
-removes its journal. Use `--partial <path>` to place it elsewhere or `--partial
-none` for a deliberately non-resumable diagnostic run.
+returns a temporary 403/500 page, re-running the same command resumes only
+records the adapter identified as `served` or `not-a-customer` and retries the
+rest. The journal also keeps the start time of each attempt, so a resumed survey
+contributes truthful batches to the append-only stamp log rather than claiming
+every county was observed at the last restart. A journal older than 24 hours is
+named and discarded before a fresh run. A complete run appends the log before
+replacing coverage, then removes its journal; a successful `--partial none` run
+also retires the default journal it bypassed.
 
 `--counties` is diagnostic only. It requires both `--out <path>` and `--log
 none`, so a one-county probe cannot replace statewide coverage or masquerade as
@@ -132,9 +133,11 @@ version is that the stamp's *age* decides nothing.
 The shared client retries a request that never receives a response at most two
 times, using the same pacing delay as the rest of the walk. A timeout or dropped
 body is transport weather, so a bounded retry prevents one transient failure
-from discarding a county-sized walk. An HTTP response, parser refusal, changed
-source stamp, or incomplete ballot is evidence from the source and is never
-retried into a different answer.
+from discarding a county-sized walk. The client never retries an HTTP response
+inside one request. The statewide survey still withholds a non-200 edge response
+from its recovery journal and re-probes that county on the next run; a served
+page's parser refusal, changed source stamp, or incomplete ballot remains source
+evidence and is never retried into a different answer.
 
 ## Precinct-level ingest, conservative county projection
 

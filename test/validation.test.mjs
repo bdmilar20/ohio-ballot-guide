@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 import { localOfficeTitleIndex, summarizeSurvey } from "../scripts/survey-contests.mjs";
+import { summarize as summarizeCoverage } from "../scripts/survey-vtrapp.mjs";
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const validator = join(projectRoot, "scripts", "validate-data.mjs");
@@ -460,6 +461,17 @@ test("validator rejects a resumed coverage observation range that runs backwards
   assert.match(result.stderr, /observation range cannot run backwards/);
 });
 
+test("validator requires generated_on to name the final observation's Ohio date", async (t) => {
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      data.meta.generated_on = "2026-10-23";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /generated_on must be the Ohio date of its final observation/);
+});
+
 test("validator rejects a coverage run that skipped part of Ohio", async (t) => {
   const result = await validateFixture(t, {
     coverage: (data) => delete data.counties.vinton,
@@ -530,7 +542,7 @@ test("validator rejects a county marked enumerable on a request that failed", as
       // transport_errors is a summarized field, so the stored summary has to
       // follow or the recomputability gate fires first and this stops testing
       // the per-county gate it is named for.
-      data.meta.summary.transport_errors += 1;
+      data.meta.summary = summarizeCoverage(data.counties);
     },
   });
 

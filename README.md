@@ -61,9 +61,12 @@ npm run survey:vtrapp -- --election 20261103G
 ```
 
 The statewide command is resumable. It journals whole county responses under
-`.cache/`, retries only requests that never answered, preserves each attempt's
-actual observation time for the freshness gate, and deletes the journal after
-the canonical artifact and stamp log are safely written.
+`.cache/`, preserving only responses the adapter can identify as `served` or
+`not-a-customer`. Unanswered requests and temporary HTTP error pages stay out
+of the journal and are retried on the next run. A journal expires after 24
+hours, preserves each attempt's actual observation time for the freshness
+gate, and is deleted after the stamp log and canonical artifact are safely
+written in that order.
 
 The artifact records, per county, the vendor response, whether the election is
 offered, the board's own "last updated" stamp, and the precinct-row counts —

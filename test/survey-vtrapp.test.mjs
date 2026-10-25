@@ -7,9 +7,15 @@ import test from "node:test";
 
 import { createVendorClient, VendorTransportError } from "../scripts/ingest/vtrapp.mjs";
 import {
+  applyObservationRange,
   appendPartialObservations,
+  commitSurveyArtifacts,
+  completedJournalPaths,
+  isSettledCountyRecord,
+  PARTIAL_MAX_AGE_HOURS,
   PARTIAL_SCHEMA_VERSION,
   readPartial,
+  StalePartialSurveyError,
   SURVEY_SCHEMA_VERSION,
   summarize,
   surveyCounty,
@@ -205,8 +211,8 @@ test("summarizes a mixed run by outcome and by scale", () => {
     counties: 4,
     served: 2,
     not_a_customer: 1,
-    unknown_slug: 1,
-    transport_errors: 0,
+    unknown_slug: 0,
+    transport_errors: 1,
     enumerable: 2,
     blocked: 2,
     precinct_splits: 74,
@@ -329,7 +335,9 @@ test("a partial journal refuses wrong-election, duplicate, transport, and trunca
   await writeFile(path, `${JSON.stringify(entry)}\n${JSON.stringify(entry)}\n`);
   await assert.rejects(() => readPartial(path, "20261103G"), /records adams more than once/);
   await writeFile(path, `${JSON.stringify({ ...entry, record: { transport_error: true } })}\n`);
-  await assert.rejects(() => readPartial(path, "20261103G"), /transport error/);
+  await assert.rejects(() => readPartial(path, "20261103G"), /retryable response/);
+  await writeFile(path, `${JSON.stringify({ ...entry, record: { enumerable: false, response: "error" } })}\n`);
+  await assert.rejects(() => readPartial(path, "20261103G"), /retryable response/);
   await writeFile(path, `${JSON.stringify(entry)}\n{"schema_version":1`);
   await assert.rejects(() => readPartial(path, "20261103G"), /not valid JSON/);
 });
@@ -349,6 +357,106 @@ test("partial observation finalization is idempotent but refuses a conflicting t
   assert.throws(
     () => appendPartialObservations(once, [{ ...observation, surveyed: ["allen"], stamps: {} }]),
     /different observation/,
+  );
+});
+
+test("final coverage dates follow the source observation rather than a later cleanup restart", () => {
+  const survey = { meta: { generated_on: "2026-10-25" } };
+  applyObservationRange(survey, [
+    { observed_at: "2026-10-22T12:00:00.000Z" },
+    { observed_at: "2026-10-24T03:30:00.000Z" },
+  ]);
+
+  assert.equal(survey.meta.observed_from, "2026-10-22T12:00:00.000Z");
+  assert.equal(survey.meta.observed_through, "2026-10-24T03:30:00.000Z");
+  assert.equal(survey.meta.generated_on, "2026-10-23", "03:30Z is still the prior day in Ohio");
+});
+
+test("partial journals expire and cannot predate newer committed evidence", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "obg-vtrapp-stale-partial-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, "survey.ndjson");
+  const entry = {
+    schema_version: PARTIAL_SCHEMA_VERSION,
+    election: "20261103G",
+    observed_at: "2026-10-22T12:00:00.000Z",
+    county: "adams",
+    record: { enumerable: true, response: "served", precinct_rows_parsed: 27 },
+  };
+  await writeFile(path, `${JSON.stringify(entry)}\n`);
+
+  await assert.rejects(
+    () => readPartial(path, "20261103G", {
+      now: "2026-10-24T12:00:00.001Z",
+      maxAgeHours: PARTIAL_MAX_AGE_HOURS,
+    }),
+    (error) => {
+      assert.ok(error instanceof StalePartialSurveyError);
+      assert.deepEqual(error.countyIds, ["adams"]);
+      assert.match(error.message, /discarding adams/);
+      return true;
+    },
+  );
+  await assert.rejects(
+    () => readPartial(path, "20261103G", {
+      now: "2026-10-22T13:00:00.000Z",
+      maxAgeHours: PARTIAL_MAX_AGE_HOURS,
+      latestCommittedAt: "2026-10-22T12:00:00.001Z",
+    }),
+    /predates the committed observation.*discarding adams/,
+  );
+});
+
+test("commits stamp evidence before replaceable coverage", async () => {
+  const writes = [];
+  const write = async (path) => {
+    writes.push(path);
+    if (path === "log.json") throw new Error("log unavailable");
+  };
+  await assert.rejects(
+    () => commitSurveyArtifacts({
+      coveragePath: "coverage.json",
+      coverage: { meta: {} },
+      logPath: "log.json",
+      log: { observations: [] },
+      write,
+    }),
+    /log unavailable/,
+  );
+  assert.deepEqual(writes, ["log.json"], "coverage must stay untouched when the log append fails");
+
+  writes.length = 0;
+  await commitSurveyArtifacts({
+    coveragePath: "coverage.json",
+    coverage: { meta: {} },
+    logPath: "log.json",
+    log: { observations: [] },
+    write: async (path) => writes.push(path),
+  });
+  assert.deepEqual(writes, ["log.json", "coverage.json"]);
+});
+
+test("a clean partial bypass retires the skipped default journal", () => {
+  assert.deepEqual(
+    completedJournalPaths({
+      partialPath: null,
+      defaultPartialPath: ".cache/default.ndjson",
+      isWholeState: true,
+      bypassedPartial: true,
+      transportErrors: 0,
+    }),
+    [".cache/default.ndjson"],
+  );
+  assert.deepEqual(
+    completedJournalPaths({
+      partialPath: ".cache/custom.ndjson",
+      defaultPartialPath: ".cache/default.ndjson",
+      isWholeState: false,
+      bypassedPartial: false,
+      transportErrors: 1,
+    }),
+    [],
+    "a diagnostic run with an unanswered request must keep its resumable journal",
   );
 });
 
@@ -387,6 +495,32 @@ test("records an unanswered request as one county's finding and keeps surveying"
   assert.equal(result.meta.summary.transport_errors, 1);
 });
 
+test("treats temporary HTTP and unknown-slug responses as retryable rather than journal evidence", async () => {
+  const result = await surveyVtrapp({
+    countyIds: ["allen", "van-wert", "wyandot"],
+    electionKey: "20261103G",
+    client: clientFor(fakeVendor()),
+    survey: async ({ countyId }) => {
+      if (countyId === "allen") {
+        return { enumerable: false, response: "error", blocked: "the vendor response is error" };
+      }
+      if (countyId === "van-wert") {
+        return { enumerable: false, response: "served", retryable_error: true, blocked: "selecting returned HTTP 403" };
+      }
+      return { enumerable: false, response: "unknown-slug", blocked: "the vendor response is unknown-slug" };
+    },
+  });
+
+  assert.equal(isSettledCountyRecord(result.counties.allen), false);
+  assert.equal(result.counties.allen.retryable_error, true);
+  assert.match(result.counties.allen.blocked, /temporary response; retry required/);
+  assert.equal(result.counties["van-wert"].retryable_error, true);
+  assert.equal(result.counties.wyandot.retryable_error, true);
+  assert.equal(result.meta.summary.served, 0, "a failed later request cannot also count as served");
+  assert.equal(result.meta.summary.transport_errors, 3);
+  assert.equal(result.meta.summary.unknown_slug, 0);
+});
+
 test("lets a parse failure end the run instead of filing it as a timeout", async () => {
   // `transport_error` means the vendor never answered, and the artifact tells a
   // reader to re-run. A parser regression answers every re-run the same way, so
@@ -416,7 +550,8 @@ test("every surveyed county lands in exactly one response category", () => {
     ottawa: { enumerable: false, transport_error: true },
   });
 
-  assert.equal(summary.transport_errors, 1);
+  assert.equal(summary.unknown_slug, 0);
+  assert.equal(summary.transport_errors, 2);
   assert.equal(
     summary.served + summary.not_a_customer + summary.unknown_slug + summary.transport_errors,
     summary.counties,

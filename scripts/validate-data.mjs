@@ -120,6 +120,11 @@ if (coverage.meta.observed_from !== undefined || coverage.meta.observed_through 
   assert.ok(Number.isFinite(observedFrom), "vtrapp coverage meta.observed_from must be a timestamp");
   assert.ok(Number.isFinite(observedThrough), "vtrapp coverage meta.observed_through must be a timestamp");
   assert.ok(observedFrom <= observedThrough, "vtrapp coverage observation range cannot run backwards");
+  assert.equal(
+    ohioDate(observedThrough),
+    coverage.meta.generated_on,
+    "vtrapp coverage meta.generated_on must be the Ohio date of its final observation",
+  );
 }
 assert.deepEqual(
   Object.keys(coverage.counties).sort(),

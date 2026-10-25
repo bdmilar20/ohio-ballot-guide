@@ -513,10 +513,12 @@ export function createVendorClient({
   delayMs = 350,
   timeoutMs = 30_000,
   transportRetries = 2,
+  sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
 } = {}) {
   if (!Number.isInteger(transportRetries) || transportRetries < 0) {
     throw new Error(`transportRetries must be a nonnegative integer, not ${JSON.stringify(transportRetries)}`);
   }
+  if (typeof sleep !== "function") throw new Error("sleep must be a function");
   let cookie = "";
   async function request(url, init) {
     let lastError;
@@ -547,7 +549,7 @@ export function createVendorClient({
     throw new VendorTransportError(url, lastError, { attempts });
   }
   const post = (url, fields) => request(url, { method: "POST", body: new URLSearchParams(fields).toString() });
-  const pause = () => (delayMs > 0 ? new Promise((resolve) => setTimeout(resolve, delayMs)) : Promise.resolve());
+  const pause = () => (delayMs > 0 ? sleep(delayMs) : Promise.resolve());
   return { base, request, post, pause };
 }
 

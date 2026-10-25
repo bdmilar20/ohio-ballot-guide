@@ -787,9 +787,11 @@ test("reports an HTTP failure at each postback boundary as that boundary", async
 
 test("retries unanswered requests with pacing and returns the first real answer", async () => {
   let calls = 0;
+  const waits = [];
   const client = createVendorClient({
-    delayMs: 0,
+    delayMs: 25,
     transportRetries: 2,
+    sleep: async (milliseconds) => waits.push(milliseconds),
     fetchImpl: async () => {
       calls += 1;
       if (calls < 3) throw new Error("transient timeout");
@@ -801,6 +803,7 @@ test("retries unanswered requests with pacing and returns the first real answer"
   assert.equal(response.status, 200);
   assert.equal(response.body, "served");
   assert.equal(calls, 3);
+  assert.deepEqual(waits, [25, 25], "each retry must keep the configured government-host pacing");
 });
 
 test("stops after the bounded transport retry count and never retries an HTTP answer", async () => {
@@ -840,6 +843,7 @@ test("stops after the bounded transport retry count and never retries an HTTP an
 test("rejects an invalid transport retry count before any request", () => {
   assert.throws(() => createVendorClient({ transportRetries: -1 }), /nonnegative integer/);
   assert.throws(() => createVendorClient({ transportRetries: 1.5 }), /nonnegative integer/);
+  assert.throws(() => createVendorClient({ sleep: null }), /sleep must be a function/);
 });
 
 test("parses CLI flags without truncating a value that contains an equals sign", () => {
