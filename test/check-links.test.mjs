@@ -53,6 +53,7 @@ test("collects every cited URL in the published data", async () => {
     await readData("offices.json"),
     await readData("county-boards.json"),
     await readData("locations.json"),
+    await readData("candidate-facts.json"),
   );
 
   for (const url of citations.keys()) {
@@ -89,6 +90,7 @@ test("collects the generated locations file's own sources", async () => {
     await readData("offices.json"),
     await readData("county-boards.json"),
     locations,
+    await readData("candidate-facts.json"),
   );
 
   const cited = new Set(citations.keys());
@@ -115,6 +117,7 @@ test("collects county-level issue sources", async () => {
     await readData("offices.json"),
     await readData("county-boards.json"),
     await readData("locations.json"),
+    await readData("candidate-facts.json"),
   );
 
   assert.deepEqual(citations.get("https://example.gov/franklin-test-levy"), [
@@ -138,6 +141,37 @@ test("refuses to build an audit without the locations file", async () => {
   assert.throws(
     () => collectCitations(elections, offices, boards, { meta: {} }),
     /needs data\/locations\.json/,
+  );
+});
+
+test("collects candidate profile sources and links", async () => {
+  const candidateFacts = await readData("candidate-facts.json");
+  const citations = collectCitations(
+    await readData("elections.json"),
+    await readData("offices.json"),
+    await readData("county-boards.json"),
+    await readData("locations.json"),
+    candidateFacts,
+  );
+
+  for (const [profileId, profile] of Object.entries(candidateFacts.profiles)) {
+    for (const [sourceId, source] of Object.entries(profile.sources)) {
+      assert.ok(citations.get(source.url).includes(`candidate-facts.${profileId} — ${sourceId}`));
+    }
+    for (const link of profile.links) {
+      assert.ok(citations.get(link.url).includes(`candidate-facts.${profileId} — ${link.kind}`));
+    }
+  }
+});
+
+test("refuses to build an audit without candidate facts", async () => {
+  const elections = await readData("elections.json");
+  const offices = await readData("offices.json");
+  const boards = await readData("county-boards.json");
+  const locations = await readData("locations.json");
+  assert.throws(
+    () => collectCitations(elections, offices, boards, locations),
+    /needs data\/candidate-facts\.json/,
   );
 });
 
