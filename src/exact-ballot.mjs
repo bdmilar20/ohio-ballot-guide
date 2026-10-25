@@ -444,7 +444,7 @@ function assertAddressIndex(value) {
   };
 }
 
-async function assertBallotBundle(value) {
+export async function assertBallotBundle(value) {
   const bundle = requireObject(value, "ballot_bundle");
   if (bundle.schema_version !== SCHEMA_VERSION) {
     throw new TypeError(`ballot_bundle.schema_version must be ${SCHEMA_VERSION}`);

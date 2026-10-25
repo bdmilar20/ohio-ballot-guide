@@ -49,6 +49,34 @@ These checks extend the existing precinct-ingestion rule: incomplete source
 coverage must stop publication because omitting a precinct can only make an
 incomplete result look more complete.
 
+## Generated vendor ballot bundles
+
+The shared TGSI ingest already captures every enumerated precinct, deduplicates
+identical ballot styles, and preserves contests that occur on only some
+precincts. Project that snapshot without any county-specific code:
+
+```sh
+npm run project:vtrapp -- --exact \
+  --snapshot .cache/vtrapp-<county>-<vendor-election>.json \
+  --elections data/elections.json \
+  --config config/vtrapp-<vendor-election>.json \
+  --out .cache/vtrapp-<county>-exact.json
+```
+
+This writes a bundle-only staging artifact. It does not add a manifest entry or
+make the address form appear. Passing `--address-index <path>` attaches a
+separately sourced index only after `assertExactBallotData` proves that the
+index covers every published precinct and agrees with the bundle.
+
+No county currently has an accepted address-index artifact in the repository.
+The 70 enumerable vendor counties have a generated ballot-bundle path, but the
+precinct-ballot flow ingested here does not expose complete street ranges.
+Hamilton County's official voter exports contain individual voter rows and
+cannot prove coverage of valid addresses where no voter is registered; its
+precinct maps remain a candidate for a separate geospatial adapter. Until a
+complete non-personal range source passes the contract, bundle generation stays
+staging-only.
+
 ## Address shape
 
 The resolver accepts structured fields: a 1-to-5-digit house number, optional

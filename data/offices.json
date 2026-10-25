@@ -1,6 +1,6 @@
 {
   "meta": {
-    "last_reviewed": "2026-10-19",
+    "last_reviewed": "2026-10-25",
     "note": "What each office on the ballot does. Every sentence is supported by the sources listed with it; nothing here describes a candidate, a party, or a policy position."
   },
   "offices": {
@@ -219,6 +219,16 @@
         { "label": "Ohio Constitution, Article XVIII, Section 7", "url": "https://codes.ohio.gov/ohio-constitution/section-18.7" }
       ],
       "last_verified": "2026-10-19"
+    },
+    "township-trustee": {
+      "title": "Township Trustee",
+      "summary": "Each Ohio township has a three-member board of trustees. Trustees serve four-year terms, and the board holds township property and exercises the powers state law assigns to the township, including authority over township facilities and other public improvements.",
+      "sources": [
+        { "label": "Ohio Revised Code 505.01", "url": "https://codes.ohio.gov/ohio-revised-code/section-505.01" },
+        { "label": "Ohio Revised Code 503.01", "url": "https://codes.ohio.gov/ohio-revised-code/section-503.01" },
+        { "label": "Ohio Revised Code 505.26", "url": "https://codes.ohio.gov/ohio-revised-code/section-505.26" }
+      ],
+      "last_verified": "2026-10-25"
     },
     "charter-commission": {
       "title": "Charter Commission",
