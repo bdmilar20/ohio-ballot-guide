@@ -785,6 +785,67 @@ test("reports an HTTP failure at each postback boundary as that boundary", async
   );
 });
 
+test("retries unanswered requests with pacing and returns the first real answer", async () => {
+  let calls = 0;
+  const waits = [];
+  const client = createVendorClient({
+    delayMs: 25,
+    transportRetries: 2,
+    sleep: async (milliseconds) => waits.push(milliseconds),
+    fetchImpl: async () => {
+      calls += 1;
+      if (calls < 3) throw new Error("transient timeout");
+      return { status: 200, headers: {}, text: async () => "served" };
+    },
+  });
+  const response = await client.request("https://example.test/ballot");
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body, "served");
+  assert.equal(calls, 3);
+  assert.deepEqual(waits, [25, 25], "each retry must keep the configured government-host pacing");
+});
+
+test("stops after the bounded transport retry count and never retries an HTTP answer", async () => {
+  let unanswered = 0;
+  const exhausted = createVendorClient({
+    delayMs: 0,
+    transportRetries: 2,
+    fetchImpl: async () => {
+      unanswered += 1;
+      throw new Error("connection reset");
+    },
+  });
+  await assert.rejects(
+    () => exhausted.request("https://example.test/ballot"),
+    (error) => {
+      assert.equal(error.name, "VendorTransportError");
+      assert.equal(error.attempts, 3);
+      assert.match(error.message, /after 3 attempts/);
+      return true;
+    },
+  );
+  assert.equal(unanswered, 3);
+
+  let answered = 0;
+  const httpFailure = createVendorClient({
+    delayMs: 0,
+    transportRetries: 2,
+    fetchImpl: async () => {
+      answered += 1;
+      return { status: 503, headers: {}, text: async () => "maintenance" };
+    },
+  });
+  assert.equal((await httpFailure.request("https://example.test/ballot")).status, 503);
+  assert.equal(answered, 1);
+});
+
+test("rejects an invalid transport retry count before any request", () => {
+  assert.throws(() => createVendorClient({ transportRetries: -1 }), /nonnegative integer/);
+  assert.throws(() => createVendorClient({ transportRetries: 1.5 }), /nonnegative integer/);
+  assert.throws(() => createVendorClient({ sleep: null }), /sleep must be a function/);
+});
+
 test("parses CLI flags without truncating a value that contains an equals sign", () => {
   assert.deepEqual(parseArgs(["--county", "adams", "--election=20261103G"]), {
     county: "adams",

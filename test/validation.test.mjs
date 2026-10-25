@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 import { localOfficeTitleIndex, summarizeSurvey } from "../scripts/survey-contests.mjs";
+import { summarize as summarizeCoverage } from "../scripts/survey-vtrapp.mjs";
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const validator = join(projectRoot, "scripts", "validate-data.mjs");
@@ -448,6 +449,29 @@ test("validator rejects a coverage summary that disagrees with its own records",
   assert.match(result.stderr, /summary must be recomputable/);
 });
 
+test("validator rejects a resumed coverage observation range that runs backwards", async (t) => {
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      data.meta.observed_from = "2026-10-24T12:00:00.000Z";
+      data.meta.observed_through = "2026-10-22T12:00:00.000Z";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /observation range cannot run backwards/);
+});
+
+test("validator requires generated_on to name the final observation's Ohio date", async (t) => {
+  const result = await validateFixture(t, {
+    coverage: (data) => {
+      data.meta.generated_on = "2026-10-23";
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /generated_on must be the Ohio date of its final observation/);
+});
+
 test("validator rejects a coverage run that skipped part of Ohio", async (t) => {
   const result = await validateFixture(t, {
     coverage: (data) => delete data.counties.vinton,
@@ -518,7 +542,7 @@ test("validator rejects a county marked enumerable on a request that failed", as
       // transport_errors is a summarized field, so the stored summary has to
       // follow or the recomputability gate fires first and this stops testing
       // the per-county gate it is named for.
-      data.meta.summary.transport_errors += 1;
+      data.meta.summary = summarizeCoverage(data.counties);
     },
   });
 
@@ -633,7 +657,7 @@ test("validator rejects a stamp log observation that surveyed a county Ohio does
 test("validator rejects a stamp for a county the observation did not look at", async (t) => {
   const result = await validateFixture(t, {
     stampLog: (data) => {
-      const observation = data.observations.at(-1);
+      const observation = data.observations.find((candidate) => candidate.stamps.adams);
       observation.surveyed = observation.surveyed.filter((countyId) => countyId !== "adams");
     },
   });
@@ -645,7 +669,8 @@ test("validator rejects a stamp for a county the observation did not look at", a
 test("validator rejects a stamp that is not a timestamp", async (t) => {
   const result = await validateFixture(t, {
     stampLog: (data) => {
-      data.observations.at(-1).stamps.adams = "sometime last week";
+      const observation = data.observations.find((candidate) => candidate.stamps.adams);
+      observation.stamps.adams = "sometime last week";
     },
   });
 
