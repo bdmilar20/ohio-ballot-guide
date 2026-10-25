@@ -2,7 +2,7 @@
   "meta": {
     "schema_version": 2,
     "generated_by": "scripts/survey-vtrapp.mjs",
-    "generated_on": "2026-10-18",
+    "generated_on": "2026-10-24",
     "note": "Generated file. Do not hand-edit; re-run npm run survey:vtrapp.",
     "vendor_base": "https://lookup.boe.ohio.gov/vtrapp",
     "election": {
@@ -12,13 +12,15 @@
     "summary": {
       "counties": 88,
       "served": 72,
-      "not_a_customer": 15,
+      "not_a_customer": 16,
       "unknown_slug": 0,
-      "transport_errors": 1,
+      "transport_errors": 0,
       "enumerable": 70,
       "blocked": 18,
       "precinct_splits": 7064
-    }
+    },
+    "observed_from": "2026-10-24T20:22:12.439Z",
+    "observed_through": "2026-10-24T21:38:27.675Z"
   },
   "counties": {
     "adams": {
@@ -677,7 +679,7 @@
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/miami/ballotlist.aspx",
       "enumerable": true,
       "response": "served",
-      "elections_offered": 32,
+      "elections_offered": 33,
       "election_offered": true,
       "source_updated_at": "2026-09-30T08:14:14-04:00",
       "precinct_rows_listed": 136,
@@ -761,8 +763,8 @@
       "vendor_slug": "ottawa",
       "listing_url": "https://lookup.boe.ohio.gov/vtrapp/ottawa/ballotlist.aspx",
       "enumerable": false,
-      "transport_error": true,
-      "blocked": "the request failed rather than answering: The operation was aborted due to timeout"
+      "response": "not-a-customer",
+      "blocked": "the vendor response is \"not-a-customer\", not a served county"
     },
     "paulding": {
       "vendor_slug": "paulding",
