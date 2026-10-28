@@ -8,7 +8,7 @@ Voting matters, but learning what will be on your ballot can feel like a second 
 
 That gap has consequences. In CIRCLE's post-2024 survey of young people, 14% of nonvoters said they lacked enough information about voting or the candidates, and nearly half had seen little or no information about registration ([CIRCLE, 2025](https://circle.tufts.edu/latest-research/barriers-and-hardships-why-some-youth-didnt-vote-2024)).
 
-This project is my attempt to make the first step easier: enter a city or ZIP code, get a concise nonpartisan overview, and follow every claim back to an official source. It is free, open source, and requires no account. The goal is not to tell anyone how to vote. It is to help more people feel ready to vote.
+This project is my attempt to make the first step easier: enter a city or ZIP code, get a concise nonpartisan overview, and follow ballot claims back to official sources. Candidate profile facts link to their source and clearly label candidate-authored material. It is free, open source, and requires no account. The goal is not to tell anyone how to vote. It is to help more people feel ready to vote.
 
 I built this project entirely using [Buzz.xyz](https://buzz.xyz).
 
@@ -59,6 +59,14 @@ Like the other live-source scripts it is **run by hand, never from CI**:
 ```bash
 npm run survey:vtrapp -- --election 20261103G
 ```
+
+The statewide command is resumable. It journals whole county responses under
+`.cache/`, preserving only responses the adapter can identify as `served` or
+`not-a-customer`. Unanswered requests and temporary HTTP error pages stay out
+of the journal and are retried on the next run. A journal expires after 24
+hours, preserves each attempt's actual observation time for the freshness
+gate, and is deleted after the stamp log and canonical artifact are safely
+written in that order.
 
 The artifact records, per county, the vendor response, whether the election is
 offered, the board's own "last updated" stamp, and the precinct-row counts —
@@ -135,7 +143,9 @@ npm run gate:vtrapp -- --refresh .cache/vtrapp-refresh-2026-10-20  # gate a bund
 
 The data is split by how it is maintained.
 
-[`data/elections.json`](data/elections.json) combines generated schedule fields with reviewed ballot content. Election days, registration deadlines, early-voting end dates, and poll hours are tied to a `schedule_rule`; [`scripts/build-election-schedule.mjs`](scripts/build-election-schedule.mjs) generates them from Ohio law, and `npm run check` rejects a stored value that disagrees. Candidate, issue, and coverage records remain curated and cite an official source for every claim. The root `elections` array holds the election types that have a schedule rule — general, primary, and August special. A local or off-cycle special election needs its rule added to the generator first, because the gate rejects a record whose schedule it cannot recompute. The site selects the nearest election whose date has not passed, so adding a future record does not require an application release.
+[`data/elections.json`](data/elections.json) combines generated schedule fields with reviewed ballot content. Election days, registration deadlines, early-voting end dates, and poll hours are tied to a `schedule_rule`; [`scripts/build-election-schedule.mjs`](scripts/build-election-schedule.mjs) generates them from Ohio law, and `npm run check` rejects a stored value that disagrees. Ballot candidates, issues, and coverage records remain curated and cite an official source for every claim. The root `elections` array holds the election types that have a schedule rule — general, primary, and August special. A local or off-cycle special election needs its rule added to the generator first, because the gate rejects a record whose schedule it cannot recompute. The site selects the nearest election whose date has not passed, so adding a future record does not require an application release.
+
+[`data/candidate-facts.json`](data/candidate-facts.json) starts candidate profiles with the same three fields for everyone in a covered contest: role, professional experience, and education. Every statement cites a dated source; official records, candidate-authored sites, and candidate questionnaires are labeled separately. Campaign links and the official campaign-finance search are provided without interpreting them. See [`docs/CANDIDATE_FACTS.md`](docs/CANDIDATE_FACTS.md) for the editorial and validation contract.
 
 [`data/locations.json`](data/locations.json) is **generated** by [`scripts/build-locations.mjs`](scripts/build-locations.mjs) and is not edited by hand. It holds Ohio's 88 counties, every ZIP code, and every place name, each mapped to the counties it falls in. Lookups are keyed by the normalized query, so resolving a location does not scan the dataset. Regenerate it rather than patching it; `npm run check` fails on a file that lost a county, miscounted its own rows, or points a ZIP at a county that is not in the registry. Its sources are the Census Bureau's ZCTA-to-county relationship files (public domain) and the GeoNames US postal file ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)); every record names the source it came from.
 
@@ -152,11 +162,11 @@ Each election includes a stable ID, date, type, scope, official information URL,
 - an `office_id` pointing at its description in `data/offices.json`; and
 - a `last_verified` date.
 
-Candidate affiliations are labels from the official candidate lists. The project does not endorse candidates or summarize policy positions in this release. A one-county match shows that county's coverage, and a cross-county match asks the voter to choose before any county race appears.
+Candidate affiliations are labels from the official candidate lists. The project does not endorse candidates or summarize policy positions in this release. Sourced biographical facts live in the separate candidate-facts dataset so they cannot be confused with certified ballot content. A one-county match shows that county's coverage, and a cross-county match asks the voter to choose before any county race appears.
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Corrections should cite an Ohio Secretary of State or county board of elections source. Never replace sourced data with campaign or social-media claims.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Ballot corrections should cite an Ohio Secretary of State or county board of elections source. Candidate profile changes follow the separate candidate-facts policy; candidate-authored claims must remain labeled and cannot replace official ballot data.
 
 ## License
 

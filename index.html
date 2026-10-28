@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#f7f3eb" />
     <title>Ohio Ballot Guide</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20261018" />
+    <link rel="stylesheet" href="./styles.css?v=20261021" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to ballot guide</a>
@@ -80,8 +80,17 @@
             <h2 id="result-title">Upcoming election</h2>
             <p id="result-summary" role="status" aria-live="polite"></p>
           </div>
-          <button class="text-button" id="new-search" type="button">Change location</button>
+          <div class="results-actions">
+            <button class="text-button" id="copy-link" type="button">Copy link to this guide</button>
+            <button class="text-button" id="new-search" type="button">Change location</button>
+          </div>
         </div>
+
+        <section class="ballot-coverage" id="ballot-coverage" aria-labelledby="ballot-coverage-title" hidden>
+          <h3 id="ballot-coverage-title">How much of your ballot this is</h3>
+          <p id="ballot-coverage-counts"></p>
+          <p id="ballot-coverage-gaps"></p>
+        </section>
 
         <div class="notice" id="coverage-notice"></div>
 
@@ -124,9 +133,6 @@
               <p class="eyebrow">Candidate guide</p>
               <h2>Statewide contests</h2>
             </div>
-            <button class="quiet-button" id="toggle-races" type="button" aria-expanded="false">
-              Show all contests
-            </button>
           </div>
           <div class="race-list" id="statewide-races"></div>
         </section>
@@ -235,6 +241,6 @@
       </article>
     </template>
 
-    <script type="module" src="./app.js?v=20261018"></script>
+    <script type="module" src="./app.js?v=20261021"></script>
   </body>
 </html>

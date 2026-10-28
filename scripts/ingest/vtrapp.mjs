@@ -493,10 +493,12 @@ const USER_AGENT = "Mozilla/5.0 (compatible; ohio-ballot-guide/0.1; manual inges
  * parser regression into 88 counties labelled "try again."
  */
 export class VendorTransportError extends Error {
-  constructor(url, cause) {
-    super(`the request to ${url} failed before answering: ${cause.message}`);
+  constructor(url, cause, { attempts = 1 } = {}) {
+    const retried = attempts > 1 ? ` after ${attempts} attempts` : "";
+    super(`the request to ${url} failed before answering${retried}: ${cause.message}`);
     this.name = "VendorTransportError";
     this.cause = cause;
+    this.attempts = attempts;
   }
 }
 
@@ -505,38 +507,49 @@ export class VendorTransportError extends Error {
  * the election and a submit to list precincts, and the accessible ballot pages
  * one contest at a time, so the session's __VIEWSTATE has to be carried along.
  */
-export function createVendorClient({ fetchImpl = fetch, base = VENDOR_BASE, delayMs = 350, timeoutMs = 30_000 } = {}) {
+export function createVendorClient({
+  fetchImpl = fetch,
+  base = VENDOR_BASE,
+  delayMs = 350,
+  timeoutMs = 30_000,
+  transportRetries = 2,
+  sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
+} = {}) {
+  if (!Number.isInteger(transportRetries) || transportRetries < 0) {
+    throw new Error(`transportRetries must be a nonnegative integer, not ${JSON.stringify(transportRetries)}`);
+  }
+  if (typeof sleep !== "function") throw new Error("sleep must be a function");
   let cookie = "";
   async function request(url, init) {
-    let response;
-    try {
-      response = await fetchImpl(url, {
-        ...init,
-        headers: {
-          "user-agent": USER_AGENT,
-          ...(cookie ? { cookie } : {}),
-          ...(init?.body ? { "content-type": "application/x-www-form-urlencoded" } : {}),
-          ...(init?.headers ?? {}),
-        },
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-    } catch (error) {
-      throw new VendorTransportError(url, error);
+    let lastError;
+    const attempts = transportRetries + 1;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        const response = await fetchImpl(url, {
+          ...init,
+          headers: {
+            "user-agent": USER_AGENT,
+            ...(cookie ? { cookie } : {}),
+            ...(init?.body ? { "content-type": "application/x-www-form-urlencoded" } : {}),
+            ...(init?.headers ?? {}),
+          },
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+        const jar = response.headers?.getSetCookie?.() ?? [];
+        if (jar.length) cookie = jar.map((entry) => entry.split(";")[0]).join("; ");
+        // Reading the body is a second chance to lose the connection, and a
+        // half-read page is a transport failure rather than a vendor answer.
+        const body = await response.text();
+        return { status: response.status, body };
+      } catch (error) {
+        lastError = error;
+        if (attempt < attempts) await pause();
+      }
     }
-    const jar = response.headers?.getSetCookie?.() ?? [];
-    if (jar.length) cookie = jar.map((entry) => entry.split(";")[0]).join("; ");
-    // Reading the body is a second chance to lose the connection, and a
-    // half-read page is a transport failure rather than a vendor answer.
-    let body;
-    try {
-      body = await response.text();
-    } catch (error) {
-      throw new VendorTransportError(url, error);
-    }
-    return { status: response.status, body };
+    throw new VendorTransportError(url, lastError, { attempts });
   }
   const post = (url, fields) => request(url, { method: "POST", body: new URLSearchParams(fields).toString() });
-  const pause = () => (delayMs > 0 ? new Promise((resolve) => setTimeout(resolve, delayMs)) : Promise.resolve());
+  const pause = () => (delayMs > 0 ? sleep(delayMs) : Promise.resolve());
   return { base, request, post, pause };
 }
 

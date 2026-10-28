@@ -1,4 +1,4 @@
-// Resolves every official URL the guide cites and reports the ones that have
+// Resolves every URL the guide cites and reports the ones that have
 // rotted. Run it by hand, never from CI: it drives a real browser and it walks
 // www.boe.ohio.gov, which hosts about fifty county board sites and rate-limits
 // concurrent callers. See CONTRIBUTING.md.
@@ -24,13 +24,18 @@ const NAVIGATION_TIMEOUT_MS = 30_000;
 // www.boe.ohio.gov answered concurrency 4 with 429s and its maintenance page.
 const SLOW_HOST_PATTERN = /(^|\.)boe\.ohio\.gov$/;
 
-export function collectCitations(elections, offices, countyBoards, locations) {
+export function collectCitations(elections, offices, countyBoards, locations, candidateFacts) {
   // Required, not optional. An audit that quietly skips a data file is worse
   // than no audit: it reports "every cited URL" over an incomplete sweep. The
   // build inputs went unchecked for exactly this reason, so this fails closed.
   if (locations?.meta?.sources == null) {
     throw new TypeError(
       "collectCitations needs data/locations.json as its fourth argument: its meta.sources are cited URLs too",
+    );
+  }
+  if (candidateFacts?.profiles == null) {
+    throw new TypeError(
+      "collectCitations needs data/candidate-facts.json as its fifth argument: profile sources are cited URLs too",
     );
   }
 
@@ -83,6 +88,15 @@ export function collectCitations(elections, offices, countyBoards, locations) {
   cite(locations.meta.source_url, "locations.meta.source_url");
   for (const source of locations.meta.sources) {
     cite(source.url, `locations — ${source.id ?? source.name}`);
+  }
+
+  for (const [profileId, profile] of Object.entries(candidateFacts.profiles)) {
+    for (const [sourceId, source] of Object.entries(profile.sources)) {
+      cite(source.url, `candidate-facts.${profileId} — ${sourceId}`);
+    }
+    for (const link of profile.links) {
+      cite(link.url, `candidate-facts.${profileId} — ${link.kind}`);
+    }
   }
 
   const byUrl = new Map();
@@ -421,6 +435,7 @@ export async function main(argv = process.argv.slice(2)) {
     await read("offices.json"),
     await read("county-boards.json"),
     await read("locations.json"),
+    await read("candidate-facts.json"),
   );
 
   const urls = [...citations.keys()]
@@ -436,7 +451,7 @@ export async function main(argv = process.argv.slice(2)) {
   }
 
   console.log(`Checking ${urls.length} cited URL${urls.length === 1 ? "" : "s"} serially.`);
-  console.log("This resolves live government sites. Do not run it from CI.\n");
+  console.log("This resolves live cited sites. Do not run it from CI.\n");
 
   const { chrome, port, userDataDir } = await launchChrome();
   const client = await connect(port);

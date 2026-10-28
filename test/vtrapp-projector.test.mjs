@@ -14,6 +14,7 @@ import {
   contestContentId,
   PROJECTION_SCHEMA_VERSION,
   projectCounty,
+  projectExactBallotBundle,
 } from "../scripts/project-vtrapp.mjs";
 
 function office(title, order, choices, overrides = {}) {
@@ -115,7 +116,9 @@ function fixture() {
     statewide_races: [
       {
         id: "governor",
+        scope: "Statewide · Vote for one ticket",
         office: "Governor & Lieutenant Governor",
+        office_id: "governor",
         candidates: [
           { name: "Vivek Ramaswamy & Robert A. McColley", party: "Republican" },
           { name: "Amy Acton & David Pepper", party: "Democratic" },
@@ -639,6 +642,170 @@ test("refuses county content whose candidates are a statewide race under another
 // The certified text of the fixture's published statewide issue, as the
 // generator would have learned it from the counties printing it.
 const CERTIFIED_ISSUE_TEXT = { "state-issue-3": "Statewide amendment text" };
+
+function exactOptions(overrides = {}) {
+  return {
+    maxSourceAgeHours: 24,
+    reviewedAt: "2026-10-16T18:00:00.000Z",
+    countyName: "Adams",
+    officeMappings: {
+      "For County Commissioner": { office_id: "county-commissioner", office: "County Commissioner" },
+      "For Village Mayor": { office_id: "village-mayor", office: "Village Mayor" },
+    },
+    statewideIssueText: CERTIFIED_ISSUE_TEXT,
+    ...overrides,
+  };
+}
+
+test("exact projection retains precinct-only contests and printed candidate order", async () => {
+  const { snapshot, election } = fixture();
+  snapshot.precincts[0].name = "WEST UNION A";
+  snapshot.precincts[0].split = "01 1";
+  snapshot.precincts[1].name = "WEST UNION B";
+  snapshot.precincts[1].split = "02 1";
+
+  const second = snapshot.ballots[snapshot.precincts[1].ballot_id];
+  const commissioner = second.contests.find(({ title }) => title === "For County Commissioner");
+  commissioner.choices = [commissioner.choices[1], commissioner.choices[0], commissioner.choices[2]];
+  commissioner.raw.choice_lines = [
+    commissioner.raw.choice_lines[1],
+    commissioner.raw.choice_lines[0],
+    commissioner.raw.choice_lines[2],
+  ];
+  rehashSnapshot(snapshot);
+
+  const bundle = await projectExactBallotBundle(snapshot, election, exactOptions());
+  assert.equal(bundle.enumeration.listed_precincts, 2);
+  assert.equal(bundle.precincts.length, 2);
+  assert.match(bundle.provenance.source_sha256, /^sha256:[0-9a-f]{64}$/);
+  assert.equal(bundle.precincts[0].name, "WEST UNION A · 01 1");
+
+  const firstBallot = bundle.ballots[bundle.precincts[0].ballot_id];
+  const secondBallot = bundle.ballots[bundle.precincts[1].ballot_id];
+  assert.ok(firstBallot.races.some(({ office_id: officeId }) => officeId === "village-mayor"));
+  assert.ok(!secondBallot.races.some(({ office_id: officeId }) => officeId === "village-mayor"));
+  assert.ok(firstBallot.races.some(({ id }) => id === "governor"));
+  assert.ok(firstBallot.issues.some(({ id }) => id === "state-issue-3"));
+
+  const firstCommissioner = firstBallot.races.find(({ office_id: officeId }) => officeId === "county-commissioner");
+  const secondCommissioner = secondBallot.races.find(({ office_id: officeId }) => officeId === "county-commissioner");
+  assert.deepEqual(firstCommissioner.candidates.map(({ name }) => name), ["Ada Lovelace", "Grace Hopper"]);
+  assert.deepEqual(secondCommissioner.candidates.map(({ name }) => name), ["Grace Hopper", "Ada Lovelace"]);
+  assert.equal(firstCommissioner.id, secondCommissioner.id, "rotation must not change the contest identity");
+});
+
+test("exact projection derives a common office from its measured subtitle", async () => {
+  const { snapshot, election } = fixture();
+  for (const [index, precinct] of snapshot.precincts.entries()) precinct.name = `Precinct ${index + 1}`;
+  for (const ballot of Object.values(snapshot.ballots)) {
+    const commissioner = ballot.contests.find(({ title }) => title === "For County Commissioner");
+    commissioner.title = "COUNTY OF ADAMS";
+    commissioner.subtitles = ["For County Commissioner"];
+  }
+  rehashSnapshot(snapshot);
+
+  const bundle = await projectExactBallotBundle(snapshot, election, exactOptions({
+    officeMappings: {
+      "For Village Mayor": exactOptions().officeMappings["For Village Mayor"],
+    },
+    labelOffice: (title) => title === "For County Commissioner"
+      ? { office_id: "county-commissioner", office: "County Commissioner" }
+      : null,
+  }));
+  const firstBallot = bundle.ballots[bundle.precincts[0].ballot_id];
+  const commissioner = firstBallot.races.find(({ office_id: officeId }) => officeId === "county-commissioner");
+  assert.equal(commissioner.office, "County Commissioner");
+  assert.match(commissioner.scope, /COUNTY OF ADAMS/);
+});
+
+test("exact projection refuses uncertainty and unmapped precinct-only offices", async () => {
+  const { snapshot, election } = fixture();
+  for (const [index, precinct] of snapshot.precincts.entries()) precinct.name = `Precinct ${index + 1}`;
+  const first = snapshot.ballots[snapshot.precincts[0].ballot_id];
+  const mayor = first.contests.find(({ title }) => title === "For Village Mayor");
+  mayor.uncertain = ["fixture uncertainty"];
+  rehashSnapshot(snapshot);
+  await assert.rejects(
+    projectExactBallotBundle(snapshot, election, exactOptions()),
+    /Village Mayor.*uncertain parse/,
+  );
+
+  mayor.uncertain = [];
+  rehashSnapshot(snapshot);
+  await assert.rejects(
+    projectExactBallotBundle(snapshot, election, exactOptions({
+      officeMappings: { "For County Commissioner": "county-commissioner" },
+    })),
+    /office contest needs a mapping: For Village Mayor/,
+  );
+});
+
+test("CLI --exact writes a bundle-only staging artifact", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "vtrapp-exact-projector-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const { snapshot, election } = fixture();
+  for (const [index, precinct] of snapshot.precincts.entries()) precinct.name = `Precinct ${index + 1}`;
+  const firstBallot = snapshot.ballots[snapshot.precincts[0].ballot_id];
+  const mayor = firstBallot.contests.find(({ title }) => title === "For Village Mayor");
+  mayor.title = "TOWNSHIP OF TEST";
+  mayor.subtitles = ["For Township Trustee"];
+  rehashSnapshot(snapshot);
+
+  const snapshotPath = join(directory, "snapshot.json");
+  const electionsPath = join(directory, "elections.json");
+  const configPath = join(directory, "config.json");
+  const issueTextPath = join(directory, "statewide-issue-text.json");
+  const patternsPath = join(directory, "office-title-patterns.json");
+  const officesPath = join(directory, "offices.json");
+  const outputPath = join(directory, "exact.json");
+  await writeFile(snapshotPath, JSON.stringify(snapshot));
+  await writeFile(electionsPath, JSON.stringify({ elections: [election] }));
+  await writeFile(configPath, JSON.stringify({
+    max_source_age_hours: 24,
+    county_name: "Adams",
+    office_mappings: {
+      "For County Commissioner": exactOptions().officeMappings["For County Commissioner"],
+    },
+    statewide_race_mappings: {},
+    statewide_issue_mappings: {},
+  }));
+  await writeFile(issueTextPath, JSON.stringify({
+    issues: { "state-issue-3": { body_text: "Statewide amendment text" } },
+  }));
+  await writeFile(patternsPath, JSON.stringify({
+    meta: { schema_version: 1, last_verified: "2026-10-16" },
+    patterns: [],
+    corrections: [],
+  }));
+  await writeFile(officesPath, JSON.stringify({
+    offices: {
+      "township-trustee": { title: "Township Trustee" },
+    },
+  }));
+
+  const result = spawnSync(process.execPath, [
+    new URL("../scripts/project-vtrapp.mjs", import.meta.url).pathname,
+    "--exact",
+    "--snapshot", snapshotPath,
+    "--elections", electionsPath,
+    "--config", configPath,
+    "--issue-text", issueTextPath,
+    "--office-title-patterns", patternsPath,
+    "--offices", officesPath,
+    "--reviewed-at", "2026-10-16T18:00:00.000Z",
+    "--out", outputPath,
+  ], { encoding: "utf8" });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /2 precincts, 2 exact ballots, bundle only/);
+  const artifact = JSON.parse(await readFile(outputPath, "utf8"));
+  assert.deepEqual(Object.keys(artifact), ["ballot_bundle"]);
+  assert.equal(artifact.ballot_bundle.precincts.length, 2);
+  const projectedFirst = artifact.ballot_bundle.ballots[artifact.ballot_bundle.precincts[0].ballot_id];
+  const trustee = projectedFirst.races.find(({ office_id: officeId }) => officeId === "township-trustee");
+  assert.equal(trustee.office, "Township Trustee");
+  assert.match(trustee.scope, /TOWNSHIP OF TEST/);
+});
 
 // Retitles the fixture's statewide issue the way lorain and tuscarawas do, so
 // that possiblePublishedIssueMatch stops recognizing it.

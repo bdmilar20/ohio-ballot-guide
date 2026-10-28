@@ -1,14 +1,84 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import { createVendorClient, VendorTransportError } from "../scripts/ingest/vtrapp.mjs";
-import { SURVEY_SCHEMA_VERSION, summarize, surveyCounty, surveyVtrapp } from "../scripts/survey-vtrapp.mjs";
+import {
+  applyObservationRange,
+  appendPartialObservations,
+  commitSurveyArtifacts,
+  completedJournalPaths,
+  isSettledCountyRecord,
+  PARTIAL_MAX_AGE_HOURS,
+  PARTIAL_SCHEMA_VERSION,
+  readPartial,
+  StalePartialSurveyError,
+  SURVEY_SCHEMA_VERSION,
+  summarize,
+  surveyCounty,
+  surveyVtrapp,
+} from "../scripts/survey-vtrapp.mjs";
+import { emptyLog } from "../scripts/vtrapp-stamp-log.mjs";
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const fixture = (name) => readFile(join(projectRoot, "test", "fixtures", "vtrapp", `${name}.html`), "utf8");
+const surveyScript = join(projectRoot, "scripts", "survey-vtrapp.mjs");
+
+async function writeFetchStub(directory) {
+  const path = join(directory, "fetch-stub.mjs");
+  await writeFile(path, `
+import { appendFileSync } from "node:fs";
+
+globalThis.fetch = async (url) => {
+  appendFileSync(process.env.OBG_REQUEST_LOG, \`\${url}\\n\`);
+  if (process.env.OBG_FETCH_MODE === "edge-and-drop") {
+    if (url.includes("/allen/")) return new Response("Attention Required", { status: 403 });
+    throw new Error("connection dropped");
+  }
+  if (process.env.OBG_FETCH_MODE === "not-a-customer") {
+    return new Response("Not a Customer", { status: 200 });
+  }
+  throw new Error(\`unknown OBG_FETCH_MODE: \${process.env.OBG_FETCH_MODE}\`);
+};
+`);
+  return path;
+}
+
+function runSurveyCli({ preload, requestLog, mode, out, partial, counties }) {
+  return spawnSync(
+    process.execPath,
+    [
+      "--import",
+      preload,
+      surveyScript,
+      "--election",
+      "20261103G",
+      "--counties",
+      counties.join(","),
+      "--out",
+      out,
+      "--log",
+      "none",
+      "--partial",
+      partial,
+      "--delay",
+      "0",
+    ],
+    {
+      cwd: projectRoot,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        OBG_FETCH_MODE: mode,
+        OBG_REQUEST_LOG: requestLog,
+      },
+    },
+  );
+}
 
 const LISTING = `<html>
   Election data last updated: 10/12/26 02:32:40 PM<br/>
@@ -195,8 +265,8 @@ test("summarizes a mixed run by outcome and by scale", () => {
     counties: 4,
     served: 2,
     not_a_customer: 1,
-    unknown_slug: 1,
-    transport_errors: 0,
+    unknown_slug: 0,
+    transport_errors: 1,
     enumerable: 2,
     blocked: 2,
     precinct_splits: 74,
@@ -234,6 +304,298 @@ test("dates the artifact by Ohio's day, not the host's", async () => {
   assert.equal(survey.meta.generated_on, "2026-10-18");
 });
 
+test("resumes whole county records without requesting them again", async () => {
+  const attempted = [];
+  const result = await surveyVtrapp({
+    countyIds: ["adams", "allen"],
+    electionKey: "20261103G",
+    client: clientFor(fakeVendor()),
+    resumedCounties: {
+      adams: { enumerable: true, response: "served", precinct_rows_parsed: 27 },
+    },
+    survey: async ({ countyId }) => {
+      attempted.push(countyId);
+      return { enumerable: true, response: "served", precinct_rows_parsed: 114 };
+    },
+  });
+
+  assert.deepEqual(attempted, ["allen"]);
+  assert.deepEqual(Object.keys(result.counties), ["adams", "allen"]);
+  assert.equal(result.meta.summary.precinct_splits, 141);
+});
+
+test("a partial journal preserves each attempt's stamp observation", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "obg-vtrapp-partial-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, "survey.ndjson");
+  const lines = [
+    {
+      schema_version: PARTIAL_SCHEMA_VERSION,
+      election: "20261103G",
+      observed_at: "2026-10-22T12:00:00.000Z",
+      county: "adams",
+      record: {
+        enumerable: true,
+        response: "served",
+        precinct_rows_parsed: 27,
+        source_updated_at: "2026-10-12T14:32:40-04:00",
+      },
+    },
+    {
+      schema_version: PARTIAL_SCHEMA_VERSION,
+      election: "20261103G",
+      observed_at: "2026-10-24T12:00:00.000Z",
+      county: "allen",
+      record: {
+        enumerable: true,
+        response: "served",
+        precinct_rows_parsed: 114,
+        source_updated_at: "2026-10-13T09:00:00-04:00",
+      },
+    },
+  ];
+  await writeFile(path, `${lines.map((entry) => JSON.stringify(entry)).join("\n")}\n`);
+
+  const partial = await readPartial(path, "20261103G");
+  assert.deepEqual(Object.keys(partial.counties), ["adams", "allen"]);
+  assert.equal(partial.observations.length, 2);
+  assert.deepEqual(partial.observations[0].surveyed, ["adams"]);
+  assert.deepEqual(partial.observations[1].surveyed, ["allen"]);
+
+  const log = appendPartialObservations(
+    emptyLog({ election: { id: "2026-11-03-general", vendor_key: "20261103G" } }),
+    partial.observations,
+  );
+  assert.equal(log.observations.length, 2);
+  assert.equal(log.observations[0].observed_at, "2026-10-22T12:00:00.000Z");
+  assert.equal(log.observations[1].observed_at, "2026-10-24T12:00:00.000Z");
+});
+
+test("a partial journal refuses wrong-election, duplicate, transport, truncated, and out-of-order records", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "obg-vtrapp-partial-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, "survey.ndjson");
+  const entry = {
+    schema_version: PARTIAL_SCHEMA_VERSION,
+    election: "20261103G",
+    observed_at: "2026-10-22T12:00:00.000Z",
+    county: "adams",
+    record: { enumerable: true, response: "served", precinct_rows_parsed: 27 },
+  };
+
+  assert.deepEqual(await readPartial(path, "20261103G"), { counties: {}, observations: [] });
+  await writeFile(path, `${JSON.stringify(entry)}\n`);
+  await assert.rejects(() => readPartial(path, "20260505P"), /holds election 20261103G/);
+  await writeFile(path, `${JSON.stringify(entry)}\n${JSON.stringify(entry)}\n`);
+  await assert.rejects(() => readPartial(path, "20261103G"), /records adams more than once/);
+  await writeFile(path, `${JSON.stringify({ ...entry, record: { transport_error: true } })}\n`);
+  await assert.rejects(() => readPartial(path, "20261103G"), /retryable response/);
+  await writeFile(path, `${JSON.stringify({ ...entry, record: { enumerable: false, response: "error" } })}\n`);
+  await assert.rejects(() => readPartial(path, "20261103G"), /retryable response/);
+  await writeFile(path, `${JSON.stringify(entry)}\n{"schema_version":1`);
+  await assert.rejects(() => readPartial(path, "20261103G"), /not valid JSON/);
+
+  await writeFile(
+    path,
+    `${JSON.stringify({ ...entry, observed_at: "2026-10-22T13:00:00.000Z" })}\n` +
+      `${JSON.stringify({ ...entry, county: "allen", observed_at: "2026-10-22T12:59:59.999Z" })}\n`,
+  );
+  await assert.rejects(() => readPartial(path, "20261103G"), /not in chronological order/);
+});
+
+test("the CLI journals only durable county responses", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "obg-vtrapp-cli-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const preload = await writeFetchStub(directory);
+  const out = join(directory, "coverage.json");
+  const partial = join(directory, "survey.ndjson");
+  const requestLog = join(directory, "requests.log");
+
+  const run = runSurveyCli({
+    preload,
+    requestLog,
+    mode: "edge-and-drop",
+    out,
+    partial,
+    counties: ["allen", "wyandot"],
+  });
+
+  assert.equal(run.status, 0, run.stderr);
+  const coverage = JSON.parse(await readFile(out, "utf8"));
+  assert.equal(coverage.meta.summary.transport_errors, 2);
+  await assert.rejects(
+    () => readFile(partial, "utf8"),
+    (error) => error.code === "ENOENT",
+    "temporary HTTP and unanswered requests must not become resumable evidence",
+  );
+  const requests = (await readFile(requestLog, "utf8")).trim().split("\n");
+  assert.equal(requests.filter((url) => url.includes("/allen/")).length, 1);
+  assert.equal(requests.filter((url) => url.includes("/wyandot/")).length, 3);
+});
+
+test("the CLI preserves the full observation range across resumed batches", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "obg-vtrapp-cli-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const preload = await writeFetchStub(directory);
+  const out = join(directory, "coverage.json");
+  const partial = join(directory, "survey.ndjson");
+  const requestLog = join(directory, "requests.log");
+  const firstObservedAt = new Date(Date.now() - 3_600_000).toISOString();
+  await writeFile(
+    partial,
+    `${JSON.stringify({
+      schema_version: PARTIAL_SCHEMA_VERSION,
+      election: "20261103G",
+      observed_at: firstObservedAt,
+      county: "allen",
+      record: {
+        vendor_slug: "allen",
+        listing_url: "https://lookup.boe.ohio.gov/vtrapp/allen/ballotlist.aspx",
+        enumerable: false,
+        response: "not-a-customer",
+        blocked: "the vendor response is not-a-customer",
+      },
+    })}\n`,
+  );
+
+  const run = runSurveyCli({
+    preload,
+    requestLog,
+    mode: "not-a-customer",
+    out,
+    partial,
+    counties: ["allen", "wyandot"],
+  });
+
+  assert.equal(run.status, 0, run.stderr);
+  const coverage = JSON.parse(await readFile(out, "utf8"));
+  assert.equal(coverage.meta.observed_from, firstObservedAt);
+  assert.ok(
+    Date.parse(coverage.meta.observed_through) > Date.parse(firstObservedAt),
+    "the final observation must come from the resumed batch",
+  );
+  const requests = (await readFile(requestLog, "utf8")).trim().split("\n");
+  assert.deepEqual(requests.map((url) => new URL(url).pathname), ["/vtrapp/wyandot/ballotlist.aspx"]);
+});
+
+test("partial observation finalization is idempotent but refuses a conflicting timestamp", () => {
+  const observation = {
+    observed_at: "2026-10-22T12:00:00.000Z",
+    election: "20261103G",
+    source: "scripts/survey-vtrapp.mjs",
+    surveyed: ["adams"],
+    stamps: { adams: "2026-10-12T14:32:40-04:00" },
+  };
+  const empty = emptyLog({ election: { id: "2026-11-03-general", vendor_key: "20261103G" } });
+  const once = appendPartialObservations(empty, [observation]);
+  const twice = appendPartialObservations(once, [observation]);
+  assert.equal(twice.observations.length, 1);
+  assert.throws(
+    () => appendPartialObservations(once, [{ ...observation, surveyed: ["allen"], stamps: {} }]),
+    /different observation/,
+  );
+});
+
+test("final coverage dates follow the source observation rather than a later cleanup restart", () => {
+  const survey = { meta: { generated_on: "2026-10-25" } };
+  applyObservationRange(survey, [
+    { observed_at: "2026-10-22T12:00:00.000Z" },
+    { observed_at: "2026-10-24T03:30:00.000Z" },
+  ]);
+
+  assert.equal(survey.meta.observed_from, "2026-10-22T12:00:00.000Z");
+  assert.equal(survey.meta.observed_through, "2026-10-24T03:30:00.000Z");
+  assert.equal(survey.meta.generated_on, "2026-10-23", "03:30Z is still the prior day in Ohio");
+});
+
+test("partial journals expire and cannot predate newer committed evidence", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "obg-vtrapp-stale-partial-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, "survey.ndjson");
+  const entry = {
+    schema_version: PARTIAL_SCHEMA_VERSION,
+    election: "20261103G",
+    observed_at: "2026-10-22T12:00:00.000Z",
+    county: "adams",
+    record: { enumerable: true, response: "served", precinct_rows_parsed: 27 },
+  };
+  await writeFile(path, `${JSON.stringify(entry)}\n`);
+
+  await assert.rejects(
+    () => readPartial(path, "20261103G", {
+      now: "2026-10-24T12:00:00.001Z",
+      maxAgeHours: PARTIAL_MAX_AGE_HOURS,
+    }),
+    (error) => {
+      assert.ok(error instanceof StalePartialSurveyError);
+      assert.deepEqual(error.countyIds, ["adams"]);
+      assert.match(error.message, /discarding adams/);
+      return true;
+    },
+  );
+  await assert.rejects(
+    () => readPartial(path, "20261103G", {
+      now: "2026-10-22T13:00:00.000Z",
+      maxAgeHours: PARTIAL_MAX_AGE_HOURS,
+      latestCommittedAt: "2026-10-22T12:00:00.001Z",
+    }),
+    /predates the committed observation.*discarding adams/,
+  );
+});
+
+test("commits stamp evidence before replaceable coverage", async () => {
+  const writes = [];
+  const write = async (path) => {
+    writes.push(path);
+    if (path === "log.json") throw new Error("log unavailable");
+  };
+  await assert.rejects(
+    () => commitSurveyArtifacts({
+      coveragePath: "coverage.json",
+      coverage: { meta: {} },
+      logPath: "log.json",
+      log: { observations: [] },
+      write,
+    }),
+    /log unavailable/,
+  );
+  assert.deepEqual(writes, ["log.json"], "coverage must stay untouched when the log append fails");
+
+  writes.length = 0;
+  await commitSurveyArtifacts({
+    coveragePath: "coverage.json",
+    coverage: { meta: {} },
+    logPath: "log.json",
+    log: { observations: [] },
+    write: async (path) => writes.push(path),
+  });
+  assert.deepEqual(writes, ["log.json", "coverage.json"]);
+});
+
+test("a clean partial bypass retires the skipped default journal", () => {
+  assert.deepEqual(
+    completedJournalPaths({
+      partialPath: null,
+      defaultPartialPath: ".cache/default.ndjson",
+      isWholeState: true,
+      bypassedPartial: true,
+      transportErrors: 0,
+    }),
+    [".cache/default.ndjson"],
+  );
+  assert.deepEqual(
+    completedJournalPaths({
+      partialPath: ".cache/custom.ndjson",
+      defaultPartialPath: ".cache/default.ndjson",
+      isWholeState: false,
+      bypassedPartial: false,
+      transportErrors: 1,
+    }),
+    [],
+    "a diagnostic run with an unanswered request must keep its resumable journal",
+  );
+});
+
 test("refuses a survey with no counties rather than writing an empty artifact", async () => {
   await assert.rejects(
     surveyVtrapp({ countyIds: [], electionKey: "20261103G" }),
@@ -269,6 +631,32 @@ test("records an unanswered request as one county's finding and keeps surveying"
   assert.equal(result.meta.summary.transport_errors, 1);
 });
 
+test("treats temporary HTTP and unknown-slug responses as retryable rather than journal evidence", async () => {
+  const result = await surveyVtrapp({
+    countyIds: ["allen", "van-wert", "wyandot"],
+    electionKey: "20261103G",
+    client: clientFor(fakeVendor()),
+    survey: async ({ countyId }) => {
+      if (countyId === "allen") {
+        return { enumerable: false, response: "error", blocked: "the vendor response is error" };
+      }
+      if (countyId === "van-wert") {
+        return { enumerable: false, response: "served", retryable_error: true, blocked: "selecting returned HTTP 403" };
+      }
+      return { enumerable: false, response: "unknown-slug", blocked: "the vendor response is unknown-slug" };
+    },
+  });
+
+  assert.equal(isSettledCountyRecord(result.counties.allen), false);
+  assert.equal(result.counties.allen.retryable_error, true);
+  assert.match(result.counties.allen.blocked, /temporary response; retry required/);
+  assert.equal(result.counties["van-wert"].retryable_error, true);
+  assert.equal(result.counties.wyandot.retryable_error, true);
+  assert.equal(result.meta.summary.served, 0, "a failed later request cannot also count as served");
+  assert.equal(result.meta.summary.transport_errors, 3);
+  assert.equal(result.meta.summary.unknown_slug, 0);
+});
+
 test("lets a parse failure end the run instead of filing it as a timeout", async () => {
   // `transport_error` means the vendor never answered, and the artifact tells a
   // reader to re-run. A parser regression answers every re-run the same way, so
@@ -298,7 +686,8 @@ test("every surveyed county lands in exactly one response category", () => {
     ottawa: { enumerable: false, transport_error: true },
   });
 
-  assert.equal(summary.transport_errors, 1);
+  assert.equal(summary.unknown_slug, 0);
+  assert.equal(summary.transport_errors, 2);
   assert.equal(
     summary.served + summary.not_a_customer + summary.unknown_slug + summary.transport_errors,
     summary.counties,

@@ -10,7 +10,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { assertBallotBundle, ballotContentId as exactBallotContentId } from "../src/exact-ballot.mjs";
 import { ballotId, parseArgs, SCHEMA_VERSION as SNAPSHOT_SCHEMA_VERSION } from "./ingest/vtrapp.mjs";
+import { projectExactFromArgs } from "./project-vtrapp-exact.mjs";
 
 export const PROJECTION_SCHEMA_VERSION = 2;
 
@@ -460,14 +462,15 @@ function stripParens(value) {
   return value.replace(/^\((.*)\)$/, "$1");
 }
 
-function raceScope(contest, countyName) {
+function raceScope(contest, countyName, { includeHeading = false } = {}) {
   const detail = [...contest.subtitles, ...contest.instructions]
     .filter((line) => !/^\(\s*(?:to )?vote\b/i.test(line))
     .map(stripParens);
   if (contest.vote_for) {
     detail.push(contest.vote_for === 1 ? "Vote for one" : `Vote for no more than ${contest.vote_for}`);
   }
-  return [`${countyName} County`, ...detail].join(" · ");
+  const heading = includeHeading && !/^For\s+/i.test(contest.title) ? [contest.title] : [];
+  return [`${countyName} County`, ...heading, ...detail].join(" · ");
 }
 
 function mappingFor(mappings, entry) {
@@ -517,6 +520,129 @@ function productIssue(entry, snapshot) {
     source_url: snapshot.source.listing_url,
     source_fingerprint: entry.fingerprint,
   };
+}
+
+function exactProductRace(entry, mapping, snapshot, countyName, published = null) {
+  const contest = entry.contest;
+  const mappedOffice = typeof mapping === "string" ? contest.title.replace(/^For\s+/i, "") : mapping?.office;
+  const mappedOfficeId = typeof mapping === "string" ? mapping : mapping?.office_id;
+  const office = published?.office ?? mappedOffice;
+  const officeId = published?.office_id ?? mappedOfficeId;
+  invariant(officeId && office, `office mapping for "${contest.title}" needs office_id and office`);
+
+  // An exact precinct ballot keeps the source's printed candidate order.
+  // The countywide projection canonicalizes that order because Ohio rotates
+  // candidates between precincts and no one rotation represents the county.
+  const candidates = contest.choices
+    .filter((choice) => !choice.write_in)
+    .map((choice) => ({
+      name: choice.name,
+      party: choice.party ?? "No party printed",
+    }));
+  invariant(candidates.length > 0, `contest "${contest.title}" has no named candidates to publish`);
+  const fingerprintSuffix = entry.fingerprint.slice("sha256:".length, "sha256:".length + 12);
+  return {
+    id: published?.id ?? `${snapshot.county.id}-${slug(contest.title)}-${fingerprintSuffix}`,
+    scope: published?.scope ?? raceScope(contest, countyName, { includeHeading: true }),
+    office,
+    office_id: officeId,
+    last_verified: ohioDate(timestamp(snapshot.source.fetched_at, "snapshot.source.fetched_at")),
+    source_url: contest.source_url ?? snapshot.source.listing_url,
+    source_fingerprint: entry.fingerprint,
+    write_in_available: contest.allows_write_in,
+    candidates,
+  };
+}
+
+function exactProductIssue(entry, snapshot, published = null) {
+  const issue = productIssue(entry, snapshot);
+  return {
+    ...issue,
+    id: published?.id ?? issue.id,
+    source_url: entry.contest.source_url ?? snapshot.source.listing_url,
+  };
+}
+
+function exactEntry(entry, contest) {
+  return { ...entry, contest, title: contest.title };
+}
+
+function derivedOfficeMapping(entry, labelOffice) {
+  const labels = [entry.title, ...entry.contest.subtitles]
+    .map((printed) => labelOffice(printed))
+    .filter(Boolean);
+  const distinct = new Map(labels.map((mapping) => [canonicalString(mapping), mapping]));
+  invariant(
+    distinct.size <= 1,
+    `office contest "${entry.title}" has conflicting title and subtitle mappings`,
+  );
+  return distinct.values().next().value ?? null;
+}
+
+function exactRace(entry, snapshot, election, options) {
+  const directId = entry.published_statewide_race_id;
+  if (directId) {
+    const published = election.statewide_races.find(({ id }) => id === directId);
+    invariant(published, `contest "${entry.title}" references missing statewide race ${directId}`);
+    return exactProductRace(entry, null, snapshot, options.countyName, published);
+  }
+
+  const mappedId = mappingFor(options.statewideRaceMappings, entry);
+  if (mappedId) {
+    invariant(
+      entry.possible_statewide_race_ids.includes(mappedId),
+      `statewide race mapping for "${entry.title}" references ${mappedId}, which does not match its office`,
+    );
+    const published = election.statewide_races.find(({ id }) => id === mappedId);
+    invariant(published, `statewide race mapping for "${entry.title}" references missing race ${mappedId}`);
+    return exactProductRace(entry, null, snapshot, options.countyName, published);
+  }
+
+  invariant(
+    entry.possible_statewide_race_ids.length === 0,
+    `office "${entry.title}" may duplicate ${entry.possible_statewide_race_ids.join(" or ")}; add an explicit statewide race mapping`,
+  );
+  const twin = statewideTwinByCandidates(entry.contest, election);
+  invariant(
+    !twin,
+    `office "${entry.title}" lists the same candidates as statewide race ${twin}; add an explicit statewide race mapping`,
+  );
+  const mapping = mappingFor(options.officeMappings, entry)
+    ?? derivedOfficeMapping(entry, options.labelOffice);
+  invariant(mapping, `office contest needs a mapping: ${entry.title}`);
+  return exactProductRace(entry, mapping, snapshot, options.countyName);
+}
+
+function exactIssue(entry, snapshot, election, options) {
+  const issueTwin = statewideIssueTwinByText(entry.contest, options.statewideIssueText);
+  const mappedId = mappingFor(options.statewideIssueMappings, entry);
+  let statewideId = null;
+  if (mappedId) {
+    invariant(
+      election.issues.some(({ id }) => id === mappedId),
+      `statewide issue mapping for "${entry.title}" references unknown issue ${mappedId}`,
+    );
+    invariant(
+      !issueTwin || issueTwin === mappedId,
+      `statewide issue mapping for "${entry.title}" references ${mappedId} but its certified ballot text identifies ${issueTwin}`,
+    );
+    statewideId = mappedId;
+  } else if (issueTwin) {
+    invariant(
+      !entry.possible_statewide_issue_id || entry.possible_statewide_issue_id === issueTwin,
+      `issue "${entry.title}" is titled as ${entry.possible_statewide_issue_id} but prints the certified ballot text of ${issueTwin}`,
+    );
+    statewideId = issueTwin;
+  } else {
+    invariant(
+      !entry.possible_statewide_issue_id,
+      `issue "${entry.title}" may duplicate ${entry.possible_statewide_issue_id}; add an explicit statewide issue mapping`,
+    );
+  }
+
+  const published = statewideId ? election.issues.find(({ id }) => id === statewideId) : null;
+  invariant(!statewideId || published, `contest "${entry.title}" references missing statewide issue ${statewideId}`);
+  return exactProductIssue(entry, snapshot, published);
 }
 
 export function projectCounty(snapshot, election, {
@@ -589,7 +715,7 @@ export function projectCounty(snapshot, election, {
         entry.possible_statewide_race_ids.length === 0,
         `office "${entry.title}" may duplicate ${entry.possible_statewide_race_ids.join(" or ")}; add an explicit statewide race mapping`,
       );
-      const mapping = mappingFor(officeMappings, entry) ?? labelOffice(entry.title);
+      const mapping = mappingFor(officeMappings, entry) ?? derivedOfficeMapping(entry, labelOffice);
       if (!mapping) {
         unmapped.push(entry.title);
         continue;
@@ -677,48 +803,171 @@ export function projectCounty(snapshot, election, {
   };
 }
 
+/**
+ * Converts every enumerated precinct ballot into the browser's exact-ballot
+ * bundle. Unlike the countywide projection, this path retains precinct-only
+ * contests and each precinct's printed candidate order. It deliberately emits
+ * no manifest entry: a bundle is publishable only after an independently
+ * sourced address index covers every precinct.
+ */
+export async function projectExactBallotBundle(snapshot, election, {
+  maxSourceAgeHours,
+  officeMappings = {},
+  statewideRaceMappings = {},
+  statewideIssueMappings = {},
+  statewideIssueText = {},
+  labelOffice = () => null,
+  countyName = displayCounty(snapshot.county.id),
+  reviewedAt = new Date(),
+} = {}) {
+  // Reuse every completeness, freshness, statewide-duplicate, and common
+  // office-mapping gate that already protects the countywide projection.
+  const sharedOptions = {
+    maxSourceAgeHours,
+    officeMappings,
+    statewideRaceMappings,
+    statewideIssueMappings,
+    statewideIssueText,
+    labelOffice,
+    countyName,
+    reviewedAt,
+  };
+  const countyProjection = projectCounty(snapshot, election, sharedOptions);
+  const entries = new Map(
+    [...countyProjection.review.common_to_all_precincts, ...countyProjection.review.precinct_specific]
+      .map((entry) => [entry.fingerprint, entry]),
+  );
+
+  const sourceBallotIds = new Map();
+  const ballots = {};
+  for (const [sourceBallotId, ballot] of Object.entries(snapshot.ballots)) {
+    let priorOrder = 0;
+    const races = [];
+    const issues = [];
+    for (const contest of ballot.contests) {
+      invariant(
+        Number.isInteger(contest.order) && contest.order > priorOrder,
+        `ballot ${sourceBallotId} contest order must be strictly increasing`,
+      );
+      priorOrder = contest.order;
+      invariant(
+        Array.isArray(contest.uncertain) && contest.uncertain.length === 0,
+        `contest "${contest.title}" contains an uncertain parse`,
+      );
+      const fingerprint = contestContentId(contest);
+      const observed = entries.get(fingerprint);
+      invariant(observed, `ballot ${sourceBallotId} contains unanalyzed contest ${fingerprint}`);
+      const entry = exactEntry(observed, contest);
+      if (contest.kind === "office") {
+        races.push(exactRace(entry, snapshot, election, sharedOptions));
+      } else {
+        invariant(contest.kind === "issue", `contest "${contest.title}" has unknown kind ${contest.kind}`);
+        issues.push(exactIssue(entry, snapshot, election, sharedOptions));
+      }
+    }
+
+    const content = { races, issues };
+    const productBallotId = await exactBallotContentId(content);
+    if (ballots[productBallotId]) {
+      invariant(
+        canonicalString(ballots[productBallotId]) === canonicalString(content),
+        `exact ballot digest collision at ${productBallotId}`,
+      );
+    } else {
+      ballots[productBallotId] = content;
+    }
+    sourceBallotIds.set(sourceBallotId, productBallotId);
+  }
+
+  const precincts = snapshot.precincts.map((precinct) => {
+    invariant(
+      typeof precinct.name === "string" && precinct.name.trim() !== "",
+      `precinct ${precinct.id} needs a source name`,
+    );
+    const productBallotId = sourceBallotIds.get(precinct.ballot_id);
+    invariant(productBallotId, `precinct ${precinct.id} references an unprojected ballot`);
+    const split = typeof precinct.split === "string" ? precinct.split.trim() : "";
+    return {
+      id: precinct.id,
+      name: split && split !== precinct.name.trim()
+        ? `${precinct.name.trim()} · ${split}`
+        : precinct.name.trim(),
+      ballot_id: productBallotId,
+    };
+  });
+
+  const bundle = {
+    schema_version: 1,
+    election_id: snapshot.election.id,
+    county_id: snapshot.county.id,
+    provenance: {
+      source_url: snapshot.source.listing_url,
+      // The official application is a multi-page stateful flow, so there is no
+      // single response body to hash. The complete normalized snapshot is the
+      // immutable input this artifact was derived from, and this digest pins
+      // every enumerated precinct, source URL, and parsed contest together.
+      source_sha256: hash(snapshot),
+      retrieved_at: snapshot.source.fetched_at,
+      last_verified: ohioDate(timestamp(snapshot.source.fetched_at, "snapshot.source.fetched_at")),
+    },
+    enumeration: structuredClone(snapshot.enumeration),
+    precincts,
+    ballots,
+  };
+  await assertBallotBundle(bundle);
+  return bundle;
+}
+
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
   try {
-    const args = parseArgs(process.argv.slice(2));
-    if (!args.snapshot) throw new Error("--snapshot is required");
-    const snapshot = await readJson(args.snapshot);
-    const electionData = args.elections ? await readJson(args.elections) : null;
-    const election = electionData?.elections?.find(({ id }) => id === snapshot.election.id) ?? null;
-    if (args.elections) {
-      invariant(election, `election ${snapshot.election.id} is absent from --elections data`);
-    }
-    const review = analyzeSnapshot(snapshot, election);
-    let artifact = { review };
-
-    if (args.config) {
-      invariant(election, `election ${snapshot.election.id} is absent from --elections data`);
-      const config = await readJson(args.config);
-      // Read rather than defaulted to empty: an absent artifact silently
-      // removes the backstop, and "silently" is how the duplicate it prevents
-      // reaches a voter.
-      const issueTextPath = args["issue-text"]
-        ?? fileURLToPath(new URL("../data/statewide-issue-text.json", import.meta.url));
-      artifact = projectCounty(snapshot, election, {
-        maxSourceAgeHours: config.max_source_age_hours,
-        officeMappings: config.office_mappings,
-        statewideRaceMappings: config.statewide_race_mappings,
-        statewideIssueMappings: config.statewide_issue_mappings,
-        statewideIssueText: certifiedIssueText(await readJson(issueTextPath)),
-        countyName: config.county_name,
-      });
-    }
-
-    const output = `${JSON.stringify(artifact, null, 2)}\n`;
-    if (args.out) {
-      await mkdir(dirname(args.out), { recursive: true });
-      await writeFile(args.out, output);
-      console.log(`Wrote ${args.out}`);
+    const argv = process.argv.slice(2);
+    const exactFlags = argv.filter((argument) => argument === "--exact");
+    invariant(exactFlags.length <= 1, "--exact may be supplied only once");
+    const exact = exactFlags.length === 1;
+    const args = parseArgs(argv.filter((argument) => argument !== "--exact"));
+    if (exact) {
+      await projectExactFromArgs(args, { certifiedIssueText, projectExactBallotBundle });
     } else {
-      process.stdout.write(output);
+      if (!args.snapshot) throw new Error("--snapshot is required");
+      const snapshot = await readJson(args.snapshot);
+      const electionData = args.elections ? await readJson(args.elections) : null;
+      const election = electionData?.elections?.find(({ id }) => id === snapshot.election.id) ?? null;
+      if (args.elections) {
+        invariant(election, `election ${snapshot.election.id} is absent from --elections data`);
+      }
+      const review = analyzeSnapshot(snapshot, election);
+      let artifact = { review };
+
+      if (args.config) {
+        invariant(election, `election ${snapshot.election.id} is absent from --elections data`);
+        const config = await readJson(args.config);
+        // Read rather than defaulted to empty: an absent artifact silently
+        // removes the backstop, and "silently" is how the duplicate it prevents
+        // reaches a voter.
+        const issueTextPath = args["issue-text"]
+          ?? fileURLToPath(new URL("../data/statewide-issue-text.json", import.meta.url));
+        artifact = projectCounty(snapshot, election, {
+          maxSourceAgeHours: config.max_source_age_hours,
+          officeMappings: config.office_mappings,
+          statewideRaceMappings: config.statewide_race_mappings,
+          statewideIssueMappings: config.statewide_issue_mappings,
+          statewideIssueText: certifiedIssueText(await readJson(issueTextPath)),
+          countyName: config.county_name,
+        });
+      }
+
+      const output = `${JSON.stringify(artifact, null, 2)}\n`;
+      if (args.out) {
+        await mkdir(dirname(args.out), { recursive: true });
+        await writeFile(args.out, output);
+        console.log(`Wrote ${args.out}`);
+      } else {
+        process.stdout.write(output);
+      }
     }
   } catch (error) {
     console.error(error.message);
