@@ -155,6 +155,20 @@ test("columnsRuledAt is false above and below the ruled region", () => {
   assert.equal(columnsRuledAt(columns, 50), false);
 });
 
+test("columnsRuledAt falls back to the frame when there is no interior boundary", () => {
+  // A single ruled column has no interior boundary, so only its frame can say
+  // where the column exists. Deciding on the interior alone makes
+  // columnsRuledAt false everywhere on a one-column page, every line becomes a
+  // full-width banner, and the left-margin sequence numerals the ballot prints
+  // outside the frame glue themselves onto the start of each contest line.
+  const rule = (x, from, to) => ({ from: { x, y: from }, to: { x, y: to } });
+  const single = detectRuledColumns([rule(33.8, 100, 700), rule(578.2, 100, 700)]);
+  assert.equal(single.length, 1);
+  assert.deepEqual(single.interior, []);
+  assert.equal(columnsRuledAt(single, 400), true);
+  assert.equal(columnsRuledAt(single, 900), false);
+});
+
 test("sliceLineByColumns cuts at a gap and keeps text that runs across a boundary", () => {
   const columns = [
     { x0: 0, x1: 100 },
