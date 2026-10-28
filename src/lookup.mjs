@@ -83,7 +83,38 @@ function countPhrase(count, singular, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
+export function ballotPresenceLabel(record) {
+  const presence = record?.ballot_presence;
+  if (!presence) return null;
+  if (presence.scope === "all_precincts") {
+    return `Found on all ${presence.precincts_total} enumerated precinct ballots`;
+  }
+  return `Found on ${presence.precincts} of ${presence.precincts_total} enumerated precinct ballots — may not apply to you`;
+}
+
+export function localSectionLabels(coverage) {
+  if (coverage.method === "all_precinct_contests") {
+    return {
+      sectionKicker: "Complete county catalog",
+      issueKicker: "Found across county precincts",
+      issueTitle: "Local ballot issues",
+    };
+  }
+  return {
+    sectionKicker: "Pilot coverage",
+    issueKicker: "Common across the county",
+    issueTitle: "Countywide ballot issues",
+  };
+}
+
 export function countyCoverageNotice(countyName, coverage, raceCount, issueCount) {
+  if (coverage.method === "all_precinct_contests") {
+    return {
+      lead: "Complete county catalog; exact applicability varies.",
+      copy: `This match points to ${countyName}. The county section includes every distinct contest found across all ${coverage.precincts_verified} enumerated precinct ballots. Narrower contests are labeled with how many precinct ballots contain them and may not apply to you. Verify your exact contests and candidate order with the official sample-ballot link below.`,
+    };
+  }
+
   if (coverage.method === "common_to_all_precincts") {
     const precinctSpecific = [];
     if (coverage.precinct_specific_races > 0) {
@@ -129,6 +160,7 @@ export function ballotCoverage(election, { countyId = null, countyName = null } 
   const statewideIssues = election.issues.length;
   const countyRaces = county?.races?.length ?? 0;
   const countyIssues = county?.issues?.length ?? 0;
+  const isCountyCatalog = county?.coverage?.method === "all_precinct_contests";
   const total = statewideRaces + statewideIssues + countyRaces + countyIssues;
 
   if (total === 0) return null;
@@ -137,11 +169,26 @@ export function ballotCoverage(election, { countyId = null, countyName = null } 
   const parts = [];
   if (statewideRaces > 0) parts.push(countPhrase(statewideRaces, "statewide contest"));
   if (statewideIssues > 0) parts.push(countPhrase(statewideIssues, "statewide ballot issue"));
-  if (countyRaces > 0) parts.push(`${countPhrase(countyRaces, "countywide contest")}${where}`);
-  if (countyIssues > 0) parts.push(`${countPhrase(countyIssues, "county ballot issue")}${where}`);
+  if (countyRaces > 0) {
+    parts.push(`${countPhrase(
+      countyRaces,
+      isCountyCatalog ? "local contest listed" : "countywide contest",
+      isCountyCatalog ? "local contests listed" : "countywide contests",
+    )}${where}`);
+  }
+  if (countyIssues > 0) {
+    parts.push(`${countPhrase(
+      countyIssues,
+      isCountyCatalog ? "local ballot issue listed" : "county ballot issue",
+      isCountyCatalog ? "local ballot issues listed" : "county ballot issues",
+    )}${where}`);
+  }
 
   let gaps;
-  if (countyRaces + countyIssues > 0) {
+  if (isCountyCatalog) {
+    gaps =
+      "This is the complete catalog found across the county, not one exact ballot. Each narrower contest says how many precinct ballots contain it.";
+  } else if (countyRaces + countyIssues > 0) {
     gaps =
       "That is not your whole ballot. Each section below names the official list it came from and what that list leaves out.";
   } else if (countyId) {

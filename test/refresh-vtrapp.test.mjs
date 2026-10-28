@@ -151,6 +151,32 @@ test("refreshes manifest jobs serially into a candidate file without mutating it
   });
 });
 
+test("catalog mode publishes measured presence for every local contest", async () => {
+  const input = electionData();
+  const catalog = manifest(["adams"]);
+  catalog.jobs[0].projection.mode = "catalog";
+  const result = await refreshVtrapp({
+    manifest: catalog,
+    electionData: input,
+    ingest: async ({ countyId }) => snapshot(countyId),
+    now: () => new Date("2026-10-16T18:00:00.000Z"),
+  });
+  const county = result.candidate.elections[0].counties.adams;
+
+  assert.equal(county.coverage.method, "all_precinct_contests");
+  assert.deepEqual(county.races[0].ballot_presence, {
+    scope: "all_precincts",
+    precincts: 1,
+    precincts_total: 1,
+  });
+});
+
+test("refresh manifest rejects an unknown projection mode", async () => {
+  const invalid = manifest(["adams"]);
+  invalid.jobs[0].projection.mode = "exact-ish";
+  assert.throws(() => validateRefreshManifest(invalid), /projection mode must be common or catalog/);
+});
+
 test("rejects duplicate jobs before starting an ingest", async () => {
   const duplicate = manifest(["adams", "adams"]);
   assert.throws(() => validateRefreshManifest(duplicate), /duplicates adams 20261103G/);

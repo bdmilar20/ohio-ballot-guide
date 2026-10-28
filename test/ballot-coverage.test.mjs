@@ -39,6 +39,20 @@ test("the count adds the statewide and county content a voter can see", () => {
   );
 });
 
+test("a county catalog counts local records without calling them countywide", () => {
+  const catalogCounty = {
+    ...county(17, 2),
+    coverage: { method: "all_precinct_contests" },
+  };
+  const coverage = ballotCoverage(
+    election({ statewide: 8, issues: 1, counties: { hamilton: catalogCounty } }),
+    { countyId: "hamilton", countyName: "Hamilton County" },
+  );
+  assert.match(coverage.counts, /17 local contests listed in Hamilton County/);
+  assert.match(coverage.counts, /2 local ballot issues listed in Hamilton County/);
+  assert.match(coverage.gaps, /complete catalog found across the county/);
+});
+
 test("a single contest is counted in the singular", () => {
   const coverage = ballotCoverage(election({ statewide: 1 }));
   assert.equal(coverage.total, 1);

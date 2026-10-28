@@ -419,6 +419,7 @@ export function buildRefreshJobs({
       county: countyId,
       election: vendorKey,
       projection: {
+        mode: "catalog",
         max_source_age_hours: maxSourceAgeHours,
         county_name: countyName,
         office_mappings: decision.office_mappings ?? {},

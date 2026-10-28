@@ -636,6 +636,18 @@ h2 {
   text-transform: uppercase;
 }
 
+.ballot-presence {
+  margin: 0 0 0.35rem;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.issue-card .ballot-presence {
+  margin: 0.45rem 0 0;
+  color: #f3dfc9;
+}
+
 .issue-sequence {
   margin-top: 0.4rem;
   color: #d7c7b8;

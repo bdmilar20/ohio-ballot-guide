@@ -288,6 +288,63 @@ test("validator accepts exact county ballot text with projection provenance", as
   assert.equal(result.status, 0, result.stderr);
 });
 
+function makeFranklinCatalog(data) {
+  const county = data.elections[0].counties.franklin;
+  county.races.forEach((race, index) => {
+    race.source_fingerprint = `sha256:${String(index + 1).repeat(64)}`;
+    race.ballot_presence = index === 0
+      ? { scope: "all_precincts", precincts: 10, precincts_total: 10 }
+      : { scope: "some_precincts", precincts: 3, precincts_total: 10 };
+  });
+  county.coverage = {
+    status: "complete",
+    method: "all_precinct_contests",
+    scope: "Every distinct contest found across 10 enumerated precinct ballots",
+    summary: "Narrower contests are labeled.",
+    source_url: "https://lookup.boe.ohio.gov/vtrapp/franklin/ballotlist.aspx",
+    source_updated_at: "2026-10-16T10:00:00-04:00",
+    source_age_hours_at_review: 4,
+    precincts_verified: 10,
+    precinct_specific_races: 1,
+    precinct_specific_issues: 0,
+    reviewed_at: "2026-10-16T18:00:00.000Z",
+    last_verified: "2026-10-16",
+  };
+  return county;
+}
+
+test("validator accepts a complete county catalog with measured ballot presence", async (t) => {
+  const result = await validateFixture(t, {
+    elections: makeFranklinCatalog,
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test("validator rejects a county catalog record without measured ballot presence", async (t) => {
+  const result = await validateFixture(t, {
+    elections: (data) => {
+      const county = makeFranklinCatalog(data);
+      delete county.races[0].ballot_presence;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /needs ballot_presence for county catalog coverage/);
+});
+
+test("validator rejects catalog counts that disagree with their records", async (t) => {
+  const result = await validateFixture(t, {
+    elections: (data) => {
+      const county = makeFranklinCatalog(data);
+      county.coverage.precinct_specific_races = 0;
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /precinct_specific_races must match its catalog records/);
+});
+
 test("validator rejects a county issue that lost both summary and ballot text", async (t) => {
   const result = await validateFixture(t, {
     elections: (data) => {

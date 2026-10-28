@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 
 import { electionIdFromKey, ingestCounty, parseArgs } from "./ingest/vtrapp.mjs";
 import { officeLabeller, readPatterns, surveyedTitlesFor } from "./map-office-titles.mjs";
-import { certifiedIssueText, projectCounty } from "./project-vtrapp.mjs";
+import { certifiedIssueText, projectCounty, projectCountyCatalog } from "./project-vtrapp.mjs";
 
 export const REFRESH_MANIFEST_SCHEMA_VERSION = 1;
 // Bumped from 2 when `inputs` became required. A schema 2 bundle carried only
@@ -131,6 +131,10 @@ export function validateRefreshManifest(manifest) {
     electionIdFromKey(job.election);
     invariant(isRecord(job.projection), `${label} needs projection decisions`);
     invariant(
+      job.projection.mode === undefined || ["common", "catalog"].includes(job.projection.mode),
+      `${label} projection mode must be common or catalog`,
+    );
+    invariant(
       Number.isFinite(job.projection.max_source_age_hours) && job.projection.max_source_age_hours >= 0,
       `${label} needs a nonnegative max_source_age_hours`,
     );
@@ -163,7 +167,17 @@ function projectionOptions(
   statewideIssueText,
   officeTitlePatterns = { patterns: [], corrections: [] },
   contestSurvey = null,
+  snapshot = null,
 ) {
+  const measuredTitles = job.projection.mode === "catalog"
+    ? new Set(
+        Object.values(snapshot?.ballots ?? {}).flatMap(({ contests }) =>
+          contests
+            .filter(({ kind }) => kind === "office")
+            .flatMap(({ title, subtitles }) => [title, ...(subtitles ?? [])]),
+        ),
+      )
+    : surveyedTitlesFor(contestSurvey, job.county, electionId);
   return {
     maxSourceAgeHours: job.projection.max_source_age_hours,
     officeMappings: job.projection.office_mappings,
@@ -185,7 +199,11 @@ function projectionOptions(
       // surveyed titles are a superset of the titles a projection publishes.
       // What it excludes is a title that appeared after the survey ran, which
       // is exactly the case that should stop and be looked at.
-      allowedTitles: surveyedTitlesFor(contestSurvey, job.county, electionId),
+      // A common projection can rely on the one-precinct contest survey: a
+      // contest present on every ballot is present on that sample. A catalog
+      // intentionally includes contests from every precinct, so its complete
+      // snapshot is the measurement that bounds which titles may be labelled.
+      allowedTitles: measuredTitles,
     }),
     countyName: job.projection.county_name,
     reviewedAt,
@@ -235,10 +253,19 @@ export async function refreshVtrapp({
     invariant(Number.isFinite(reviewedAt.getTime()), `${job.county}: refresh clock returned an invalid time`);
     let projection;
     try {
-      projection = projectCounty(
+      const projector = job.projection.mode === "catalog" ? projectCountyCatalog : projectCounty;
+      projection = projector(
         snapshot,
         election,
-        projectionOptions(job, electionId, reviewedAt, statewideIssueText, officeTitlePatterns, contestSurvey),
+        projectionOptions(
+          job,
+          electionId,
+          reviewedAt,
+          statewideIssueText,
+          officeTitlePatterns,
+          contestSurvey,
+          snapshot,
+        ),
       );
     } catch (error) {
       const failure = projectionFailure(job, electionId, error);

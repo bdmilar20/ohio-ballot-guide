@@ -616,17 +616,17 @@
         "adams": {
           "coverage": {
             "status": "complete",
-            "method": "common_to_all_precincts",
-            "scope": "Content present on all 27 enumerated precinct ballots",
-            "summary": "Every office and issue shown appears on every enumerated precinct ballot. Candidate order here may differ from the official ballot because Ohio rotates candidate order by precinct. Additional precinct-specific content remains excluded.",
+            "method": "all_precinct_contests",
+            "scope": "Every distinct contest found across 27 enumerated precinct ballots",
+            "summary": "This county catalog includes every race and issue found on any enumerated precinct ballot. Contests limited to some precincts are labeled and may not apply to your address. Candidate order may differ because Ohio rotates candidates by precinct.",
             "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
             "source_updated_at": "2026-10-12T14:32:40-04:00",
-            "source_age_hours_at_review": 143,
+            "source_age_hours_at_review": 369.6,
             "precincts_verified": 27,
             "precinct_specific_races": 0,
             "precinct_specific_issues": 14,
-            "reviewed_at": "2026-10-18T17:35:21.686Z",
-            "last_verified": "2026-10-18"
+            "reviewed_at": "2026-10-28T04:11:25.699Z",
+            "last_verified": "2026-10-28"
           },
           "races": [
             {
@@ -639,9 +639,20 @@
               "source_fingerprint": "sha256:f9c9be92ea8a8e41f977fe39a2067ea3cfd2776580736d5a9fc49c32bb247b06",
               "write_in_available": false,
               "candidates": [
-                { "name": "David J. Taylor", "party": "Republican" },
-                { "name": "Jen Mazzuckelli", "party": "Democratic" }
-              ]
+                {
+                  "name": "David J. Taylor",
+                  "party": "Republican"
+                },
+                {
+                  "name": "Jen Mazzuckelli",
+                  "party": "Democratic"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 27,
+                "precincts_total": 27
+              }
             },
             {
               "id": "adams-for-state-representative-90th-district-640172bb5771",
@@ -653,9 +664,20 @@
               "source_fingerprint": "sha256:640172bb5771c619aa1e2d0fbc77c78dec09dd26abdd4035ea05bff7c1de28b7",
               "write_in_available": false,
               "candidates": [
-                { "name": "Collin Docterman", "party": "Democratic" },
-                { "name": "Justin Pizzulli", "party": "Republican" }
-              ]
+                {
+                  "name": "Collin Docterman",
+                  "party": "Democratic"
+                },
+                {
+                  "name": "Justin Pizzulli",
+                  "party": "Republican"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 27,
+                "precincts_total": 27
+              }
             },
             {
               "id": "adams-for-judge-of-the-court-of-appeals-4th-district-3d3e1ca6f647",
@@ -667,8 +689,16 @@
               "source_fingerprint": "sha256:3d3e1ca6f6474bb0ecb117106c53e2a9cabee85cad039a312423567180e69169",
               "write_in_available": false,
               "candidates": [
-                { "name": "Peter B. Abele", "party": "Republican" }
-              ]
+                {
+                  "name": "Peter B. Abele",
+                  "party": "Republican"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 27,
+                "precincts_total": 27
+              }
             },
             {
               "id": "adams-for-judge-of-the-court-of-common-pleas-aabc7c43b2ee",
@@ -680,9 +710,20 @@
               "source_fingerprint": "sha256:aabc7c43b2ee714cf389b247a2735c875d4e7ee6867b55adc4029d7f7b3ca298",
               "write_in_available": false,
               "candidates": [
-                { "name": "Barbara Moore Holt", "party": "No party printed" },
-                { "name": "Lisa Ann Rothwell", "party": "No party printed" }
-              ]
+                {
+                  "name": "Barbara Moore Holt",
+                  "party": "No party printed"
+                },
+                {
+                  "name": "Lisa Ann Rothwell",
+                  "party": "No party printed"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 27,
+                "precincts_total": 27
+              }
             },
             {
               "id": "adams-for-county-commissioner-7330fa5921e6",
@@ -694,11 +735,28 @@
               "source_fingerprint": "sha256:7330fa5921e6ef7434b2e35df7a22149dc28b30ca743ccb1fb4695faa4db46d4",
               "write_in_available": false,
               "candidates": [
-                { "name": "Helen L. Newman", "party": "No party printed" },
-                { "name": "Kelly Jones", "party": "Republican" },
-                { "name": "Travis Wilson", "party": "No party printed" },
-                { "name": "Troy D. Thatcher", "party": "No party printed" }
-              ]
+                {
+                  "name": "Helen L. Newman",
+                  "party": "No party printed"
+                },
+                {
+                  "name": "Kelly Jones",
+                  "party": "Republican"
+                },
+                {
+                  "name": "Travis Wilson",
+                  "party": "No party printed"
+                },
+                {
+                  "name": "Troy D. Thatcher",
+                  "party": "No party printed"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 27,
+                "precincts_total": 27
+              }
             },
             {
               "id": "adams-for-county-auditor-10609999fb46",
@@ -710,9 +768,20 @@
               "source_fingerprint": "sha256:10609999fb462b9dcd667ec4812f629467fb1003b5f65e5473a92726687b4712",
               "write_in_available": false,
               "candidates": [
-                { "name": "Clayton Osborne", "party": "No party printed" },
-                { "name": "David Gifford", "party": "Republican" }
-              ]
+                {
+                  "name": "Clayton Osborne",
+                  "party": "No party printed"
+                },
+                {
+                  "name": "David Gifford",
+                  "party": "Republican"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 27,
+                "precincts_total": 27
+              }
             },
             {
               "id": "adams-for-prosecuting-attorney-3aac640a14b8",
@@ -724,9 +793,20 @@
               "source_fingerprint": "sha256:3aac640a14b8acc49b830afa7ea18046c2ae53d662c29b667c93bc61c103c581",
               "write_in_available": false,
               "candidates": [
-                { "name": "Ariana D. Norris", "party": "Republican" },
-                { "name": "David Osborne, Jr.", "party": "No party printed" }
-              ]
+                {
+                  "name": "Ariana D. Norris",
+                  "party": "Republican"
+                },
+                {
+                  "name": "David Osborne, Jr.",
+                  "party": "No party printed"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 27,
+                "precincts_total": 27
+              }
             },
             {
               "id": "adams-for-judge-of-the-court-of-appeals-4th-district-7fef5c90caf8",
@@ -738,9 +818,20 @@
               "source_fingerprint": "sha256:7fef5c90caf82e011010d243188728a458e690582de5439f393d8d3868a5a1c2",
               "write_in_available": false,
               "candidates": [
-                { "name": "Jayme Hartley Fountain", "party": "Republican" },
-                { "name": "Todd L. Grace", "party": "Democratic" }
-              ]
+                {
+                  "name": "Jayme Hartley Fountain",
+                  "party": "Republican"
+                },
+                {
+                  "name": "Todd L. Grace",
+                  "party": "Democratic"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 27,
+                "precincts_total": 27
+              }
             }
           ],
           "issues": [
@@ -749,20 +840,719 @@
               "label": "Proposed Tax Levy (Additional)",
               "title": "Adams County — A majority affirmative vote is necessary for passage.",
               "ballot_text": "An additional tax for the benefit of Adams County for the purpose of continued operation of Adams County Children Services and the care and placement of children including Wilson Children's Home that the county auditor estimates will collect $1,232,128 annually, at a rate not exceeding 1.5 mills for each $1 of taxable value, which amounts to $53 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2026, first due in calendar year 2027.",
-              "choices": ["For the Tax Levy", "Against the Tax Levy"],
+              "choices": [
+                "For the Tax Levy",
+                "Against the Tax Levy"
+              ],
               "last_verified": "2026-10-17",
               "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
-              "source_fingerprint": "sha256:64c2e1f396c800af8ccbf2cff3a89e58503c52cf17c19b57eca77a3a254f9d22"
+              "source_fingerprint": "sha256:64c2e1f396c800af8ccbf2cff3a89e58503c52cf17c19b57eca77a3a254f9d22",
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 27,
+                "precincts_total": 27
+              }
             },
             {
               "id": "adams-proposed-tax-levy-additional-7ca2335875da",
               "label": "Proposed Tax Levy (Additional)",
               "title": "Adams County — A majority affirmative vote is necessary for passage.",
               "ballot_text": "An additional tax for the benefit of Adams County for the purpose of continued operation of Adams County Emergency Medical Services that the county auditor estimates will collect $2,874,966 annually, at a rate not exceeding 3.5 mills for each $1 of taxable value, which amounts to $123 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2026, first due in calendar year 2027.",
-              "choices": ["For the Tax Levy", "Against the Tax Levy"],
+              "choices": [
+                "For the Tax Levy",
+                "Against the Tax Levy"
+              ],
               "last_verified": "2026-10-17",
               "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
-              "source_fingerprint": "sha256:7ca2335875daaafadf1df053a8d8ddc04992a49eb4243f23da7a134a7c531844"
+              "source_fingerprint": "sha256:7ca2335875daaafadf1df053a8d8ddc04992a49eb4243f23da7a134a7c531844",
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 27,
+                "precincts_total": 27
+              }
+            },
+            {
+              "id": "adams-proposed-tax-levy-additional-704e8ac204fd",
+              "label": "Proposed Tax Levy (Additional)",
+              "title": "Township of Bratton — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "An additional tax for the benefit of the Township of Bratton for the purpose of current expenses that the county auditor estimates will collect $37,489 annually, at a rate not exceeding 1 mill for each $1 of taxable value, which amounts to $35 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2026, first due in calendar year 2027.",
+              "choices": [
+                "For the Tax Levy",
+                "Against the Tax Levy"
+              ],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:704e8ac204fd0cce72a14c4a124148072eb37a2e099d4ee9819f4f015ae4d8d0",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 2,
+                "precincts_total": 27
+              }
+            },
+            {
+              "id": "adams-proposed-tax-levy-additional-4f10c3ceac5e",
+              "label": "Proposed Tax Levy (Additional)",
+              "title": "Township of Oliver — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "An additional tax for the benefit of the Township of Oliver for the purpose of road repairs and maintenance that the county auditor estimates will collect $84,115 annually, at a rate not exceeding 2 mills for each $1 of taxable value, which amounts to $70 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2026, first due in calendar year 2027.",
+              "choices": [
+                "For the Tax Levy",
+                "Against the Tax Levy"
+              ],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:4f10c3ceac5e6d98eb891f837513e1578d5ec94b40d66b21f5be32671ce8e388",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 1,
+                "precincts_total": 27
+              }
+            },
+            {
+              "id": "adams-proposed-tax-levy-additional-c2243a038483",
+              "label": "Proposed Tax Levy (Additional)",
+              "title": "Township of Scott — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "An additional tax for the benefit of the Township of Scott for the purpose of providing and maintaining emergency medical services, including ambulance service, emergency service, or both, and to maintain EMS apparatus, appliances, buildings, sites for apparatus, EMS vehicles, and related equipment, whether by contract or otherwise that the county auditor estimates will collect $259,477 annually, at a rate not exceeding 3.5 mills for each $1 of taxable value, which amounts to $123 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2026, first due in calendar year 2027.",
+              "choices": [
+                "For the Tax Levy",
+                "Against the Tax Levy"
+              ],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:c2243a038483d3a76167c6b4c66ad362a733138eea2763a77edfeee88e66fefa",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 3,
+                "precincts_total": 27
+              }
+            },
+            {
+              "id": "adams-proposed-tax-levy-additional-3438ae02373d",
+              "label": "Proposed Tax Levy (Additional)",
+              "title": "Village of Winchester — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "An additional tax for the benefit of the Village of Winchester for the purpose of police protection that the county auditor estimates will collect $74,835 annually, at a rate not exceeding 3.5 mills for each $1 of taxable value, which amounts to $123 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2026, first due in calendar year 2027.",
+              "choices": [
+                "For the Tax Levy",
+                "Against the Tax Levy"
+              ],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:3438ae02373d8d973f914a546f54865537181f3675aee94dd7eaf65a02428652",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 1,
+                "precincts_total": 27
+              }
+            },
+            {
+              "id": "adams-proposed-tax-levy-renewal-6cb7493ec2c9",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Village of Peebles — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of the Village of Peebles for the purpose of police operating expenses, that the county auditor estimates will collect $52,603 annually, at a rate not exceeding 2.8 mills for each $1 of taxable value, which amounts to $49 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2027, first due in calendar year 2028.",
+              "choices": [
+                "For the Tax Levy",
+                "Against the Tax Levy"
+              ],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:6cb7493ec2c9ae9eab251da9dc57f58dd9366ce6d90bd8fcd9eeda5c21687e7e",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 1,
+                "precincts_total": 27
+              }
+            },
+            {
+              "id": "adams-proposed-tax-levy-renewal-02c3a4e0143b",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Village of Seaman — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of the Village of Seaman for the purpose of street improvements that the county auditor estimates will collect $44,384 annually, at a rate not exceeding 2 mills for each $1 of taxable value, which amounts to $39 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2026, first due in calendar year 2027.",
+              "choices": [
+                "For the Tax Levy",
+                "Against the Tax Levy"
+              ],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:02c3a4e0143b6cafc1b11b281c987fbf8fd4467ca21de754bb8806194331c26e",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 1,
+                "precincts_total": 27
+              }
+            },
+            {
+              "id": "adams-proposed-tax-levy-renewal-7139abe97cd2",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Township of Wayne — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of the Township of Wayne for the purpose of maintaining and operating fire apparatus, appliances, buildings, or sites therefore, that the county auditor estimates will collect $15,618 annually, at a rate not exceeding 0.8 mill for each $1 of taxable value, which amounts to $12 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2027, first due in calendar year 2028.",
+              "choices": [
+                "For the Tax Levy",
+                "Against the Tax Levy"
+              ],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:7139abe97cd20d571b7755c32f97631b72bc65e9582d85e8dda89b81ad862b4b",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 1,
+                "precincts_total": 27
+              }
+            },
+            {
+              "id": "adams-proposed-tax-levy-renewal-ddff8695ee2f",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Township of Winchester — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of the Township of Winchester for the purpose of maintaining and operating the Winchester Union Cemetery that the county auditor estimates will collect $29,887 annually, at a rate not exceeding 1 mill for each $1 of taxable value, which amounts to $14 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2027, first due in calendar year 2028.",
+              "choices": [
+                "For the Tax Levy",
+                "Against the Tax Levy"
+              ],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:ddff8695ee2f4ed581daf451578d60335fba93aeb946114eb7df7d233be339ec",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 2,
+                "precincts_total": 27
+              }
+            },
+            {
+              "id": "adams-proposed-tax-levy-renewal-6a3de16575f5",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Township of Liberty — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of the Township of Liberty for the purpose of maintaining and operating cemeteries that the county auditor estimates will collect $29,375 annually, at a rate not exceeding 0.9 mill for each $1 of taxable value, which amounts to $17 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2027, first due in calendar year 2028.",
+              "choices": [
+                "For the Tax Levy",
+                "Against the Tax Levy"
+              ],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:6a3de16575f55dab290158e173537610ceaca399d3832b4636ac5ff14472d903",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 2,
+                "precincts_total": 27
+              }
+            },
+            {
+              "id": "adams-proposed-zoning-plan-0d6a173e652c",
+              "label": "Proposed Zoning Plan",
+              "title": "Township of Monroe — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A Resolution enacted under Section 519 of the Ohio Revised Code, titled \"Monroe Township Zoning Resolution\", governing the unincorporated area of Monroe Township, Adams County, Ohio, to preserve the rural and agricultural character of the Township, protect public health, safety, and general welfare, allow reasonable use of property with minimal unneccessary regulation, provide a predictable process for review of higher-impact development, ensure that uses with potentially significant impacts are evaluated and reasonably mitigated, and to promote orderly and compatible land use consistent with Township infrastructure and services.\nPursuant to the authority conferred by Section 519 of the Ohio Revised Code, and for the purpose of protecting agricultural, residential, and small-scale uses; preventing unreasonable burdens on roads, infrastructure, and public services; providing uniform and objective standards for land use review; and to carry out zoning authority in a manner consistent with Ohio law.\nShall the zoning plan for the unincorporated area of the Township of Monroe as adopted by the Township of Monroe be approved?",
+              "choices": [
+                "For the Zoning Resolution",
+                "Against the Zoning Resolution"
+              ],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:0d6a173e652c251d0367fb9e9572600b06aff805af112f1f99021f62fe3c6fb1",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 2,
+                "precincts_total": 27
+              }
+            },
+            {
+              "id": "adams-proposed-zoning-plan-2c3756ecbad4",
+              "label": "Proposed Zoning Plan",
+              "title": "Township of Sprigg — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A Resolution enacted under Section 519 of the Ohio Revised Code, titled \"Sprigg Township Zoning Resolution\", governing the unincorporated area of Sprigg Township, Adams County, Ohio, to preserve the rural and agricultural character of the Township, protect public health, safety, and general welfare, allow reasonable use of property with minimal unnecessary regulation, provide a predictable process for review of higher-impact development, ensure that uses with potentially significant impacts are evaluated and reasonably mitigated, and to promote orderly and compatible land use consistent with Township infrastructure and services.\nPursuant to the authority conferred by Section 519 of the Ohio Revised Code, and for the purpose of protecting agricultural, residential, and small-scale uses; preventing unreasonable burdens on roads, infrastructure, and public services; providing uniform and objective standards for land use review; and to carry out zoning authority in a manner consistent with Ohio law.\nShall the zoning plan for the unincorporated area of the Township of Sprigg as adopted by the Township of Sprigg be approved?",
+              "choices": [
+                "For the Zoning Resolution",
+                "Against the Zoning Resolution"
+              ],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:2c3756ecbad46ca028876f879e828d074f8d0ae1b7b374a64c87730dd661a5ce",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 1,
+                "precincts_total": 27
+              }
+            },
+            {
+              "id": "adams-local-liquor-option-by-petition-931e8577dfa0",
+              "label": "Local Liquor Option (By Petition)",
+              "title": "A majority affirmative vote is necessary for passage.",
+              "ballot_text": "Shall the sale of beer, wine, mixed beverages and spirituous liquor be permitted for sale on Sunday by Local Jacks LLC dba Local Jacks an applicant for a D-6 liquor permit and holder of a D-1, D-2, D-3 liquor permits who is engaged in the business of operating a restaurant at 122 S. Main St, Peebles, OH 45660 in this precinct?",
+              "choices": [
+                "Yes",
+                "No"
+              ],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:931e8577dfa001938683fbcd4646891f52c0c7b83c0d3ce9786bdafc94b914f9",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 1,
+                "precincts_total": 27
+              }
+            },
+            {
+              "id": "adams-proposed-tax-levy-renewal-11827ba11bb1",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Township of Scott — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of the Township of Scott for the purpose of providing and maintaining fire apparatus and appliances of the volunteer fire department that the county auditor estimates will collect $54,225 annually, at a rate not exceeding 1.5 mills for each $1 of taxable value, which amounts to $13 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2026, first due in calendar year 2027.",
+              "choices": [
+                "For the Tax Levy",
+                "Against the Tax Levy"
+              ],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:11827ba11bb1c28ef0ce1a2031e94280c9756e096e27db4d31488d6764f4f106",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 3,
+                "precincts_total": 27
+              }
+            },
+            {
+              "id": "adams-proposed-tax-levy-renewal-8f5dddf2badd",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Township of Winchester — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of the Township of Winchester for the purpose of care, supervision, repair and improvement of township cemeteries that the county auditor estimates will collect $12,356 annually, at a rate not exceeding 0.4 mill for each $1 of taxable value, which amounts to $6 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2027, first due in calendar year 2028.",
+              "choices": [
+                "For the Tax Levy",
+                "Against the Tax Levy"
+              ],
+              "last_verified": "2026-10-17",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/adams/ballotlist.aspx",
+              "source_fingerprint": "sha256:8f5dddf2badd30ef453745f8e5dc9d42178580f2dfc2134c22a21926711e022b",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 2,
+                "precincts_total": 27
+              }
+            }
+          ]
+        },
+        "vinton": {
+          "coverage": {
+            "status": "complete",
+            "method": "all_precinct_contests",
+            "scope": "Every distinct contest found across 22 enumerated precinct ballots",
+            "summary": "This county catalog includes every race and issue found on any enumerated precinct ballot. Contests limited to some precincts are labeled and may not apply to your address. Candidate order may differ because Ohio rotates candidates by precinct.",
+            "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+            "source_updated_at": "2026-10-05T15:23:54-04:00",
+            "source_age_hours_at_review": 537,
+            "precincts_verified": 22,
+            "precinct_specific_races": 2,
+            "precinct_specific_issues": 10,
+            "reviewed_at": "2026-10-28T04:22:15.110Z",
+            "last_verified": "2026-10-28"
+          },
+          "races": [
+            {
+              "id": "vinton-for-representative-to-congress-2nd-district-f9c9be92ea8a",
+              "scope": "Vinton County · Vote for one",
+              "office": "U.S. Representative (2nd District)",
+              "office_id": "us-representative",
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:f9c9be92ea8a8e41f977fe39a2067ea3cfd2776580736d5a9fc49c32bb247b06",
+              "write_in_available": false,
+              "candidates": [
+                {
+                  "name": "David J. Taylor",
+                  "party": "Republican"
+                },
+                {
+                  "name": "Jen Mazzuckelli",
+                  "party": "Democratic"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 22,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-for-state-senator-17th-district-38429d93602b",
+              "scope": "Vinton County · Vote for one",
+              "office": "State Senator (17th District)",
+              "office_id": "state-senator",
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:38429d93602ba43d72d74735bef4dfed71727c405df24aa90b1deacdc4b8bf67",
+              "write_in_available": false,
+              "candidates": [
+                {
+                  "name": "Brian A. Deer",
+                  "party": "Democratic"
+                },
+                {
+                  "name": "Shane Wilkin",
+                  "party": "Republican"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 22,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-for-state-representative-92nd-district-59b602c067c3",
+              "scope": "Vinton County · Vote for one",
+              "office": "State Representative (92nd District)",
+              "office_id": "state-representative",
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:59b602c067c31092bf85103943af70f8c476999828a67f9373424a5e8341573c",
+              "write_in_available": false,
+              "candidates": [
+                {
+                  "name": "Mark Johnson",
+                  "party": "Republican"
+                },
+                {
+                  "name": "Sarah Senff",
+                  "party": "Democratic"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 22,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-for-judge-of-the-court-of-appeals-4th-district-7fef5c90caf8",
+              "scope": "Vinton County · Full term commencing 2-9-2027 · Vote for one",
+              "office": "Judge of the Court of Appeals (4th District)",
+              "office_id": "court-of-appeals-judge",
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:7fef5c90caf82e011010d243188728a458e690582de5439f393d8d3868a5a1c2",
+              "write_in_available": false,
+              "candidates": [
+                {
+                  "name": "Jayme Hartley Fountain",
+                  "party": "Republican"
+                },
+                {
+                  "name": "Todd L. Grace",
+                  "party": "Democratic"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 22,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-for-judge-of-the-court-of-common-pleas-juvenile-division-3d565b5c1f3a",
+              "scope": "Vinton County · Full term commencing 2-9-2027 · Vote for one",
+              "office": "Judge of the Court of Common Pleas (Juvenile Division)",
+              "office_id": "common-pleas-judge",
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:3d565b5c1f3a3eda9c183768731997ea8494105610db03f5a3eb388981e5bd26",
+              "write_in_available": false,
+              "candidates": [
+                {
+                  "name": "Jeffrey Randolph Griffith",
+                  "party": "No party printed"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 22,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-for-county-commissioner-a48f6677ccc3",
+              "scope": "Vinton County · Full term commencing 1-1-2027 · Vote for one",
+              "office": "County Commissioner",
+              "office_id": "county-commissioner",
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:a48f6677ccc3a6ae2920d6f849e4b90e8b44653728e41fee856752afcbb07b8f",
+              "write_in_available": false,
+              "candidates": [
+                {
+                  "name": "C. Scott Ward",
+                  "party": "Republican"
+                },
+                {
+                  "name": "Steven Ray Hammond",
+                  "party": "Democratic"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 22,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-for-county-auditor-f5acc7abf60e",
+              "scope": "Vinton County · Vote for one",
+              "office": "County Auditor",
+              "office_id": "county-auditor",
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:f5acc7abf60ecb832f94ae1eebcb0ad97e5cbb726e68f67d224df23833404a4a",
+              "write_in_available": false,
+              "candidates": [
+                {
+                  "name": "Cindy Ann Waugh",
+                  "party": "Republican"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 22,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-township-of-richland-49269f7e5088",
+              "scope": "Vinton County · TOWNSHIP OF RICHLAND · For Township Trustee · Unexpired term ending 12-31-2029 · Vote for one",
+              "office": "Township Trustee",
+              "office_id": "township-trustee",
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:49269f7e5088a6ed0ea72601ca1d7bf53ade45ad572ed1b4eed53460fdd5b588",
+              "write_in_available": false,
+              "candidates": [
+                {
+                  "name": "Travis G. Faught",
+                  "party": "No party printed"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 2,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-township-of-swan-3b8663297a67",
+              "scope": "Vinton County · TOWNSHIP OF SWAN · For Township Trustee · Unexpired term ending 12-31-2029 · Vote for one",
+              "office": "Township Trustee",
+              "office_id": "township-trustee",
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:3b8663297a674b04df9e193b5e0d2d2f60cc936a1867d2dcf5d7cfa5df7f015e",
+              "write_in_available": true,
+              "candidates": [
+                {
+                  "name": "Jerrod Loren Schorr",
+                  "party": "No party printed"
+                },
+                {
+                  "name": "Nathan Leland Durr",
+                  "party": "No party printed"
+                }
+              ],
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 2,
+                "precincts_total": 22
+              }
+            }
+          ],
+          "issues": [
+            {
+              "id": "vinton-proposed-tax-levy-renewal-4c7871ce4050",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Vinton County — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of Vinton County for the purpose of providing sufficient funds to carry out the health programs of the Vinton County health district, that the county auditor estimates will collect $457,712 annually, at a rate not exceeding 1 mill for each $1 of taxable value, which amounts to $26 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2027, first due in calendar year 2028.",
+              "choices": [
+                "FOR THE TAX LEVY",
+                "AGAINST THE TAX LEVY"
+              ],
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:4c7871ce4050923c889c8104f4459e08b165d4f22257a4ddd25a63840db2d789",
+              "ballot_presence": {
+                "scope": "all_precincts",
+                "precincts": 22,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-proposed-income-tax-ad9762aaf799",
+              "label": "Proposed Income Tax",
+              "title": "Alexander Local School District (Athens, Meigs and Vinton Counties) — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "Shall an annual income tax of 0.75 percent on the earned income of individuals residing in the school district be imposed by Alexander Local School District, for 5 years, beginning January 1, 2027, for the purpose of current expenses?",
+              "choices": [
+                "FOR THE TAX",
+                "AGAINST THE TAX"
+              ],
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:ad9762aaf7998109a7dba93db6d397a16eac5f613e4ed4667a8a0b2c751227bf",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 1,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-proposed-tax-levy-renewal-7dcbbcacf64d",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Village of Hamden — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of the Village of Hamden for the purpose of providing and maintaining motor vehicles, communications, other equipment, buildings and sites for such buildings used directly in the operation of a police department, for the payment of salaries of permanent or part-time police, communications, or administrative personnel to operate the same, including the payment of any employer contributions required for such personnel under section 145.48 or 742.33 of the revised code, for the payment of the costs incurred by townships as a result of contracts made with other political subdivisions in order to obtain police protection, for the provision ambulance or emergency medical services operated by a police department, or for the payment of other related costs that the county auditor estimates will collect $34,962 annually, at a rate not exceeding 6 mills for each $1 of taxable value, which amounts to $118 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2027, first due in calendar year 2028.",
+              "choices": [
+                "FOR THE TAX LEVY",
+                "AGAINST THE TAX LEVY"
+              ],
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:7dcbbcacf64dd2ce86ef76feaaed9f15addb7ecc848f5b0c87436dff5b5c1cb0",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 2,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-proposed-tax-levy-renewal-33bd2a906d3a",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Village of McArthur — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of the Village of McArthur for the purpose of current operating expenses, that the county auditor estimates will collect $69,833 annually, at a rate not exceeding 4 mills for each $1 of taxable value, which amounts to $85 for each $100,000 of the county auditor's market value, for 4 years, commencing in 2026, first due in calendar year 2027.",
+              "choices": [
+                "FOR THE TAX LEVY",
+                "AGAINST THE TAX LEVY"
+              ],
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:33bd2a906d3a5fa0b005d52ddcbab6259165c9f3bb8a59a2c856290261133df7",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 3,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-proposed-tax-levy-renewal-d37d460fbfb9",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Knox Township — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of Knox Township for the purpose of the general construction, reconstruction, resurfacing, and repair of streets, roads, and bridges in municipal corporations, counties, or townships that the county auditor estimates will collect $17,528 annually, at a rate not exceeding 2 mills for each $1 of taxable value, which amounts to $31 for each $100,000 of the county auditor's market value, for 5 years commencing in 2026, first due in calendar year 2027.",
+              "choices": [
+                "FOR THE TAX LEVY",
+                "AGAINST THE TAX LEVY"
+              ],
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:d37d460fbfb9a17cbfdad19029607c326b7000ba45226d85080388b6db941dff",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 2,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-proposed-tax-levy-renewal-928c5c9f6b99",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Madison Township — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of Madison Township for the purpose of maintaining and operating cemeteries; that the county auditor estimates will collect $14,352 annually, at a rate not exceeding 1 mill for each $1 of taxable value, which amounts to $14 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2026, first due in calendar year 2027.",
+              "choices": [
+                "FOR THE TAX LEVY",
+                "AGAINST THE TAX LEVY"
+              ],
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:928c5c9f6b99b4c94bce10808142183513cecad796274866a57cef77cc317268",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 2,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-proposed-tax-levy-renewal-3fc1c81af366",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Wilkesville Township — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of Wilkesville Township for the purpose of the collection and disposal of garbage or refuse, including yard waste, that the county auditor estimates will collect $103,807 annually, at a rate not exceeding 0.5 mill for each $1 of taxable value, which amounts to $11 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2026, first due in calendar year 2027.",
+              "choices": [
+                "FOR THE TAX LEVY",
+                "AGAINST THE TAX LEVY"
+              ],
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:3fc1c81af366cda955f45631800be207beb37ee5cdf234f15d5e7709a4a1dcf4",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 2,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-proposed-tax-levy-renewal-2b8c1b7fbfc1",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Village of Hamden — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of the Village of Hamden for the purpose of providing and maintaining fire apparatus, mechanical resuscitators, underwater rescue and recovery equipment, and appliances, buildings and sites therefor, or sources of water supply and materials therefor, for the establishment and maintenance of lines of fire-alarm communications, for the payment of firefighting companies or permanent, part-time, or volunteer firefighting, emergency medical service, administrative, or communications personnel to operate the same, including the payment of any employer contributions required for such personnel under section 145.48 or 742.34 of the revised code, for the purchase of ambulance equipment, for the provision of ambulance, paramedic, or other emergency medical services operated by a fire department or firefighting company, or for the payment of other related costs; that the county auditor estimates will collect $22,874 annually, at a rate not exceeding 3 mills for each $1 of taxable value, which amounts to $80 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2027, first due in calendar year 2028.",
+              "choices": [
+                "FOR THE TAX LEVY",
+                "AGAINST THE TAX LEVY"
+              ],
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:2b8c1b7fbfc1160cf2a76730ed9dd5e568944ed949f72185cb2735a3f23f77de",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 2,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-proposed-tax-levy-renewal-2bbf1ddecdff",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Village of McArthur — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of the Village of McArthur for the purpose of providing and maintaining motor vehicles, communications, other equipment, buildings and sites for such buildings used directly in the operation of a police department, for the payment of salaries of permanent or part-time police, communications, or administrative personnel under section 145.48 or 742.33 of the revised code, for the payment of the costs incurred by townships as a result of contracts made with other political subdivisions in order to obtain police protection, for the provision ambulance or emergency medical services operated by a police department, that the county auditor estimates will collect $61,104 annually, at a rate not exceeding 3.5 mills for each $1 of taxable value, which amounts to $75 for each $100,000 of the county auditor's market value, for 4 years, commencing in 2026, first due in calendar year 2027.",
+              "choices": [
+                "FOR THE TAX LEVY",
+                "AGAINST THE TAX LEVY"
+              ],
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:2bbf1ddecdff4ed476c1583ebc1711f326355d9a97a52f8e38c12e55ad323fe0",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 3,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-proposed-tax-levy-renewal-6dc2e84bbaeb",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Swan Township — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of Swan Township for the purpose of maintaining and operating cemeteries that the county auditor estimates will collect $10,213 annually, at a rate not exceeding 0.5 mill for each $1 of taxable value, which amounts to $4 for each $100,000 of the county auditor's market value, for 5 years, commencing in 2026, first due in calendar year 2027.",
+              "choices": [
+                "FOR THE TAX LEVY",
+                "AGAINST THE TAX LEVY"
+              ],
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:6dc2e84bbaebc6c6150b6b8f66921f6762e284f6b28103ad7b2d0c4d08ab5f52",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 2,
+                "precincts_total": 22
+              }
+            },
+            {
+              "id": "vinton-proposed-tax-levy-renewal-eebab164f2e9",
+              "label": "Proposed Tax Levy (Renewal)",
+              "title": "Village of McArthur — A majority affirmative vote is necessary for passage.",
+              "ballot_text": "A renewal of a tax for the benefit of the Village of McArthur for the purpose of parks and recreational purposes, that the county auditor estimates will collect $17,400 annually, at a rate not exceeding 1 mill for each $1 of taxable value, which amounts to $21 for each $100,000 of the county auditor's market value, for 4 years, commencing in 2026, first due in calendar year 2027.",
+              "choices": [
+                "FOR THE TAX LEVY",
+                "AGAINST THE TAX LEVY"
+              ],
+              "last_verified": "2026-10-24",
+              "source_url": "https://lookup.boe.ohio.gov/vtrapp/vinton/ballotlist.aspx",
+              "source_fingerprint": "sha256:eebab164f2e9ad32b695d742ee42fa80ab8af141b2f3f86fae2c98b52cf7d2ba",
+              "ballot_presence": {
+                "scope": "some_precincts",
+                "precincts": 3,
+                "precincts_total": 22
+              }
             }
           ]
         }

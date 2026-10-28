@@ -98,6 +98,18 @@ test("rejects generated county coverage whose projection decisions were not comm
   );
 });
 
+test("rejects a durable projection mode that cannot reproduce the published method", () => {
+  const input = fixture();
+  input.configs[0].manifest.jobs[0].projection.mode = "catalog";
+  assert.throws(
+    () => validateRefreshConfigs(input),
+    /publishes common_to_all_precincts but its durable job uses catalog projection mode/,
+  );
+
+  input.electionData.elections[0].counties.adams.coverage.method = "all_precinct_contests";
+  assert.doesNotThrow(() => validateRefreshConfigs(input));
+});
+
 test("requires each statewide issue removal to be reproducible", () => {
   const withoutEvidence = fixture();
   withoutEvidence.statewideIssueText.issues["state-issue-3"].counties = [];

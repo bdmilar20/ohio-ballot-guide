@@ -1,5 +1,6 @@
 import {
   ballotCoverage,
+  ballotPresenceLabel,
   countiesWithContests,
   contestSequenceLabels,
   countyCoverageNotice,
@@ -7,6 +8,7 @@ import {
   guideSearch,
   hasPublishedBallotDetails,
   issuesForCounty,
+  localSectionLabels,
   issueSequenceLabels,
   issueSourceLabel,
   parseGuideSearch,
@@ -16,7 +18,7 @@ import {
   scheduleOnlyNote,
   sourceLabel,
   upcomingElections,
-} from "./src/lookup.mjs?v=20261021";
+} from "./src/lookup.mjs?v=20261028";
 
 const OFFICIAL_VOTING_SCHEDULE_URL =
   "https://www.ohiosos.gov/elections/voting-schedule-text-only";
@@ -39,9 +41,12 @@ const statewideContainer = document.querySelector("#statewide-races");
 const localContainer = document.querySelector("#local-races");
 const localSection = document.querySelector("#local-section");
 const localTitle = document.querySelector("#local-title");
+const localKicker = document.querySelector("#local-kicker");
 const localCoverageSummary = document.querySelector("#local-coverage-summary");
 const localSource = document.querySelector("#local-source");
 const localIssueSection = document.querySelector("#local-issue-section");
+const localIssueKicker = document.querySelector("#local-issue-kicker");
+const localIssueTitle = document.querySelector("#local-issue-title");
 const localIssuesContainer = document.querySelector("#local-issues");
 const countyChoice = document.querySelector("#county-choice");
 const countyChoicePrompt = document.querySelector("#county-choice-prompt");
@@ -168,6 +173,12 @@ function renderRace(race, sequenceLabel = null) {
   const node = raceTemplate.content.firstElementChild.cloneNode(true);
   node.querySelector(".race-scope").textContent = race.scope;
   node.querySelector("h3").textContent = race.office;
+  const presenceLabel = ballotPresenceLabel(race);
+  if (presenceLabel) {
+    const presence = node.querySelector(".ballot-presence");
+    presence.textContent = presenceLabel;
+    presence.hidden = false;
+  }
   if (sequenceLabel) {
     const sequence = node.querySelector(".race-sequence");
     sequence.textContent = sequenceLabel;
@@ -248,6 +259,13 @@ function renderIssues(container, issues) {
     label.textContent = issue.label;
     title.textContent = issue.title;
     heading.append(label);
+    const presenceLabel = ballotPresenceLabel(issue);
+    if (presenceLabel) {
+      const presence = document.createElement("p");
+      presence.className = "ballot-presence";
+      presence.textContent = presenceLabel;
+      heading.append(presence);
+    }
     if (sequenceLabel) {
       const sequence = document.createElement("p");
       sequence.className = "issue-sequence";
@@ -443,6 +461,10 @@ function showCounty(countyId) {
   }
 
   localTitle.textContent = `${county.name} ballot content`;
+  const sectionLabels = localSectionLabels(countyElection.coverage);
+  localKicker.textContent = sectionLabels.sectionKicker;
+  localIssueKicker.textContent = sectionLabels.issueKicker;
+  localIssueTitle.textContent = sectionLabels.issueTitle;
   localCoverageSummary.textContent = `${countyElection.coverage.scope}. ${countyElection.coverage.summary}`;
   setHttpsHref(localSource, countyElection.coverage.source_url);
   localSource.setAttribute(
