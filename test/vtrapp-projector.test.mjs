@@ -361,12 +361,18 @@ test("projects reviewed countywide content and keeps precinct content out", () =
 
 test("projects every local contest into a labeled county catalog", () => {
   const { snapshot, election } = fixture();
+  const mayor = Object.values(snapshot.ballots)
+    .flatMap(({ contests }) => contests)
+    .find(({ title }) => title === "For Village Mayor");
+  mayor.title = "VILLAGE OF TEST";
+  mayor.subtitles = ["For Village Mayor"];
+  rehashSnapshot(snapshot);
   const result = projectCountyCatalog(snapshot, election, {
     maxSourceAgeHours: 24,
     reviewedAt: "2026-10-16T18:00:00.000Z",
     officeMappings: {
       "For County Commissioner": "county-commissioner",
-      "For Village Mayor": "village-mayor",
+      "VILLAGE OF TEST": { office_id: "village-mayor", office: "Village Mayor" },
     },
     statewideIssueMappings: { "Issue 3": "state-issue-3" },
     countyName: "Adams",
@@ -384,6 +390,8 @@ test("projects every local contest into a labeled county catalog", () => {
       ["Village Mayor", { scope: "some_precincts", precincts: 1, precincts_total: 2 }],
     ],
   );
+  const villageMayor = result.county.races.find(({ office }) => office === "Village Mayor");
+  assert.match(villageMayor.scope, /VILLAGE OF TEST/);
   assert.equal(result.county.issues.length, 1);
   assert.deepEqual(result.county.issues[0].ballot_presence, {
     scope: "all_precincts",

@@ -496,7 +496,12 @@ function productRace(entry, mapping, snapshot, countyName) {
   const fingerprintSuffix = entry.fingerprint.slice("sha256:".length, "sha256:".length + 12);
   return {
     id: `${snapshot.county.id}-${slug(contest.title)}-${fingerprintSuffix}`,
-    scope: raceScope(contest, countyName),
+    // Catalog cards need the printed jurisdiction in their visible scope.
+    // Precinct-specific township and village offices often carry that fact in
+    // the heading rather than the subtitle; dropping it makes two different
+    // contests look identical and leaves a voter unable to tell which one may
+    // apply to them.
+    scope: raceScope(contest, countyName, { includeHeading: true }),
     office,
     office_id: officeId,
     last_verified: ohioDate(timestamp(snapshot.source.fetched_at, "snapshot.source.fetched_at")),
