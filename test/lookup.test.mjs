@@ -336,6 +336,30 @@ test("publishes the complete Adams county catalog from every enumerated precinct
   );
 });
 
+test("publishes the complete Vinton county catalog from every enumerated precinct ballot", () => {
+  const county = election.counties.vinton;
+  assert.deepEqual(
+    {
+      status: county.coverage.status,
+      method: county.coverage.method,
+      precincts: county.coverage.precincts_verified,
+      precinctSpecificRaces: county.coverage.precinct_specific_races,
+      precinctSpecificIssues: county.coverage.precinct_specific_issues,
+      races: county.races.length,
+      issues: county.issues.length,
+    },
+    {
+      status: "complete",
+      method: "all_precinct_contests",
+      precincts: 22,
+      precinctSpecificRaces: 2,
+      precinctSpecificIssues: 10,
+      races: 9,
+      issues: 11,
+    },
+  );
+});
+
 test("publishes every Hamilton County judicial contest in the certified candidate list", () => {
   const judicialRaces = racesForCounty("hamilton", election.counties).slice(0, 15);
 

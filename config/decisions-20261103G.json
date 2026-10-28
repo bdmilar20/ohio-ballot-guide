@@ -10,6 +10,18 @@
       "statewide_race_mappings": {
         "sha256:79f65ef39efa08c7200d7595d6c9da58bc926673485655b6c9bec8d30beb06a6": "attorney-general"
       }
+    },
+    "vinton": {
+      "office_mappings": {
+        "TOWNSHIP OF RICHLAND": {
+          "office_id": "township-trustee",
+          "office": "Township Trustee"
+        },
+        "TOWNSHIP OF SWAN": {
+          "office_id": "township-trustee",
+          "office": "Township Trustee"
+        }
+      }
     }
   }
 }
