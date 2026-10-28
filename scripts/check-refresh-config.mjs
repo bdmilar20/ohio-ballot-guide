@@ -147,11 +147,17 @@ export function validateRefreshConfigs({
   let generatedCounties = 0;
   for (const election of electionData.elections) {
     for (const [countyId, county] of Object.entries(election.counties ?? {})) {
-      if (county.coverage?.method !== "common_to_all_precincts") continue;
+      if (!["common_to_all_precincts", "all_precinct_contests"].includes(county.coverage?.method)) continue;
       generatedCounties += 1;
       const label = `${election.id}:${countyId}`;
       const durable = jobs.get(`${election.id}\0${countyId}`);
       invariant(durable, `${label} is generated ballot coverage but has no durable refresh job`);
+      const durableMode = durable.job.projection.mode ?? "common";
+      const expectedMode = county.coverage.method === "all_precinct_contests" ? "catalog" : "common";
+      invariant(
+        durableMode === expectedMode,
+        `${label} publishes ${county.coverage.method} but its durable job uses ${durableMode} projection mode`,
+      );
       invariant(
         durable.job.projection.max_source_age_hours >= county.coverage.source_age_hours_at_review,
         `${label} was reviewed at age ${county.coverage.source_age_hours_at_review}h, above its durable ${durable.job.projection.max_source_age_hours}h limit`,

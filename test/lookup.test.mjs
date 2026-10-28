@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   contestSequenceLabels,
+  ballotPresenceLabel,
   countyCoverageNotice,
   daysUntilElection,
   hasPublishedBallotDetails,
@@ -133,6 +134,16 @@ test("returns county issues only after a county is selected", () => {
 });
 
 test("describes precinct verification only for common-precinct projections", () => {
+  const catalog = countyCoverageNotice(
+    "Adams",
+    { status: "complete", method: "all_precinct_contests", precincts_verified: 27 },
+    12,
+    8,
+  );
+  assert.equal(catalog.lead, "Complete county catalog; exact applicability varies.");
+  assert.match(catalog.copy, /every distinct contest found across all 27 enumerated precinct ballots/);
+  assert.match(catalog.copy, /may not apply to you/);
+
   const projected = countyCoverageNotice(
     "Adams",
     {
@@ -158,6 +169,22 @@ test("describes precinct verification only for common-precinct projections", () 
   assert.equal(partial.lead, "Approximate location and partial coverage.");
   assert.match(partial.copy, /2 selected contests and 0 issues/);
   assert.doesNotMatch(partial.copy, /enumerated precinct ballot/);
+});
+
+test("labels whether a catalog record appears on every or only some precinct ballots", () => {
+  assert.equal(ballotPresenceLabel({}), null);
+  assert.equal(
+    ballotPresenceLabel({
+      ballot_presence: { scope: "all_precincts", precincts: 27, precincts_total: 27 },
+    }),
+    "Found on all 27 enumerated precinct ballots",
+  );
+  assert.equal(
+    ballotPresenceLabel({
+      ballot_presence: { scope: "some_precincts", precincts: 3, precincts_total: 27 },
+    }),
+    "Found on 3 of 27 enumerated precinct ballots — may not apply to you",
+  );
 });
 
 test("labels repeated office headings only when scope does not distinguish them", () => {
@@ -272,7 +299,7 @@ test("publishes sourced, explicitly partial coverage for each covered county", (
   }
 });
 
-test("publishes Adams content common to every enumerated precinct ballot", () => {
+test("publishes the complete Adams county catalog from every enumerated precinct ballot", () => {
   const county = election.counties.adams;
   assert.deepEqual(
     {
@@ -286,12 +313,12 @@ test("publishes Adams content common to every enumerated precinct ballot", () =>
     },
     {
       status: "complete",
-      method: "common_to_all_precincts",
+      method: "all_precinct_contests",
       precincts: 27,
       precinctSpecificRaces: 0,
       precinctSpecificIssues: 14,
       races: 8,
-      issues: 2,
+      issues: 16,
     },
   );
   assert.deepEqual(
@@ -299,8 +326,13 @@ test("publishes Adams content common to every enumerated precinct ballot", () =>
     ["Separate contest 1 of 2", "Separate contest 2 of 2"],
   );
   assert.deepEqual(
-    issueSequenceLabels(county.issues),
-    ["Separate measure 1 of 2", "Separate measure 2 of 2"],
+    issueSequenceLabels(county.issues).filter(Boolean),
+    [
+      "Separate measure 1 of 2",
+      "Separate measure 2 of 2",
+      "Separate measure 1 of 2",
+      "Separate measure 2 of 2",
+    ],
   );
 });
 

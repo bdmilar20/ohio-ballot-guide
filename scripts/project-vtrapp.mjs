@@ -567,6 +567,22 @@ function exactEntry(entry, contest) {
   return { ...entry, contest, title: contest.title };
 }
 
+function catalogPresence(entry) {
+  invariant(
+    Number.isInteger(entry.precinct_count) && Number.isInteger(entry.precinct_total),
+    `contest "${entry.title}" needs measured precinct presence`,
+  );
+  invariant(
+    entry.precinct_count > 0 && entry.precinct_count <= entry.precinct_total,
+    `contest "${entry.title}" has invalid precinct presence`,
+  );
+  return {
+    scope: entry.precinct_count === entry.precinct_total ? "all_precincts" : "some_precincts",
+    precincts: entry.precinct_count,
+    precincts_total: entry.precinct_total,
+  };
+}
+
 function derivedOfficeMapping(entry, labelOffice) {
   const labels = [entry.title, ...entry.contest.subtitles]
     .map((printed) => labelOffice(printed))
@@ -794,6 +810,134 @@ export function projectCounty(snapshot, election, {
         precinct_specific_issues: precinctSpecificIssues,
         reviewed_at: new Date(reviewedAtInstant).toISOString(),
         last_verified: ohioDate(reviewedAtInstant),
+      },
+      races,
+      issues,
+    },
+    removed_statewide_duplicates: removedStatewide,
+    review,
+  };
+}
+
+/**
+ * Publishes the union of every distinct local contest found anywhere in a
+ * county's complete precinct snapshot. This is the city/ZIP product: it gives
+ * a voter the county's full catalog without pretending the catalog is their
+ * exact ballot. Each record carries the measured number of precinct ballots
+ * it appeared on, and the UI labels narrower contests before a voter reads the
+ * card.
+ */
+export function projectCountyCatalog(snapshot, election, options = {}) {
+  // Reuse the conservative projection's completeness, freshness, statewide
+  // duplicate, and common-office gates before widening from the intersection
+  // to the union.
+  const commonProjection = projectCounty(snapshot, election, options);
+  const review = commonProjection.review;
+  const {
+    officeMappings = {},
+    statewideRaceMappings = {},
+    statewideIssueMappings = {},
+    statewideIssueText = {},
+    labelOffice = () => null,
+    countyName = displayCounty(snapshot.county.id),
+  } = options;
+  const sharedOptions = {
+    officeMappings,
+    statewideRaceMappings,
+    statewideIssueMappings,
+    statewideIssueText,
+    labelOffice,
+    countyName,
+  };
+  const statewideRaceIds = new Set(election.statewide_races.map(({ id }) => id));
+  const statewideIssueIds = new Set(election.issues.map(({ id }) => id));
+  const races = [];
+  const issues = [];
+  const removedStatewide = [];
+
+  for (const entry of [...review.common_to_all_precincts, ...review.precinct_specific]) {
+    invariant(
+      Array.isArray(entry.uncertain) && entry.uncertain.length === 0,
+      `contest "${entry.title}" contains an uncertain parse`,
+    );
+    const ballotPresence = catalogPresence(entry);
+    if (entry.kind === "office") {
+      if (entry.published_statewide_race_id) {
+        invariant(
+          statewideRaceIds.has(entry.published_statewide_race_id),
+          `contest "${entry.title}" references missing statewide race ${entry.published_statewide_race_id}`,
+        );
+        removedStatewide.push({
+          fingerprint: entry.fingerprint,
+          id: entry.published_statewide_race_id,
+        });
+        continue;
+      }
+      const mappedStatewideId = mappingFor(statewideRaceMappings, entry);
+      if (mappedStatewideId) {
+        invariant(
+          entry.possible_statewide_race_ids.includes(mappedStatewideId),
+          `statewide race mapping for "${entry.title}" references ${mappedStatewideId}, which does not match its office`,
+        );
+        invariant(
+          statewideRaceIds.has(mappedStatewideId),
+          `statewide race mapping for "${entry.title}" references missing race ${mappedStatewideId}`,
+        );
+        removedStatewide.push({ fingerprint: entry.fingerprint, id: mappedStatewideId });
+        continue;
+      }
+      // exactRace owns the statewide-identity and office-mapping decision for
+      // both common and precinct-specific contests. The catalog then
+      // canonicalizes candidate rotation because no precinct's order
+      // represents a county-wide list.
+      const classified = exactRace(entry, snapshot, election, sharedOptions);
+      if (statewideRaceIds.has(classified.id)) {
+        removedStatewide.push({ fingerprint: entry.fingerprint, id: classified.id });
+        continue;
+      }
+      races.push({
+        ...productRace(
+          entry,
+          { office_id: classified.office_id, office: classified.office },
+          snapshot,
+          countyName,
+        ),
+        ballot_presence: ballotPresence,
+      });
+      continue;
+    }
+
+    invariant(entry.kind === "issue", `contest "${entry.title}" has unknown kind ${entry.kind}`);
+    const classified = exactIssue(entry, snapshot, election, sharedOptions);
+    if (statewideIssueIds.has(classified.id)) {
+      removedStatewide.push({ fingerprint: entry.fingerprint, id: classified.id });
+      continue;
+    }
+    issues.push({ ...productIssue(entry, snapshot), ballot_presence: ballotPresence });
+  }
+
+  const ids = [...races, ...issues].map(({ id }) => id);
+  invariant(new Set(ids).size === ids.length, "county catalog generated duplicate product ids");
+  const precinctSpecificRaces = races.filter(
+    ({ ballot_presence: presence }) => presence.scope === "some_precincts",
+  ).length;
+  const precinctSpecificIssues = issues.filter(
+    ({ ballot_presence: presence }) => presence.scope === "some_precincts",
+  ).length;
+  const baseCoverage = commonProjection.county.coverage;
+
+  return {
+    schema_version: PROJECTION_SCHEMA_VERSION,
+    election_id: snapshot.election.id,
+    county_id: snapshot.county.id,
+    county: {
+      coverage: {
+        ...baseCoverage,
+        method: "all_precinct_contests",
+        scope: `Every distinct contest found across ${snapshot.precincts.length} enumerated precinct ballots`,
+        summary: "This county catalog includes every race and issue found on any enumerated precinct ballot. Contests limited to some precincts are labeled and may not apply to your address. Candidate order may differ because Ohio rotates candidates by precinct.",
+        precinct_specific_races: precinctSpecificRaces,
+        precinct_specific_issues: precinctSpecificIssues,
       },
       races,
       issues,

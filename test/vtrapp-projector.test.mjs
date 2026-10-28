@@ -14,6 +14,7 @@ import {
   contestContentId,
   PROJECTION_SCHEMA_VERSION,
   projectCounty,
+  projectCountyCatalog,
   projectExactBallotBundle,
 } from "../scripts/project-vtrapp.mjs";
 
@@ -356,6 +357,40 @@ test("projects reviewed countywide content and keeps precinct content out", () =
     statewideIssueMappings: { "Issue 3": "state-issue-3" },
   });
   assert.equal(eveningReview.county.coverage.last_verified, "2026-10-16");
+});
+
+test("projects every local contest into a labeled county catalog", () => {
+  const { snapshot, election } = fixture();
+  const result = projectCountyCatalog(snapshot, election, {
+    maxSourceAgeHours: 24,
+    reviewedAt: "2026-10-16T18:00:00.000Z",
+    officeMappings: {
+      "For County Commissioner": "county-commissioner",
+      "For Village Mayor": "village-mayor",
+    },
+    statewideIssueMappings: { "Issue 3": "state-issue-3" },
+    countyName: "Adams",
+  });
+
+  assert.equal(result.county.coverage.method, "all_precinct_contests");
+  assert.equal(result.county.coverage.precincts_verified, 2);
+  assert.equal(result.county.coverage.precinct_specific_races, 1);
+  assert.equal(result.county.coverage.precinct_specific_issues, 0);
+  assert.deepEqual(result.removed_statewide_duplicates.map(({ id }) => id).sort(), ["governor", "state-issue-3"]);
+  assert.deepEqual(
+    result.county.races.map(({ office, ballot_presence: presence }) => [office, presence]),
+    [
+      ["County Commissioner", { scope: "all_precincts", precincts: 2, precincts_total: 2 }],
+      ["Village Mayor", { scope: "some_precincts", precincts: 1, precincts_total: 2 }],
+    ],
+  );
+  assert.equal(result.county.issues.length, 1);
+  assert.deepEqual(result.county.issues[0].ballot_presence, {
+    scope: "all_precincts",
+    precincts: 2,
+    precincts_total: 2,
+  });
+  assert.doesNotMatch(JSON.stringify(result.county), /Amy Acton/);
 });
 
 test("requires explicit freshness, office, issue-duplicate, and uncertainty decisions", () => {

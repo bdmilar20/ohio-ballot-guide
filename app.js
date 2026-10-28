@@ -1,5 +1,6 @@
 import {
   ballotCoverage,
+  ballotPresenceLabel,
   countiesWithContests,
   contestSequenceLabels,
   countyCoverageNotice,
@@ -16,7 +17,7 @@ import {
   scheduleOnlyNote,
   sourceLabel,
   upcomingElections,
-} from "./src/lookup.mjs?v=20261021";
+} from "./src/lookup.mjs?v=20261028";
 
 const OFFICIAL_VOTING_SCHEDULE_URL =
   "https://www.ohiosos.gov/elections/voting-schedule-text-only";
@@ -168,6 +169,12 @@ function renderRace(race, sequenceLabel = null) {
   const node = raceTemplate.content.firstElementChild.cloneNode(true);
   node.querySelector(".race-scope").textContent = race.scope;
   node.querySelector("h3").textContent = race.office;
+  const presenceLabel = ballotPresenceLabel(race);
+  if (presenceLabel) {
+    const presence = node.querySelector(".ballot-presence");
+    presence.textContent = presenceLabel;
+    presence.hidden = false;
+  }
   if (sequenceLabel) {
     const sequence = node.querySelector(".race-sequence");
     sequence.textContent = sequenceLabel;
@@ -248,6 +255,13 @@ function renderIssues(container, issues) {
     label.textContent = issue.label;
     title.textContent = issue.title;
     heading.append(label);
+    const presenceLabel = ballotPresenceLabel(issue);
+    if (presenceLabel) {
+      const presence = document.createElement("p");
+      presence.className = "ballot-presence";
+      presence.textContent = presenceLabel;
+      heading.append(presence);
+    }
     if (sequenceLabel) {
       const sequence = document.createElement("p");
       sequence.className = "issue-sequence";

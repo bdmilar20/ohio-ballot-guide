@@ -83,6 +83,7 @@ test("generates one job per surveyed county, in county order, with no hand mappi
     county: "adams",
     election: "20261103G",
     projection: {
+      mode: "catalog",
       max_source_age_hours: 4368,
       county_name: "Adams",
       office_mappings: {},

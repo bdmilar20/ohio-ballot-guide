@@ -41,7 +41,7 @@ const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const electionTypes = new Set(["general", "primary", "special", "local"]);
 const electionScopes = new Set(["statewide", "county", "municipal"]);
 const coverageStatuses = new Set(["partial", "complete"]);
-const coverageMethods = new Set(["common_to_all_precincts"]);
+const coverageMethods = new Set(["common_to_all_precincts", "all_precinct_contests"]);
 const orderBases = new Set(["population-2010", "land-area-2020", "single-county"]);
 // Ohio has had 88 counties since 1851. A generated file that disagrees has lost
 // rows or picked up another state.
@@ -71,6 +71,36 @@ function assertDate(value, label) {
 function assertHttpsUrl(value, label) {
   const url = new URL(value);
   assert.equal(url.protocol, "https:", `${label} must use HTTPS`);
+}
+
+function assertBallotPresence(record, precinctsVerified, label) {
+  const presence = record.ballot_presence;
+  assert.ok(presence && typeof presence === "object", `${label} needs ballot_presence for county catalog coverage`);
+  assert.ok(
+    ["all_precincts", "some_precincts"].includes(presence.scope),
+    `${label}.ballot_presence has an invalid scope`,
+  );
+  assert.ok(
+    Number.isInteger(presence.precincts) && presence.precincts > 0,
+    `${label}.ballot_presence.precincts must be a positive integer`,
+  );
+  assert.equal(
+    presence.precincts_total,
+    precinctsVerified,
+    `${label}.ballot_presence.precincts_total must match coverage.precincts_verified`,
+  );
+  if (presence.scope === "all_precincts") {
+    assert.equal(
+      presence.precincts,
+      presence.precincts_total,
+      `${label} marked all_precincts must appear on every verified precinct ballot`,
+    );
+  } else {
+    assert.ok(
+      presence.precincts < presence.precincts_total,
+      `${label} marked some_precincts must appear on fewer than every verified precinct ballot`,
+    );
+  }
 }
 
 assertDate(data.meta.last_reviewed, "meta.last_reviewed");
@@ -385,7 +415,7 @@ for (const election of data.elections) {
         assert.equal(
           county.coverage.status,
           "complete",
-          `${countyId}.coverage common projection must have complete status`,
+          `${countyId}.coverage generated projection must have complete status`,
         );
         assert.ok(
           Number.isInteger(county.coverage.precincts_verified) && county.coverage.precincts_verified > 0,
@@ -441,6 +471,24 @@ for (const election of data.elections) {
           );
           assert.ok(issue.ballot_text, `${issue.id} needs exact ballot text for common projection`);
           assert.ok(issue.choices?.length, `${issue.id} needs ballot choices for common projection`);
+        }
+        if (county.coverage.method === "all_precinct_contests") {
+          for (const race of county.races) {
+            assertBallotPresence(race, county.coverage.precincts_verified, race.id);
+          }
+          for (const issue of county.issues) {
+            assertBallotPresence(issue, county.coverage.precincts_verified, issue.id);
+          }
+          assert.equal(
+            county.coverage.precinct_specific_races,
+            county.races.filter(({ ballot_presence: presence }) => presence.scope === "some_precincts").length,
+            `${countyId}.coverage.precinct_specific_races must match its catalog records`,
+          );
+          assert.equal(
+            county.coverage.precinct_specific_issues,
+            county.issues.filter(({ ballot_presence: presence }) => presence.scope === "some_precincts").length,
+            `${countyId}.coverage.precinct_specific_issues must match its catalog records`,
+          );
         }
       }
     }

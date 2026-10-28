@@ -150,12 +150,20 @@ ballots by precinct split and contests genuinely differ within a county
 resolves only to a county and already warns that it cannot predict a precinct
 ballot.
 
-A separate projector owns the product decision. For the county-only UI it may
-publish a contest **only when that contest's complete normalized content appears
-on every successfully enumerated precinct ballot** in the county — call that
-`common_to_all_precincts`, never an exact ballot. Precinct-specific races and
-all issues stay in the snapshot for review and for a future exact-precinct
-lookup. **ZIP or city must never be used to guess a precinct.**
+A separate projector owns the product decision. It supports two honest
+city/ZIP views over the same complete snapshot:
+
+- `common_to_all_precincts` publishes only content whose complete normalized
+  form appears on every enumerated precinct ballot.
+- `all_precinct_contests` publishes the union of every distinct local contest
+  found anywhere in the county. Each record states how many of the enumerated
+  precinct ballots contain it, and the UI labels narrower records as possibly
+  inapplicable to the voter.
+
+Neither projection is an exact ballot. ZIP or city must never be used to guess
+a precinct; the union is a complete county catalog and can over-include local
+content for one address. The exact-ballot bundle remains available as a staged
+derivative if the product later adopts a complete precinct resolver.
 
 ## Adapter output
 

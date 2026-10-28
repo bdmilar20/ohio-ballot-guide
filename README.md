@@ -153,7 +153,7 @@ The data is split by how it is maintained.
 
 [`data/county-boards.json`](data/county-boards.json) is the curated directory of official county Board of Elections websites. Its county IDs must match the generated location registry exactly; validation fails if any of Ohio's 88 counties is missing or a link is not HTTPS.
 
-Each election includes a stable ID, date, type, scope, official information URL, voting deadlines, statewide contests, covered county records, and issues. County records can contain races and ballot issues. A populated county record also declares whether its coverage is `partial` or `complete`, names the included scope, states what can be missing, and links to the official source. Generated `common_to_all_precincts` coverage also records the precinct count, source update time, review time, and a fingerprint for every projected record. Every contest must include:
+Each election includes a stable ID, date, type, scope, official information URL, voting deadlines, statewide contests, covered county records, and issues. County records can contain races and ballot issues. A populated county record also declares whether its coverage is `partial` or `complete`, names the included scope, states what can be missing, and links to the official source. Generated `common_to_all_precincts` coverage records the intersection shared by every enumerated precinct. Generated `all_precinct_contests` coverage records the complete county catalog and adds measured ballot-presence counts to every projected record so narrower contests can be labeled. Both generated methods record the precinct count, source update time, review time, and a fingerprint for every projected record. Every contest must include:
 
 - a stable ID;
 - its geographic scope and office;
