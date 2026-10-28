@@ -26,6 +26,14 @@ The round-2 schema work did most of the structural job:
 - `hasPublishedBallotDetails()` separates "we know a date" from "we know the
   ballot". Most states publish schedules long before certified contests, so this
   distinction becomes more useful with more states, not less.
+- `src/pdf-text.mjs` knows about PDF and nothing about Ohio. Boards in every
+  state publish sample ballots as PDFs, and the properties that make them hard
+  to read — `Identity-H` glyph ids, one show operator per glyph, the type scale
+  living in `Tm` on some producers and `Tf` on others, columns that exist only
+  as drawn rules, a rotated watermark sharing baselines with body text — are
+  properties of PDF generators rather than of counties. Its parity measurement
+  (`scripts/verify-pdf-parity.mjs`) is vendor-shaped and its reader is not; a
+  second state reuses the reader and writes its own oracle.
 
 ## What is Ohio-shaped today
 

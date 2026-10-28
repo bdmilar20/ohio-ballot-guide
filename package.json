@@ -18,6 +18,7 @@
     "survey:contests": "node scripts/survey-contests.mjs",
     "map:offices": "node scripts/map-office-titles.mjs",
     "gate:vtrapp": "node scripts/gate-vtrapp.mjs",
+    "verify:pdf-parity": "node scripts/verify-pdf-parity.mjs",
     "verify": "node scripts/verify-tip.mjs"
   }
 }

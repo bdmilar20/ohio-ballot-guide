@@ -4,3 +4,7 @@
 # -diff also keeps `git diff --check` from reporting every line as trailing
 # whitespace.
 test/fixtures/vtrapp/*.html -text -diff
+
+# Captured ballot PDFs, kept byte for byte: the tests assert on what the
+# vendor actually served, and these are binary.
+test/fixtures/pdf/*.pdf binary

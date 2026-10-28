@@ -86,6 +86,86 @@ reader has to demonstrate field-for-field normalized agreement with the HTML on
 counties that publish both before it is trusted on counties that publish
 neither.
 
+### Reading a ballot PDF, and what the parity measurement so far supports
+
+`src/pdf-text.mjs` reads these PDFs with no dependency, because the project has
+none and `npm run check` has no install step. `node:zlib` is core and the
+ballots are the narrow case that makes that defensible: every one observed is
+`%ABCpdf 11310`, unencrypted, PDF 1.4, with no object streams and no
+cross-reference streams. It returns positioned lines and refuses anything it
+does not recognise, since the failure to avoid is returning plausible garbage
+rather than an error.
+
+Four properties of the source decide the implementation, and each one breaks the
+obvious version:
+
+- **The text is not bytes of text.** Lake's faces are Type0 / CIDFontType2 with
+  `Identity-H`, so a show operator carries two-byte glyph ids: `<0004> Tj` is
+  `E` only after its `/ToUnicode` CMap is read. A reader without the CMap
+  returns control bytes and returns them silently, so a missing `/ToUnicode` on
+  an `Identity-H` font is refused rather than guessed.
+- **There are no strings and no spaces.** That generator emits one glyph per
+  `Tj`, each preceded by its own absolute `Tm`. Words and lines are both
+  reconstructed from coordinates; concatenating show operands in stream order
+  gives `EastLakeCity1A`, and stream order is per table cell rather than
+  reading order.
+- **The scale is in a different place on different counties.** Lake's `Tf`
+  names a 10pt font under a unit text matrix. Licking's names a **1pt** font and
+  carries the 10x in `Tm`. A glyph advance computed as width x font size is 20x
+  too small on the second one, every gap then clears the word-break threshold,
+  and the ballot extracts as `F o r A t t o r n e y G e n e r a l` — readable
+  enough to look like a near miss and useless to a parser. Advances are measured
+  in device space.
+- **The columns are drawn, and that is the only reliable way to find them.**
+  The generator strokes a long vertical rule at each column edge (x = 33.8,
+  215.3, 396.7, 578.2 on a Lake ballot). No whitespace heuristic can match that:
+  a line carrying text in the first and third columns occupies 90% of the page
+  width, so nothing about spans or corridors distinguishes it from the election
+  title above it. Each boundary also carries the heights over which it is
+  actually ruled, which is what separates the three columns from the full-width
+  title and instruction band above them. A boundary is only a boundary where it
+  is ruled.
+
+A diagonal "Sample" watermark is stamped through each ballot with a rotated
+`cm`. Its glyphs have real device positions, so grouping by baseline alone
+threads each letter into whichever line it passes near and yields `Geeneral`,
+`Republicpan` and `Ceommon` — real words with one letter inserted, which is the
+worst available failure because nothing downstream can detect it. Glyphs are
+separated by baseline direction and the rotated ones are reported rather than
+dropped, so an unread watermark is distinguishable from an unread contest.
+
+`npm run verify:pdf-parity -- <county>…` is the measurement the parity
+requirement calls for. For one precinct it walks the accessible HTML ballot,
+fetches the PDF for that same precinct, and asks whether every contest title,
+subtitle, candidate and party the HTML reports appears in the text extracted
+from the PDF. The HTML is the oracle in both directions; text the PDF carries
+and the HTML does not is reported separately, because these ballots print voter
+instructions, precinct footers and left-margin sequence numerals that no
+contest contains. It is a live measurement rather than a test: a board that
+edits between the two fetches is a disagreement about the ballot, not about the
+reader.
+
+**On 2026-10-28 it found every claim on all five counties measured** — Allen
+(16 contests), Licking (21), Medina (18), Summit (26) and Lucas (27), 448
+claims in total, 0 missing. That is content parity on the five oracle counties,
+and it is the evidence that was missing when this section said the PDF path was
+untrusted.
+
+Two limits on that result, stated rather than implied:
+
+- **It compares content, not fields.** It proves the reader recovers the
+  ballot's text; it does not yet prove a normalized contest record built from
+  that text matches the HTML record field for field. The contest parser and that
+  stricter comparison are the next step, and `data/` gets nothing until it
+  passes.
+- **Not every county has a text layer to read.** Adams and Greene publish the
+  ballot as a scanned image: Adams' four pages carry one Times-Roman footer
+  font and no body text at all. The reader returns no text rather than throwing,
+  because "this PDF has no text" and "this PDF could not be parsed" call for
+  different work — the first needs a human or an OCR path, the second is a bug.
+  So the PDF route is not a universal replacement for the HTML walk; it is the
+  only route for Lake and Wayne, and a possible optimization elsewhere.
+
 ### Six things about this source that are not guessable
 
 Each is pinned by a test against captured fixtures in `test/fixtures/vtrapp`,
