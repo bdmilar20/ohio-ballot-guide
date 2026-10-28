@@ -8,6 +8,7 @@ import {
   guideSearch,
   hasPublishedBallotDetails,
   issuesForCounty,
+  localSectionLabels,
   issueSequenceLabels,
   issueSourceLabel,
   parseGuideSearch,
@@ -40,9 +41,12 @@ const statewideContainer = document.querySelector("#statewide-races");
 const localContainer = document.querySelector("#local-races");
 const localSection = document.querySelector("#local-section");
 const localTitle = document.querySelector("#local-title");
+const localKicker = document.querySelector("#local-kicker");
 const localCoverageSummary = document.querySelector("#local-coverage-summary");
 const localSource = document.querySelector("#local-source");
 const localIssueSection = document.querySelector("#local-issue-section");
+const localIssueKicker = document.querySelector("#local-issue-kicker");
+const localIssueTitle = document.querySelector("#local-issue-title");
 const localIssuesContainer = document.querySelector("#local-issues");
 const countyChoice = document.querySelector("#county-choice");
 const countyChoicePrompt = document.querySelector("#county-choice-prompt");
@@ -457,6 +461,10 @@ function showCounty(countyId) {
   }
 
   localTitle.textContent = `${county.name} ballot content`;
+  const sectionLabels = localSectionLabels(countyElection.coverage);
+  localKicker.textContent = sectionLabels.sectionKicker;
+  localIssueKicker.textContent = sectionLabels.issueKicker;
+  localIssueTitle.textContent = sectionLabels.issueTitle;
   localCoverageSummary.textContent = `${countyElection.coverage.scope}. ${countyElection.coverage.summary}`;
   setHttpsHref(localSource, countyElection.coverage.source_url);
   localSource.setAttribute(

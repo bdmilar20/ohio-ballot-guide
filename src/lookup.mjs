@@ -92,6 +92,21 @@ export function ballotPresenceLabel(record) {
   return `Found on ${presence.precincts} of ${presence.precincts_total} enumerated precinct ballots — may not apply to you`;
 }
 
+export function localSectionLabels(coverage) {
+  if (coverage.method === "all_precinct_contests") {
+    return {
+      sectionKicker: "Complete county catalog",
+      issueKicker: "Found across county precincts",
+      issueTitle: "Local ballot issues",
+    };
+  }
+  return {
+    sectionKicker: "Pilot coverage",
+    issueKicker: "Common across the county",
+    issueTitle: "Countywide ballot issues",
+  };
+}
+
 export function countyCoverageNotice(countyName, coverage, raceCount, issueCount) {
   if (coverage.method === "all_precinct_contests") {
     return {

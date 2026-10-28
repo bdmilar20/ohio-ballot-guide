@@ -9,6 +9,7 @@ import {
   daysUntilElection,
   hasPublishedBallotDetails,
   issuesForCounty,
+  localSectionLabels,
   issueSequenceLabels,
   issueSourceLabel,
   normalizeQuery,
@@ -185,6 +186,19 @@ test("labels whether a catalog record appears on every or only some precinct bal
     }),
     "Found on 3 of 27 enumerated precinct ballots — may not apply to you",
   );
+});
+
+test("labels a county catalog without calling precinct-specific issues countywide", () => {
+  assert.deepEqual(localSectionLabels({ method: "all_precinct_contests" }), {
+    sectionKicker: "Complete county catalog",
+    issueKicker: "Found across county precincts",
+    issueTitle: "Local ballot issues",
+  });
+  assert.deepEqual(localSectionLabels({ method: "common_to_all_precincts" }), {
+    sectionKicker: "Pilot coverage",
+    issueKicker: "Common across the county",
+    issueTitle: "Countywide ballot issues",
+  });
 });
 
 test("labels repeated office headings only when scope does not distinguish them", () => {
